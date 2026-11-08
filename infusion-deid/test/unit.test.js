@@ -411,7 +411,7 @@ test('self-check is over-sensitive: spaced MRN digits, nicknames, initials, bare
   const res = D.processTable({ headers: RT_HEADERS, rows: [['Schwartz, Benjamin', '00412369', '10/31/1956', 'ok']] }, { seed: 1, columns: RT_COLS });
   const probe = (text) => D.selfCheck({ rows: [[res.rows[0][0], 'P001', '', text]], headers: res.headers, census: res.census, cfg: res.cfg, details: res.details }).hits.map((h) => `${h.kind}:${h.text}`);
   assert.deepEqual(probe('MRN#0041 2369 and 0041-2369 and 412369 and Ben and Benny and B.S. and Benj S. and Zofia, 95, and turned 91; call 716-555-0142; j@gmail.com'),
-    ['census:412369', 'census:Ben', 'census:Benny', 'census:B.S.', 'census:0041 2369', 'census:0041-2369', 'token:Benj S.', 'age:95', 'age:91', 'shape:j@gmail.com', 'shape:716-555-0142']);
+    ['census:412369', 'census:Ben', 'census:Benny', 'census:B.S.', 'census:Benj', 'census:0041 2369', 'census:0041-2369', 'token:Benj S.', 'age:95', 'age:91', 'shape:j@gmail.com', 'shape:716-555-0142']);
   // the digits-only comparison stands on its own when the census regex is not available
   const noRegex = Object.assign({}, res.census, { regex: null, lookup: new Map() });
   assert.deepEqual(D.selfCheck({ rows: [['x', 'P001', '', 'MRN 0041 2369 and 0041-2369']], headers: res.headers, census: noRegex, cfg: res.cfg, details: res.details }).hits.map((h) => `${h.kind}:${h.text}`), ['digits:0041 2369', 'digits:0041-2369']);
@@ -804,4 +804,95 @@ test('r2 self-check on pasted text: "First Last (MRN …)" is the line\'s patien
   assert.ok(chk('used pre_chemo smartphrase; see lab_results').out.includes('pre_chemo smartphrase; see lab_results'));
   // a record number with no name anywhere still stops the download
   assert.equal(chk('MRN 55120999 called about labs').sc.unnamed.length, 1);
+});
+
+// ---------------------------------------------------------------- red-team round 3 classes (fresh strings, not the case texts)
+test('r3 dates: Mon-dd-yyyy, month and year alone, mm/yyyy, a bare ordinal day after a time word; cycles and lower-case "may" stay', () => {
+  const r = (t) => rules(t).filter((x) => x.startsWith('DATE=') || x.startsWith('DOB='));
+  assert.deepEqual(r('due Dec-14-2026 per plan'), ['DATE=Dec-14-2026']);
+  assert.deepEqual(r('restart in Mar 2027 if stable'), ['DATE=Mar 2027']);
+  assert.deepEqual(r('father died 03/2025'), ['DATE=03/2025']);
+  assert.deepEqual(r('away until the 14th'), ['DATE=14th']);
+  assert.deepEqual(r('on the 2nd cycle; on the 3rd day'), []);
+  assert.deepEqual(r('we may 2026 plan'), []);
+  const out = textOut('Visiting family, back on the 17th. Next scan Jan 2027. Wife passed 04/2024.');
+  noneOf(out, ['17th', 'Jan 2027', '04/2024']);
+});
+test('r3 ages: "Pt is 93," with a comma after the number is an age; vitals stay', () => {
+  const out = textOut('Pt is 93, frail. HR is 95, regular.');
+  assert.ok(out.includes('Pt is 90+,') && out.includes('HR is 95'), out);
+});
+test('r3 places: a numbered route as the street, a town after a residence or travel verb, a town in brackets after a facility or home', () => {
+  assert.ok(rules('c/o Maple Grove Manor, 212 Route 6A').includes('ADDRESS=212 Route 6A'));
+  assert.ok(rules('lives at 18 State Rte 31').includes('ADDRESS=18 State Rte 31'));
+  const l = lex('lives alone in Pickerel; son drives over from Ashgrove most days');
+  assert.ok(l.includes('LOCATION=Pickerel') && l.includes('LOCATION=Ashgrove'), l.join(' '));
+  assert.ok(!lex('came in from Radiology, lives at home').some((x) => x.startsWith('LOCATION')));
+  const res = one(['Patient', 'Referring Facility', 'Notes'], ['Brandt, Ilse', 'Larkmoor Regional (Fennick)', 'ok']);
+  assert.equal(res.columns[1].role, 'text');
+  assert.ok(!D.cellToString(res.rows[0][1]).includes('Fennick'), D.cellToString(res.rows[0][1]));
+  assert.ok(lex('discharged home (Wrexley)').includes('LOCATION=Wrexley'));
+});
+test('r3 columns: an apartment/unit column is removed (a Lot # is not), a merged "Patient / DOB" cell feeds the census, link and portal columns are processed', () => {
+  const c = D.classifyColumns(['Apt', 'Line 2', 'Lot #'], [['3F', 'Unit 4C', 'L2231A'], ['', 'Apt 12', 'L2231B'], ['7', 'Suite 210', 'L2231C']]);
+  assert.deepEqual(c.map((x) => x.role), ['drop', 'drop', 'keep']);
+  const m = one(['Patient / DOB', 'MRN', 'Notes'], ['Ferreira-Holm, Teodor / 03.14.1947', '5511209', 'Teodor tolerated well']);
+  assert.equal(m.columns[0].role, 'patient_name');
+  noneOf(m.rows.map((r) => r.map(D.cellToString).join(' ')).join(' '), ['Ferreira', 'Teodor', '1947']);
+  const p = D.processTable({ headers: ['Patient', 'MRN', 'Portal', 'Visit Link'], rows: [['Lindahl, Marit', '7712004', 'Active - user mlindahl88', 'https://tele.example.org/r/lindahl-7712004'], ['Okoro, Femi', '7712019', 'Proxy: son tunde.okoro', 'n/a']] }, { seed: 5 });
+  const txt = p.rows.map((r) => r.map(D.cellToString).join(' ')).join(' ');
+  noneOf(txt, ['mlindahl88', 'lindahl-7712004', '7712004', 'tunde.okoro']);
+});
+test('r3 names: Pt + two words before any verb, an eponym surname after an honorific or before a person verb, initials then surname, dotted alias re-found, "proxy for", a given name in brackets', () => {
+  noneOf(textOut('Pt Orrin Vasquel emailed the outside records.'), ['Orrin', 'Vasquel']);
+  const h = textOut('Mrs. Hickman called. Hickman catheter flushed. Ewan Hickman here for labs.');
+  assert.ok(h.includes('Hickman catheter') && !h.startsWith('Mrs. Hickman') && !h.includes('Ewan'), h);
+  assert.ok(textOut('Mr. Bell\'s palsy improving.').includes('Bell\'s palsy'));
+  noneOf(textOut('Nursing: Gideon R. Ashcombe-Lyle arrived in chair 3.'), ['Gideon', 'Ashcombe']);
+  noneOf(textOut('Seen: Margaret Olin (goes by M.J.) in chair. M.J. reports nausea.'), ['M.J.']);
+  noneOf(textOut('Message from Ines Corvo (proxy for Aurelio Corvo) about labs.'), ['Aurelio']);
+  noneOf(D.processTable({ headers: ['Patient', 'MRN', 'Notes'], rows: [['Vashti, Orla', '4410021', 'stepson also Vashti (Dorran) visiting']] }, { seed: 5 }).rows[0].map(D.cellToString).join(' '), ['Dorran']);
+});
+test('r3 contacts and devices: a first name alone in a contact column is found in the comments; a pump model after its brand stays', () => {
+  const res = D.processTable({ headers: ['Patient', 'MRN', 'Emergency Contact', 'Comments'], rows: [['Haldane, Ruth', '6620031', 'Son - Torvald 555-0161', 'Torvald brings her in']] }, { seed: 5 });
+  noneOf(res.rows[0].map(D.cellToString).join(' '), ['Torvald']);
+  assert.ok(textOut('Pt home on CADD Solis pump, Alaris Medley in clinic.').includes('CADD Solis'));
+});
+test('r3 lower case: a lower-case export is matched in lower case, a short form of a long given name is the patient, a lower-case message has its names found from cues', () => {
+  const res = D.processTable({ headers: ['pt_name', 'mrn', 'notes'], rows: [['vanterhoef, ismene', 'e5520010', 'ismene sleepy today; daughter oriel at bedside'], ['KRISTOFFERSEN, MAXIMILIAN', 'E5520033', 'MAXI DECLINED ICE. MAXI WIFE AWARE']] }, { seed: 5 });
+  const out = res.rows.map((r) => r.map(D.cellToString).join(' ')).join(' ');
+  noneOf(out, ['ismene', 'oriel', 'MAXI ']);
+  assert.ok(out.includes('at bedside') && out.includes('DECLINED ICE'), out);
+  const m = textOut('portal msg: hi its rosamund vell, port hurts again. my neighbor ottilie can drive me. thanks, rosie');
+  noneOf(m, ['rosamund', 'vell', 'ottilie', 'rosie']);
+  assert.ok(textOut('pt says husband at bedside, son will drive home').includes('husband at bedside, son will drive home'));
+});
+test('r3 text and screenshots: values wrapped onto the next line, a dose unit wrapped below its number, a name broken mid-word in a narrow grid, tiles read across a board', () => {
+  const w = D.parseTextDocument('Banner: Male, 70y CSN:\n77120034519\nCall 508-555-\n0177 after 3pm');
+  assert.ok(w.rows.some((r) => /CSN: 77120034519/.test(r[3])) && w.rows.some((r) => /508-555-0177/.test(r[3])), JSON.stringify(w.rows));
+  assert.ok(D.parseTextDocument('0900 Lund, Ana   C1 Cisplatin 75\nMRN 66120091            mg/m2 over 1 hr').rows.some((r) => /Cisplatin 75 mg\/m2/.test(r[3])));
+  const g = 'Time   Patient    DOB     MRN    Visit\n0800   Abercrom DOB    E7710021  FOLFOX\nbie-   03/02/1951\nWhitlow,\nCasimir\n0830   Pemberto DOB    E7710055  Venofer\nn,     06/06/1960\nLavinia';
+  const doc = D.parseTextDocument(g);
+  assert.ok(doc.rows.some((r) => r[0] === 'Abercrombie-Whitlow, Casimir' && r[1] === 'E7710021'), JSON.stringify(doc.rows.map((r) => r.slice(0, 2))));
+  assert.ok(doc.rows.some((r) => r[0] === 'Pemberton, Lavinia' && r[1] === 'E7710055'));
+  const res = D.processTable({ headers: doc.headers, rows: doc.rows }, { columns: doc.columns, seed: 5 });
+  noneOf(res.rows.map((r) => r[3]).join('\n'), ['Abercrom', 'bie-', 'Whitlow', 'Pemberto', 'Lavinia', 'E7710021']);
+  const board = 'Bay 1                    Bay 2                    Bay 3\nHALVORSEN,          OKAFOR-LINDE,        BRISTOW, TEMPE\nASTRID               CHIDI                E5530019 | 91 y F\nE5530002 | 60 y F    E5530005 | 48 y M    Zometa 4 mg\nKeytruda 200 mg      Venofer 200 mg';
+  const b = D.parseTextDocument(board);
+  const pair = (nm) => (b.rows.find((r) => r[0].startsWith(nm)) || [])[1];
+  assert.equal(pair('HALVORSEN'), 'E5530002'); assert.equal(pair('OKAFOR-LINDE'), 'E5530005'); assert.equal(pair('BRISTOW'), 'E5530019');
+  const reg = D.createRegistry(); D.processTable({ headers: b.headers, rows: b.rows }, { columns: b.columns, seed: 5, registry: reg });
+  assert.equal(reg.size, 3);
+});
+test('r3 negatives: month-year is never a birthdate, lower-case fakes restore, short forms stay ordinary words at a sentence start, label-led Title Case, agencies and descriptions stay', () => {
+  assert.equal(D.parseTextDocument('Dx Mar 2015, MRN 1234567, Smith, John').rows[0][2], '');
+  const res = D.processTable({ headers: ['pt_name', 'mrn', 'notes'], rows: [['vanterhoef, ismene', 'e5520010', 'ismene sleepy today; daughter oriel at bedside']] }, { seed: 5 });
+  const back = D.reidentify({ headers: res.headers, rows: res.rows }, res.mapping);
+  assert.ok(D.cellToString(back.rows[0][2]).startsWith('ismene sleepy today; daughter oriel'), D.cellToString(back.rows[0][2]));
+  const st = D.processTable({ headers: ['Patient', 'MRN', 'Notes'], rows: [['Okafor, Stephanie', '5512001', 'Step 2 of protocol done. Steph aware.'], ['Lund, Heathcliff', '5512002', 'Heat applied to site.']] }, { seed: 5 });
+  assert.ok(st.rows[0][2].startsWith('Step 2 of protocol') && st.rows[1][2].startsWith('Heat applied'), st.rows.map((r) => r[2]).join(' / '));
+  ['Pt Lives Alone currently.', 'Pt Needs Wheelchair today.'].forEach((t) => assert.equal(textOut(t), t));
+  const ag = D.processTable({ headers: ['Patient', 'MRN', 'Emergency Contact', 'Notes'], rows: [['Okafor, Mildred', '5512001', 'Home Health Aide', 'Home Health Aide visits; Smith (Hospice) aware']] }, { seed: 5 });
+  assert.ok(ag.rows[0][3].includes('Home Health Aide visits') && ag.rows[0][3].includes('(Hospice)'), ag.rows[0][3]);
+  ['deaf', 'pregnant', 'overseas', 'diabetic', 'retired'].forEach((w) => { const t = `pt doing ok today, husband ${w} at home, will call back later`; assert.equal(textOut(t), t); });
 });

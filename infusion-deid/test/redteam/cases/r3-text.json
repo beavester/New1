@@ -1,0 +1,444 @@
+[
+  {
+    "id": "r3-sched-korean-caps-nospace",
+    "kind": "text",
+    "text": "SCHED COMMENT: RHEE,SOOYEON (MRN# 004 77182) moved from Thu 12/03 to Fri 12/11 per pt, daughter Hana Rhee driving. Keytruda 200 mg q3w C4D1, labs 1 hr prior. Pt cell: 555.0143 x2.",
+    "phi": [
+      "RHEE,SOOYEON",
+      "004 77182",
+      "12/03",
+      "12/11",
+      "Hana Rhee",
+      "555.0143"
+    ],
+    "keep": [
+      "Keytruda 200 mg",
+      "q3w",
+      "C4D1"
+    ],
+    "note": "ALL CAPS Korean name without space after comma, spaced MRN with #, weekday+month/day dates, relative full name, dotted phone with extension"
+  },
+  {
+    "id": "r3-mychart-nickname-peggy-hyphen",
+    "kind": "text",
+    "text": "MyChart message from patient: Hi this is Margaret Oyelaran-Pike (everyone calls me Peggy). I had bad nausea after Tuesday's infusion even with the ondansetron 8 mg. Can I get the Neulasta Onpro again? My husband Rupert can pick up. -Peggy",
+    "phi": [
+      "Margaret Oyelaran-Pike",
+      "Peggy",
+      "Rupert"
+    ],
+    "keep": [
+      "ondansetron 8 mg",
+      "Neulasta Onpro"
+    ],
+    "note": "nickname used as signature, hyphenated Nigerian-English surname, spouse given name only"
+  },
+  {
+    "id": "r3-benefits-mbi-member-id",
+    "kind": "text",
+    "text": "Benefits verification 11/06: Pt Dolores Abernathy-Quist, Medicare MBI 3HJ7-WQ2-RT48 active Part B. Secondary AARP Medigap member ID 00418827511. Darzalex Faspro 1800 mg SC covered under J9144, no PA needed.",
+    "phi": [
+      "11/06",
+      "Dolores Abernathy-Quist",
+      "3HJ7-WQ2-RT48",
+      "00418827511"
+    ],
+    "keep": [
+      "Darzalex Faspro 1800 mg",
+      "J9144"
+    ],
+    "note": "Medicare MBI format, numeric member ID with label, HCPCS code must survive"
+  },
+  {
+    "id": "r3-pharm-verif-vietnamese-four-part",
+    "kind": "text",
+    "text": "Pharmacy verification: NGUYEN THI KIM LOAN, DOB 07/14/1958, MRN 00561203. Carboplatin AUC 5 = 640 mg per Calvert using CrCl 98 mL/min, wt 81.2 kg. Paclitaxel 175 mg/m2 OK. Verified by RPh.",
+    "phi": [
+      "NGUYEN THI KIM LOAN",
+      "07/14/1958",
+      "00561203"
+    ],
+    "keep": [
+      "Carboplatin AUC 5",
+      "Calvert",
+      "Paclitaxel 175 mg/m2"
+    ],
+    "note": "four-token Vietnamese name in caps with no comma; eponym Calvert must survive"
+  },
+  {
+    "id": "r3-phone-nonagenarian-son",
+    "kind": "text",
+    "text": "Phone call: Spoke w/ son Desmond Achebe-Ward re: his mother Eunice Achebe-Ward. Pt is a nonagenarian, 96 y/o, and he asks to reduce chair time. Discussed switching Zometa 4 mg to q12 weeks. Call back 555-0186 after 3pm.",
+    "phi": [
+      "Desmond Achebe-Ward",
+      "Eunice Achebe-Ward",
+      "96 y/o",
+      "555-0186"
+    ],
+    "keep": [
+      "Zometa 4 mg",
+      "q12 weeks"
+    ],
+    "note": "age over 89 in 'NN y/o' form with 'nonagenarian', relative and patient sharing hyphenated surname"
+  },
+  {
+    "id": "r3-transport-apt-no-suffix",
+    "kind": "text",
+    "text": "Transport: wheelchair van pickup 0715 at 2210 Larchmont #4B, Eastbridge 04987. Pt Horace Quimby-Dunn, cell: 555 0158. Return after Herceptin 6 mg/kg and port flush with heparin 500 units.",
+    "phi": [
+      "2210 Larchmont #4B",
+      "Eastbridge",
+      "04987",
+      "Horace Quimby-Dunn",
+      "555 0158"
+    ],
+    "keep": [
+      "Herceptin 6 mg/kg",
+      "heparin 500 units"
+    ],
+    "note": "street with no suffix and # apartment, town + ZIP without state, space-separated phone after 'cell:'"
+  },
+  {
+    "id": "r3-sw-arabic-bint",
+    "kind": "text",
+    "text": "SW note: Met with Fatima bint Yusuf al-Mansouri and husband Omar al-Mansouri in infusion bay 7. Arabic interpreter used. Family lives at 77 Cedarline Ct Apt 12, Harrow Falls. Referred to copay foundation for Imfinzi 1500 mg.",
+    "phi": [
+      "Fatima bint Yusuf al-Mansouri",
+      "Omar al-Mansouri",
+      "77 Cedarline Ct Apt 12",
+      "Harrow Falls"
+    ],
+    "keep": [
+      "Imfinzi 1500 mg",
+      "bay 7"
+    ],
+    "note": "Arabic bint + al- particle, spouse, address with Ct + Apt, town without ZIP; bay number must survive"
+  },
+  {
+    "id": "r3-dob-nosep-label-variants",
+    "kind": "text",
+    "text": "Pt ID checked x2: name Cornelius Ashby-Tran, DOB:11221947, Med Rec No. 7740-0213. Pt reports rash grade 1 after cetuximab 250 mg/m2; continue with doxycycline 100 mg BID.",
+    "phi": [
+      "Cornelius Ashby-Tran",
+      "11221947",
+      "7740-0213"
+    ],
+    "keep": [
+      "cetuximab 250 mg/m2",
+      "doxycycline 100 mg BID"
+    ],
+    "note": "DOB with no separators directly after colon, 'Med Rec No.' label with dash-split number"
+  },
+  {
+    "id": "r3-hispanic-de-la-two-given",
+    "kind": "text",
+    "text": "Interpreter note: Pt María José de la Cruz Villanueva (prefers Sra. de la Cruz) declined port. Peripheral IV for oxaliplatin 85 mg/m2. Her daughter Guadalupe Villanueva signed consent as witness on 11/05/2026.",
+    "phi": [
+      "María José de la Cruz Villanueva",
+      "de la Cruz",
+      "Guadalupe Villanueva",
+      "11/05/2026"
+    ],
+    "keep": [
+      "oxaliplatin 85 mg/m2",
+      "Peripheral IV"
+    ],
+    "note": "accented two-word given name, 'de la' particle + double surname, short honorific form, relative"
+  },
+  {
+    "id": "r3-apostrophe-outside-onc-fax",
+    "kind": "text",
+    "text": "Records request: Siobhan O'Brien-Kealy, records sent to her outside oncologist Dr. Paolo D'Angelo, Lakeshore Hematology, fax 555-0177 / ph 555-0178. Last Rituxan 375 mg/m2 given 10/29; hold Bactrim DS while on bendamustine.",
+    "phi": [
+      "Siobhan O'Brien-Kealy",
+      "Paolo D'Angelo",
+      "555-0177",
+      "555-0178",
+      "10/29"
+    ],
+    "keep": [
+      "Rituxan 375 mg/m2",
+      "Bactrim DS",
+      "bendamustine"
+    ],
+    "note": "apostrophe surnames for patient and outside provider, fax/phone with slash"
+  },
+  {
+    "id": "r3-initials-tj-goes-by",
+    "kind": "text",
+    "text": "Nursing: Theodore J. Wexley-Brand (goes by T.J.) arrived ambulatory. T.J. reports fatigue 2/10. Pre-meds: diphenhydramine 25 mg IV, acetaminophen 650 mg PO. Gemzar 1000 mg/m2 started 0942.",
+    "phi": [
+      "Theodore J. Wexley-Brand",
+      "T.J."
+    ],
+    "keep": [
+      "diphenhydramine 25 mg IV",
+      "acetaminophen 650 mg PO",
+      "Gemzar 1000 mg/m2"
+    ],
+    "note": "initials-only nickname repeated as subject of sentence"
+  },
+  {
+    "id": "r3-mychart-username-email",
+    "kind": "text",
+    "text": "MyChart access issue: user name gma.lorraine47 locked out. Pt Lorraine Fitzhugh asks reset link go to lorraine.fitzhugh47@example.com. Reminder: Venofer 200 mg infusion Wed 11/18 at 1:30. Hgb 9.4, TSAT 11%.",
+    "phi": [
+      "gma.lorraine47",
+      "Lorraine Fitzhugh",
+      "lorraine.fitzhugh47@example.com",
+      "11/18"
+    ],
+    "keep": [
+      "Venofer 200 mg",
+      "Hgb 9.4",
+      "TSAT 11%"
+    ],
+    "note": "MyChart username containing a dot and digits, email, appointment date with weekday"
+  },
+  {
+    "id": "r3-nigerian-igbo-family",
+    "kind": "text",
+    "text": "Teaching done with pt Chukwuemeka Obiora Nwachukwu-Eze and wife Ngozi. Reviewed neutropenic precautions, ANC 1.1. Emergency contact: Mrs. Ngozi Nwachukwu-Eze 555-0134. Docetaxel 75 mg/m2 held x1 week.",
+    "phi": [
+      "Chukwuemeka Obiora Nwachukwu-Eze",
+      "Ngozi",
+      "Ngozi Nwachukwu-Eze",
+      "555-0134"
+    ],
+    "keep": [
+      "ANC 1.1",
+      "Docetaxel 75 mg/m2",
+      "neutropenic precautions"
+    ],
+    "note": "Igbo three-part name with hyphenated surname, spouse given name alone and with honorific"
+  },
+  {
+    "id": "r3-surname-equals-eponym-hickman",
+    "kind": "text",
+    "text": "Line care: Lionel Hickman here for dressing change. Mr. Hickman's Hickman catheter site clean, no erythema. Flushed with NS 10 mL. Hx Hodgkin lymphoma s/p ABVD.",
+    "phi": [
+      "Lionel Hickman",
+      "Mr. Hickman"
+    ],
+    "keep": [
+      "Hickman catheter",
+      "Hodgkin lymphoma",
+      "ABVD"
+    ],
+    "note": "patient surname identical to device eponym; eponym must survive while patient reference is removed"
+  },
+  {
+    "id": "r3-table-van-der-age-94",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "DOB",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "11/12/2026",
+        "VAN DER MEULEN, ANNEKE J",
+        "Med Rec No. 0091-4472",
+        "1/9/1932",
+        "Pt is 94, son Joost will call 555-0128 ext 311. Aranesp 100 mcg if Hgb < 10."
+      ]
+    ],
+    "phi": [
+      "11/12/2026",
+      "VAN DER MEULEN, ANNEKE J",
+      "0091-4472",
+      "1/9/1932",
+      "94",
+      "Joost",
+      "555-0128"
+    ],
+    "keep": [
+      "Aranesp 100 mcg",
+      "Hgb < 10"
+    ],
+    "note": "Dutch particle surname in caps with middle initial, bare age over 89 in comments, son by given name, phone with ext"
+  },
+  {
+    "id": "r3-table-korean-english-name",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "DOB",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "Mon 11/16/26",
+        "KIM, MIN-JUN",
+        "00388410",
+        "05/02/1966",
+        "Goes by David. Wife Ji-woo Kim interprets. Opdivo 480 mg q4w, TSH due."
+      ]
+    ],
+    "phi": [
+      "11/16/26",
+      "KIM, MIN-JUN",
+      "00388410",
+      "05/02/1966",
+      "David",
+      "Ji-woo Kim"
+    ],
+    "keep": [
+      "Opdivo 480 mg",
+      "q4w",
+      "TSH"
+    ],
+    "note": "Korean hyphenated given name, adopted English name in comments, spouse full name"
+  },
+  {
+    "id": "r3-ssn-plate-security",
+    "kind": "text",
+    "text": "Security/valet log: patient Bartholomew Szczepański left vehicle in infusion lot, plate 8RVK552. Registration needed SSN 912-55-0187 for financial counseling. Pt in chair 14 for Kyprolis 56 mg/m2.",
+    "phi": [
+      "Bartholomew Szczepański",
+      "8RVK552",
+      "912-55-0187"
+    ],
+    "keep": [
+      "Kyprolis 56 mg/m2",
+      "chair 14"
+    ],
+    "note": "Polish diacritic surname, license plate without state, SSN; chair number must survive"
+  },
+  {
+    "id": "r3-device-serial-pump",
+    "kind": "text",
+    "text": "Home pump connected: CADD Solis SN 7714-30092 for 46h 5-FU 2400 mg/m2. Pt Winifred Okonkwo-Lindqvist to return Thu 11/12 for disconnect. Port serial PP88213470 documented.",
+    "phi": [
+      "7714-30092",
+      "Winifred Okonkwo-Lindqvist",
+      "11/12",
+      "PP88213470"
+    ],
+    "keep": [
+      "CADD Solis",
+      "5-FU 2400 mg/m2",
+      "46h"
+    ],
+    "note": "device serials (pump and port) tied to patient; device brand name must survive"
+  },
+  {
+    "id": "r3-death-hospice-rn",
+    "kind": "text",
+    "text": "Pt Rosalind Featherstonehaugh expired at home 10/30/2026 per Seaside Hospice RN Brenda Kowalczyk (ph 555-0191). Cancel remaining FOLFIRINOX cycles 7-12 and notify Dr. office.",
+    "phi": [
+      "Rosalind Featherstonehaugh",
+      "10/30/2026",
+      "Brenda Kowalczyk",
+      "555-0191"
+    ],
+    "keep": [
+      "FOLFIRINOX",
+      "cycles 7-12"
+    ],
+    "note": "date of death, outside hospice nurse full name"
+  },
+  {
+    "id": "r3-insurance-aetna-spaced-id",
+    "kind": "text",
+    "text": "Auth update: Aetna ID W2284 71930 for pt Ignatius Brannigan-Moss approved Entyvio 300 mg IV q8w through 05/2027. Acct # 44009188 billed. Patient notified via voicemail at 555-0112.",
+    "phi": [
+      "W2284 71930",
+      "Ignatius Brannigan-Moss",
+      "44009188",
+      "555-0112"
+    ],
+    "keep": [
+      "Entyvio 300 mg IV",
+      "q8w"
+    ],
+    "note": "insurance member ID with internal space, account number with 'Acct #'"
+  },
+  {
+    "id": "r3-portal-url-pobox",
+    "kind": "text",
+    "text": "Pt Rasmus Lindqvist uploaded outside labs to https://portal.example.org/patients/rlindqvist-0412. Mail statements to P.O. Box 7731, Quarrytown 05844. Ferritin 12, start Injectafer 750 mg x2.",
+    "phi": [
+      "Rasmus Lindqvist",
+      "https://portal.example.org/patients/rlindqvist-0412",
+      "P.O. Box 7731",
+      "Quarrytown",
+      "05844"
+    ],
+    "keep": [
+      "Ferritin 12",
+      "Injectafer 750 mg"
+    ],
+    "note": "URL with patient-identifying path, dotted P.O. Box, town and ZIP"
+  },
+  {
+    "id": "r3-lowercase-signature-bev",
+    "kind": "text",
+    "text": "MyChart: hi its beverly szymanski again, my port is sore since the last Kadcyla 3.6 mg/kg. should i come in early? echo said EF 55%, still on trastuzumab emtansine. my neighbor gus kowal can drive me thurs. thanks, bev",
+    "phi": [
+      "beverly szymanski",
+      "gus kowal",
+      "bev"
+    ],
+    "keep": [
+      "Kadcyla 3.6 mg/kg",
+      "EF 55%",
+      "trastuzumab emtansine"
+    ],
+    "note": "all-lowercase patient and neighbor names, lowercase nickname signature"
+  },
+  {
+    "id": "r3-96th-birthday-date",
+    "kind": "text",
+    "text": "Scheduling: Pt Philippa Ravensworth celebrating her 96th birthday on 11/20, family requests no infusion that day. Move Prolia 60 mg SC to 11/23. Ca 9.1 OK.",
+    "phi": [
+      "Philippa Ravensworth",
+      "96th",
+      "11/20",
+      "11/23"
+    ],
+    "keep": [
+      "Prolia 60 mg SC",
+      "Ca 9.1"
+    ],
+    "note": "ordinal age over 89, birthday date month/day only, rescheduled date"
+  },
+  {
+    "id": "r3-visitors-two-word-given",
+    "kind": "text",
+    "text": "Visitor log, pod B: Mary Beth Thornquist (pt) accompanied by Billy Ray Cottle (fiance) and Jean-Luc Moreau-Tessier (brother-in-law). Infusion of Tecentriq 1200 mg completed without reaction.",
+    "phi": [
+      "Mary Beth Thornquist",
+      "Billy Ray Cottle",
+      "Jean-Luc Moreau-Tessier"
+    ],
+    "keep": [
+      "Tecentriq 1200 mg",
+      "without reaction"
+    ],
+    "note": "two-word given names (Mary Beth, Billy Ray), French hyphenated given + surname for visitors"
+  },
+  {
+    "id": "r3-vietnamese-order-mr-given-mrn-colon",
+    "kind": "text",
+    "text": "Infusion reaction note: Tran Van Minh, MRN:00478812, HAR 4400918823. At 15 min of Erbitux pt flushed; Mr. Minh given hydrocortisone 100 mg IV and Benadryl 50 mg IV, resolved. Wife Le Thi Hoa at bedside.",
+    "phi": [
+      "Tran Van Minh",
+      "00478812",
+      "4400918823",
+      "Mr. Minh",
+      "Le Thi Hoa"
+    ],
+    "keep": [
+      "hydrocortisone 100 mg IV",
+      "Benadryl 50 mg IV",
+      "Erbitux"
+    ],
+    "note": "Vietnamese surname-first order with honorific on given name, MRN with no space after colon, HAR account number, spouse Vietnamese name"
+  }
+]

@@ -125,6 +125,23 @@ Case correction: `aged 90` and `turns 90` in `tbl2-ages-over-89` were listed as 
 
 Left open: a lower-case nickname that appears in no handle and is not a known diminutive (`hi its mari` from `Marisol`) is not found; that needs the Tier 1 model.
 
+### 5e. Red-team round 3 (r3): blind cases, what changed
+
+A third blind round (`test/redteam/*/r3-*.json`: 24 text, 16 table, 8 screenshot cases). Before: 16 text/table cases and 3 screenshots leaked, 1 screenshot was blocked, 2 cases lost clinical text, and two screenshots keyed record numbers to the wrong patient (unscored, no `expectPatients`). After: no leaks, nothing blocked or lost in any round (r1's `Oxaliplatin 85 mg/m2` included). Fixed generally, each class with a unit test (`r3 …` in `test/unit.test.js`):
+
+- **Dates**: `Nov-30-2026`, month and year alone (`Feb 2027`, `09/2026`), a bare ordinal day after a time word (`until the 23rd`; `the 2nd cycle` stays). **Ages**: `Pt is 94,` (a comma after the number no longer blocks the rule).
+- **Places**: a numbered route as the street (`400 Route 9`), a town after a residence or travel verb (`lives alone in X;`, `drives in from X`), a town in brackets after a facility or `home`.
+- **Columns**: `Apt`/`Suite` headers and columns of `Unit 2B`-shaped values are removed (`Lot #` is not); a merged `Patient / DOB` cell is the name column and its birthdate feeds the census; a short date-headed column of links is processed; `user name123` and a dotted handle after `Proxy:`/a relation word are identifiers; outside/referring facility columns are free text.
+- **Names**: `Pt First Last` before any lower-case verb; a surname that is a clinical eponym or device after an honorific (`Mr. Hickman's Hickman catheter`) or before a person verb (`Lionel Hickman here`), never before a clinical word; a middle initial before the surname; dotted initials as an alias, re-found alone (`goes by T.J.` … `T.J. reports`); `proxy for First Last`; a given name in brackets after a name; every capitalized word of a removed contact cell (`Wife - Lorna 555-…`); a pump model after its brand stays (`CADD Solis`).
+- **Lower case and short forms**: an export written in lower case is matched in lower case in its own rows; the first four letters of a long given name are the patient in the patient's rows (`FINN` of Finnegan); in a message typed in lower case, a non-ordinary word after a relation word, a self-introduction or a sign-off is a name (`husband rufus`, `hi its beverly szymanski`, `thanks, bev`).
+- **Text and screenshots**: a value wrapped onto the next line is moved up to its label (`CSN:` / number, `413-555-` / `0129`); a dose unit wrapped below its number is moved up; a name broken mid-word by a narrow column (`Vanderhoe` / `k-` / `Okonkwo,`) is rebuilt from its record line, keeps that line's record number, and the broken pieces are replaced; under a row of tile labels (`Bay 1   Bay 2   Bay 3`) the board is cut into its columns and written tile by tile, so each tile's name, rest of name and record number stay one patient. `mg/m?2` (a misread superscript) reads `mg/m2`.
+
+Guards added after review: a month and year alone is never taken as a birthdate on a pasted line unless labelled; a made-up name written in lower case restores; a short form of a given name at a sentence start stays the ordinary word unless the text is in capitals or a person verb follows (`Step 2 of protocol` for a patient Stephanie); agencies in contact columns (`Home Health Aide`) are not names.
+
+Left on purpose: the lower-case pass has no English dictionary, only a list of ordinary words and adjective endings, so an unusual lower-case word right after a relation word in an all-lower-case note may be taken as a name (over-redaction, not a leak); `the 23rd` and `Feb 2027` restore exactly only when the shift does not cross a month boundary (the day-only form is read in the current month, the month-year form as the 15th); a tile label line (`Bay 2`) carries the previous tile's patient for date shifting.
+
+Case corrections: `turning 90` in `tbl3-age-column-90plus` moved to `keep` as `turning 90+` (the Safe Harbor aggregate; r1/r2 precedent). `Grace` in `tbl3-common-word-names` became `Grace hopes`: the scorer's one-edit match for 5-letter words also hits `grade` in that case's own keep string `neuropathy grade 1`, so the bare word could never pass; `Grace` is still removed.
+
 ## 6. Open questions for compliance (send as one email)
 
 1. Is any AI or cloud surface already under a BAA (Azure tenant, M365 Copilot, Epic's own)? If Azure Health De-ID is available inside the tenant, the detection engine is bought, not built, and this tool becomes the census/date-shift/tabular layer around it.

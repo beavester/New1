@@ -1,0 +1,460 @@
+[
+  {
+    "id": "r4-sched-caps-nospace-two-given",
+    "kind": "text",
+    "text": "SCHED COMMENT 11/09: RAMIREZ-OCHOA,MARIA JOSE moved from 0800 to 1030 per pt request. Med Rec No. 004 12345. Pt confirmed via cell: 555.0143 x2. FOLFOX cycle 4, needs CBC w/ diff and CMP prior. Ride by son Ernesto.",
+    "phi": [
+      "RAMIREZ-OCHOA,MARIA JOSE",
+      "004 12345",
+      "555.0143 x2",
+      "Ernesto",
+      "11/09"
+    ],
+    "keep": [
+      "FOLFOX",
+      "CBC w/ diff",
+      "CMP"
+    ],
+    "note": "ALL CAPS hyphenated double surname, no space after comma, two-word given name, Med Rec No. with spaced digits, dotted phone with extension, son named by first name only"
+  },
+  {
+    "id": "r4-mychart-goes-by-nickname",
+    "kind": "text",
+    "text": "MyChart message from Margaret Anne Quillfeather (goes by Peggy): Hi, this is Peggy. I can't make my Tuesday 11/17 iron infusion (Injectafer 750 mg), my daughter Rosalind has surgery that day. Can we do Thursday? You can email me at peggyq1948@example.com. Thanks!",
+    "phi": [
+      "Margaret Anne Quillfeather",
+      "Peggy",
+      "11/17",
+      "Rosalind",
+      "peggyq1948@example.com"
+    ],
+    "keep": [
+      "iron infusion",
+      "Injectafer 750 mg"
+    ],
+    "note": "nickname used alone after full name, daughter first name, email with birth year"
+  },
+  {
+    "id": "r4-pharm-verify-mbi",
+    "kind": "text",
+    "text": "Pharmacy verification: Pt NGUYEN THI HOA, DOB 03041951, Medicare MBI 1EG4-TE5-MK73. Rituximab 375 mg/m2 x BSA 1.62 = 607.5 mg, rounded to 600 mg per dose-rounding policy. Premed acetaminophen 650 mg PO, diphenhydramine 25 mg IV. Verified by RPh.",
+    "phi": [
+      "NGUYEN THI HOA",
+      "03041951",
+      "1EG4-TE5-MK73"
+    ],
+    "keep": [
+      "Rituximab 375 mg/m2",
+      "acetaminophen 650 mg",
+      "diphenhydramine 25 mg"
+    ],
+    "note": "Vietnamese name family-first in caps without comma, DOB without separators, Medicare MBI"
+  },
+  {
+    "id": "r4-phone-note-korean-proxy",
+    "kind": "text",
+    "text": "Phone call 11/05 1415: Spoke with pt's husband Kim Dae-sung re: wife Lee Soo-jin (MRN 7730215). He asked if Herceptin can be given on 11/12 instead. Advised trastuzumab q3wk window allows +/- 3 days. Callback 555-0188.",
+    "phi": [
+      "Kim Dae-sung",
+      "Lee Soo-jin",
+      "7730215",
+      "11/12",
+      "555-0188",
+      "11/05"
+    ],
+    "keep": [
+      "Herceptin",
+      "trastuzumab",
+      "q3wk"
+    ],
+    "note": "Korean family-first hyphenated given names, wife keeps own surname"
+  },
+  {
+    "id": "r4-transport-arabic-particle-address",
+    "kind": "text",
+    "text": "Transport note: Ride arranged for Fatima al-Zahrani, pickup 0715 at 82 Orchard Hill Unit 14, Marlowe Falls 01988. Wheelchair van. Contact grandson Yousef al-Zahrani 555-0127. Chair 6 reserved for pembrolizumab 200 mg.",
+    "phi": [
+      "Fatima al-Zahrani",
+      "82 Orchard Hill Unit 14",
+      "Marlowe Falls",
+      "01988",
+      "Yousef al-Zahrani",
+      "555-0127"
+    ],
+    "keep": [
+      "pembrolizumab 200 mg",
+      "Wheelchair van"
+    ],
+    "note": "al- particle names, address with no street suffix and unit, invented town with ZIP"
+  },
+  {
+    "id": "r4-sw-nigerian-name-pobox",
+    "kind": "text",
+    "text": "SW note: Met with Oluwaseun Adebayo-Okonkwo and her sister Chiamaka. Pt mailing address is P.O. Box 773, Brindlewood 03311. Assisted with copay foundation application for bevacizumab; member ID XQH448129003. Will f/u next Wednesday.",
+    "phi": [
+      "Oluwaseun Adebayo-Okonkwo",
+      "Chiamaka",
+      "P.O. Box 773",
+      "Brindlewood",
+      "03311",
+      "XQH448129003"
+    ],
+    "keep": [
+      "bevacizumab",
+      "copay foundation"
+    ],
+    "note": "Nigerian hyphenated surname, sister first name only, dotted P.O. Box, member ID"
+  },
+  {
+    "id": "r4-nonagenarian-iron",
+    "kind": "text",
+    "text": "Nursing note: Pleasant nonagenarian, turned 93 last week, here for Venofer 200 mg IV over 15 min. Tolerated well. Hgb 9.1, ferritin 18. Daughter-in-law Bernadette O'Shaughnessy at bedside.",
+    "phi": [
+      "93",
+      "Bernadette O'Shaughnessy"
+    ],
+    "keep": [
+      "Venofer 200 mg",
+      "Hgb 9.1",
+      "ferritin 18"
+    ],
+    "note": "age over 89 stated as 'turned 93' plus nonagenarian; apostrophe surname of relative; lab values must survive"
+  },
+  {
+    "id": "r4-outside-onc-fax",
+    "kind": "text",
+    "text": "Records request faxed to outside oncologist Dr. Ignatius D'Angelo, Seacliff Hematology, fax (555) 010-4471, re: pt Thomasina Wexley-Hart DOB 7/22/1946. Prior regimen R-CHOP x6, last dose 08/14/2026. Reed-Sternberg cells not seen on path.",
+    "phi": [
+      "Ignatius D'Angelo",
+      "(555) 010-4471",
+      "Thomasina Wexley-Hart",
+      "7/22/1946",
+      "08/14/2026"
+    ],
+    "keep": [
+      "R-CHOP",
+      "Reed-Sternberg"
+    ],
+    "note": "outside provider with apostrophe surname, fax in parenthesized format, eponym that must survive"
+  },
+  {
+    "id": "r4-initials-surname-caps",
+    "kind": "text",
+    "text": "Pt is A.K. VANDERMOLEN, prefers 'AK'. Acct # 88-210-4471. Arrived 0900 for carboplatin AUC 5 + paclitaxel 175 mg/m2. Emergency contact: wife Henrietta, home 555 0109.",
+    "phi": [
+      "A.K. VANDERMOLEN",
+      "AK",
+      "88-210-4471",
+      "Henrietta",
+      "555 0109"
+    ],
+    "keep": [
+      "carboplatin AUC 5",
+      "paclitaxel 175 mg/m2"
+    ],
+    "note": "initials plus caps surname, initials-nickname, dashed account number, spaced phone"
+  },
+  {
+    "id": "r4-de-la-particle-mychart-username",
+    "kind": "text",
+    "text": "Portal: MyChart username jdelacruzfuentes58 reset requested. Pt Joaquin de la Cruz Fuentes, MRN# 00593318. Infliximab 5 mg/kg q8wk, next due 12/02/2026. Remicade biosimilar switch approved.",
+    "phi": [
+      "jdelacruzfuentes58",
+      "Joaquin de la Cruz Fuentes",
+      "00593318",
+      "12/02/2026"
+    ],
+    "keep": [
+      "Infliximab 5 mg/kg",
+      "q8wk",
+      "Remicade"
+    ],
+    "note": "de la particle plus double surname, MyChart username derived from name"
+  },
+  {
+    "id": "r4-table-oneline-ssn-comments",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "DOB",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "11/10/2026",
+        "BIN SALEH,AHMED",
+        "MRN 4420917",
+        "1949-02-11",
+        "Pt gave SSN 900-55-0172 for financial counselor. Zoledronic acid 4 mg IV. Bring son Omar to interpret."
+      ]
+    ],
+    "phi": [
+      "11/10/2026",
+      "BIN SALEH,AHMED",
+      "4420917",
+      "1949-02-11",
+      "900-55-0172",
+      "Omar"
+    ],
+    "keep": [
+      "Zoledronic acid 4 mg",
+      "financial counselor"
+    ],
+    "note": "bin particle surname in caps no space, SSN inside comments, relative first name"
+  },
+  {
+    "id": "r4-table-age-over-89-text",
+    "kind": "table",
+    "headers": [
+      "Patient Name",
+      "MRN",
+      "Age",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "Pettigrew, Cornelius",
+        "000881245",
+        "94 y.o.",
+        "Deferred denosumab, Ca 8.2. Niece Wilhelmina calls weekly 555-0154."
+      ]
+    ],
+    "phi": [
+      "Pettigrew, Cornelius",
+      "000881245",
+      "94",
+      "Wilhelmina",
+      "555-0154"
+    ],
+    "keep": [
+      "denosumab",
+      "Ca 8.2"
+    ],
+    "note": "age column with y.o. suffix above 89, niece in comments"
+  },
+  {
+    "id": "r4-device-pump-serial",
+    "kind": "text",
+    "text": "Home infusion pump CADD-Solis serial SN 1147-882903 sent home with pt Leopold Achebe-Rourke for 46h 5-FU 2400 mg/m2. Disconnect scheduled 11/13 at Ashgrove home, 19 Tamarack Ln Apt 2, Ashgrove 04120.",
+    "phi": [
+      "1147-882903",
+      "Leopold Achebe-Rourke",
+      "11/13",
+      "19 Tamarack Ln Apt 2",
+      "Ashgrove",
+      "04120"
+    ],
+    "keep": [
+      "5-FU 2400 mg/m2",
+      "CADD-Solis"
+    ],
+    "note": "device serial number, address with abbreviated suffix and apt, town repeated"
+  },
+  {
+    "id": "r4-negatives-eponyms-dense",
+    "kind": "text",
+    "text": "Pt Ingrid Solvang here for Hodgkin lymphoma ABVD C3D15. Hx Bell's palsy 2019, Raynaud's. Brentuximab not started. Bleomycin held, DLCO 62%. Next appt 11/24.",
+    "phi": [
+      "Ingrid Solvang",
+      "11/24"
+    ],
+    "keep": [
+      "Hodgkin lymphoma",
+      "ABVD",
+      "Bell's palsy",
+      "Bleomycin"
+    ],
+    "note": "dense eponyms and regimen codes beside a short patient name; years alone not PHI"
+  },
+  {
+    "id": "r4-license-plate-visitor",
+    "kind": "text",
+    "text": "Security/valet: visitor Desmond Okafor-Lindqvist parked in patient lot, plate 4TRW882, waiting for his mother in pod B. Her infusion of IVIG 0.4 g/kg runs until 1500.",
+    "phi": [
+      "Desmond Okafor-Lindqvist",
+      "4TRW882"
+    ],
+    "keep": [
+      "IVIG 0.4 g/kg",
+      "pod B"
+    ],
+    "note": "visitor name and license plate"
+  },
+  {
+    "id": "r4-irish-mac-lowercase-message",
+    "kind": "text",
+    "text": "hi this is siobhan mac giolla phadraig, my oncologist dr. fennimore said my keytruda can wait a week since my TSH was 7.8. my number changed to 555-0176. dob 9/9/1952. thx",
+    "phi": [
+      "siobhan mac giolla phadraig",
+      "fennimore",
+      "555-0176",
+      "9/9/1952"
+    ],
+    "keep": [
+      "keytruda",
+      "TSH was 7.8"
+    ],
+    "note": "all lowercase message, multi-particle Irish surname, outside oncologist surname lowercase"
+  },
+  {
+    "id": "r4-death-date-hospice",
+    "kind": "text",
+    "text": "Note: Pt Gertrude Hollowell-Banks expired 11/02/2026 at Riverbend Hospice per daughter Cordelia. Cancel remaining cycles of azacitidine 75 mg/m2. Remove from chair schedule.",
+    "phi": [
+      "Gertrude Hollowell-Banks",
+      "11/02/2026",
+      "Cordelia"
+    ],
+    "keep": [
+      "azacitidine 75 mg/m2",
+      "Remove from chair schedule"
+    ],
+    "note": "date of death, relative first name"
+  },
+  {
+    "id": "r4-insurance-group-member",
+    "kind": "text",
+    "text": "Benefits check for TANAKA, HIROSHI: BlueRiver PPO member ID BRV-221-448-097, group 77014. Ocrelizumab 600 mg covered, PA not required. Pt reachable at hiro.tanaka.44@example.net or home phone 555-0131 ext 2.",
+    "phi": [
+      "TANAKA, HIROSHI",
+      "BRV-221-448-097",
+      "hiro.tanaka.44@example.net",
+      "555-0131 ext 2"
+    ],
+    "keep": [
+      "Ocrelizumab 600 mg",
+      "PA not required"
+    ],
+    "note": "caps name with space, member ID with dashes, email, phone with ext"
+  },
+  {
+    "id": "r4-epic-dot-phrase-header",
+    "kind": "text",
+    "text": "Patient: Okonjo, Ifeoma C\nMRN: 5562018  CSN: 300044781  DOB: 04/30/1958\nPCP: Dr. Archibald Penhallow (outside)\nVisit: 11/06/2026 Infusion\nPlan: Darzalex Faspro 1800 mg SC, dex 20 mg PO.",
+    "phi": [
+      "Okonjo, Ifeoma C",
+      "5562018",
+      "300044781",
+      "04/30/1958",
+      "Archibald Penhallow",
+      "11/06/2026"
+    ],
+    "keep": [
+      "Darzalex Faspro 1800 mg",
+      "dex 20 mg"
+    ],
+    "note": "Epic dot-phrase header with CSN, outside PCP"
+  },
+  {
+    "id": "r4-url-personal-portal",
+    "kind": "text",
+    "text": "Pt shared fundraising page https://giving.example.com/help-bartholomew-quince for treatment costs; Bartholomew Quince asked if we could post flyer. Declined per policy. Gemcitabine 1000 mg/m2 D1, D8 with nab-paclitaxel 125 mg/m2.",
+    "phi": [
+      "https://giving.example.com/help-bartholomew-quince",
+      "Bartholomew Quince"
+    ],
+    "keep": [
+      "Gemcitabine 1000 mg/m2",
+      "nab-paclitaxel 125 mg/m2"
+    ],
+    "note": "URL containing patient name"
+  },
+  {
+    "id": "r4-table-two-surname-spanish",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "Phone",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "Nov 16, 2026",
+        "Gutierrez de Alba, Luz Marina",
+        "0099 4417",
+        "cell: 555-0193",
+        "Spanish interpreter. Husband Rigoberto drives. Ferumoxytol 510 mg."
+      ]
+    ],
+    "phi": [
+      "Nov 16, 2026",
+      "Gutierrez de Alba, Luz Marina",
+      "0099 4417",
+      "555-0193",
+      "Rigoberto"
+    ],
+    "keep": [
+      "Ferumoxytol 510 mg",
+      "Spanish interpreter"
+    ],
+    "note": "Spanish double surname with de, two-word given name, spaced MRN, cell: prefix"
+  },
+  {
+    "id": "r4-van-particle-caps-outside-neuro",
+    "kind": "text",
+    "text": "Referral in: VAN HOUTEN, ELISABETH M, referred by outside neurologist Dr. Maarten van Houten (no relation) for natalizumab 300 mg q4wk. JCV antibody index 0.3. Office ph 555-0161.",
+    "phi": [
+      "VAN HOUTEN, ELISABETH M",
+      "Maarten van Houten",
+      "555-0161"
+    ],
+    "keep": [
+      "natalizumab 300 mg",
+      "JCV antibody index 0.3"
+    ],
+    "note": "van particle in caps for patient and lowercase for outside provider with same surname"
+  },
+  {
+    "id": "r4-common-word-surnames",
+    "kind": "text",
+    "text": "Chair 3: Faith Hope Mercer, follow-up with Dr. Joy Winter (outside rheum) about Orencia. Pt's husband Rich Mercer will pick up. Abatacept 750 mg IV, next infusion 12/01.",
+    "phi": [
+      "Faith Hope Mercer",
+      "Joy Winter",
+      "Rich Mercer",
+      "12/01"
+    ],
+    "keep": [
+      "Orencia",
+      "Abatacept 750 mg"
+    ],
+    "note": "names that are common English words (Faith, Hope, Joy, Winter, Rich)"
+  },
+  {
+    "id": "r4-dob-written-out-age",
+    "kind": "text",
+    "text": "Intake: Ambrose Thistlewood, born March fourth 1931, age ninety-five. Lives at 7 Quarry Rd, Elm Hollow. Dx MDS, on luspatercept 1 mg/kg q3wk.",
+    "phi": [
+      "Ambrose Thistlewood",
+      "March fourth 1931",
+      "ninety-five",
+      "7 Quarry Rd",
+      "Elm Hollow"
+    ],
+    "keep": [
+      "MDS",
+      "luspatercept 1 mg/kg"
+    ],
+    "note": "DOB with spelled-out day, age over 89 in words, street address and town"
+  },
+  {
+    "id": "r4-pharmacy-lot-negatives-vs-id",
+    "kind": "text",
+    "text": "Pharmacy: Lot 4G221A exp 03/2028 for daratumumab. Pt Rasmus Eklund-Moreau weight 72 kg. Dose 16 mg/kg = 1152 mg. NDC 57894-502-05. Pt's MRN 61 220 945 verified with 2 identifiers.",
+    "phi": [
+      "Rasmus Eklund-Moreau",
+      "61 220 945"
+    ],
+    "keep": [
+      "daratumumab",
+      "16 mg/kg",
+      "NDC 57894-502-05",
+      "Lot 4G221A"
+    ],
+    "note": "drug lot/NDC numbers (not patient identifiers) mixed with spaced MRN"
+  }
+]
