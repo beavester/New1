@@ -192,3 +192,11 @@ Effect on the round 5 set (biased, because these fixes were designed from its mi
 ### Tier 1 model: decision deferred, path documented
 
 Not bundled in this version. Reasons: (a) Hugging Face is unreachable from the build environment, so the weights could not be fetched or tested; (b) a 110M INT8 model adds roughly 110 MB to the file, which is past what a single HTML file should carry; (c) no published validation on scheduling text. The sensible integration is a separate model folder the user picks once in the page (a file input, cached in IndexedDB), with `onnxruntime-web` bundled; the `detectText` function already merges spans from any producer. Build it when the gold set shows what the lexicon still misses.
+
+### Round 6 (blind measurement of v0.3) and the v0.4 fixes
+
+92 fresh cases, scored once, no fixes. Ordinary comments: 3 of 56 leaked (5%, 95% CI 2–15%), down from 10 of 56 (18%, CI 10–30%) in round 5. Hard comments: 10 of 24 (42%), from 12 of 24. Screenshots: 3 of 12 leaked (insurance member IDs on a check-in board, a hyphenated tile name, a town before its ZIP); round 5 had 0 of 12. All 16 leaks were real.
+
+v0.4 fixes, each general: split "Pt Last / Pt First" columns form one patient and are surrogated as parts; header abbreviations (Pat Age, Birth Dt, Prov, Emerg Contact); insurer-prefixed member IDs and masked/last-4 SSNs; phone numbers written in words; a name before " - MRN" or at a line start before " - drug"; lower-case names after pt/called; quoted nicknames inside a name; places after movement cues and "Town 44052"; tile rows of "Last, First" names paired with the record numbers below, including hyphenated surnames and a second given name; a self-introduction ("Hi, this is Lan Huong") naming the owner of an unnamed record number. Round 7 measures v0.4.
+
+Known residue: two word-names at a sentence start with weak context ("Rose Bell in chair 4" is caught; a bare "Rose reports" later in the note is not); names wrapped across distant lines in a narrow OCR grid are blocked by the self-check rather than leaked.

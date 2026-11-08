@@ -996,3 +996,28 @@ test('#-prefixed identifiers and received-dates', () => {
   assert.ok(r.some((x) => /=71120045$/.test(x)), r.join(','));
   assert.ok(r.includes('DATE=2/1'), r.join(','));
 });
+
+test('round 6 classes: split name columns, insurance IDs, spelled phones, tile rows, dash pairs, lower-case runs, nicknames, places', () => {
+  // split "Pt Last" / "Pt First" columns form one patient and are surrogated as parts
+  const r = D.processTable({ headers: ['Appt Date', 'Pt Last', 'Pt First', 'MRN', 'Comments'], rows: [[new Date(2026, 10, 20), 'Oduya', 'Temitope', '6672210', 'Temitope tolerated; Oduya family at bedside.']] }, { seed: 3 });
+  assert.equal(r.registry.size, 1); assert.notEqual(r.rows[0][1], 'Oduya'); assert.notEqual(r.rows[0][2], 'Temitope');
+  for (const leak of ['Oduya', 'Temitope']) assert.ok(!r.rows[0][4].includes(leak), leak + ': ' + r.rows[0][4]);
+  // header abbreviations
+  const roles = D.classifyColumns(['Pat Name', 'Birth Dt', 'Pat Age', 'Prov', 'Emerg Contact'], [['Jimenez, Rosalba', '1936-06-27', '90', 'Bhattacharya, S', 'Marisela Jimenez (dtr)']]).map((c) => c.role);
+  assert.deepEqual(roles, ['patient_name', 'dob', 'age', 'provider', 'drop']);
+  // identifiers and phones in words
+  const ids = rules('UHC / 009227418-02; Aetna: W220893115; Medicaid ID 44120099871; SSN last 4 (xxx-xx-6612); cell five five five 0171; Lot 4G221A NDC 57894-502-05');
+  for (const x of ['009227418-02', 'W220893115', '44120099871', 'xxx-xx-6612', 'five five five 0171']) assert.ok(ids.some((s) => s.endsWith('=' + x)), x + ' in ' + ids.join(','));
+  assert.ok(!ids.some((s) => /57894/.test(s)), 'NDC kept: ' + ids.join(','));
+  // tile row of "Last, First" names paired with the MRNs below
+  const t = D.parseTextDocument('N1 Ogunbiyi, Folasade          N2 Rousseau-Lapointe, Ghislain          N3 Pham, Quoc Dung\nMRN 1472039 - DOB 04/11/1975          MRN 8356120 - DOB 09/27/1958          MRN 6209478 - DOB 12/30/1969');
+  const reg = D.createRegistry(); D.processTable({ headers: t.headers, rows: t.rows }, { columns: t.columns, registry: reg, seed: 3 });
+  assert.equal(reg.size, 3, JSON.stringify(reg.toMappingRows().map((x) => x.RealName)));
+  // names before a dash, lower-case runs after a cue, quoted nicknames, places after movement cues
+  const names = (x) => D.lexiconSpans(x, cfg()).filter((s) => D.COARSE(s.type) === 'NAME' || s.type === 'LOCATION').map((s) => s.text).sort();
+  assert.deepEqual(names('Ananya Krishnamurthy - Benlysta monthly.'), ['Ananya Krishnamurthy']);
+  assert.deepEqual(names('called nguyen thi bich ngoc re tomorrows rituxan; belongs to pt lakshmi venkatesan in chair 9'), ['lakshmi venkatesan', 'nguyen thi bich ngoc']);
+  assert.deepEqual(names('Adebayo "Bayo" Ogunwale transferred care from Mercy Hospital in Carbondale; pt moving to Decatur next month. Lorain 44052'), ['Adebayo "Bayo" Ogunwale', 'Carbondale', 'Decatur', 'Lorain 44052']);
+  for (const neg of ['pt doing well in chair 3; w/ fall risk; MS. Premed solumedrol given', '(ILD screen negative) from ECMC', 'Pt Zbigniew arrived']) assert.ok(!names(neg).some((n) => /fall|risk|Premed|ILD|doing/.test(n)), neg + ' -> ' + names(neg));
+  assert.deepEqual(names('Pt Zbigniew arrived'), ['Zbigniew']);
+});
