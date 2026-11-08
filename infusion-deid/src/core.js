@@ -646,7 +646,9 @@
       const from = ad.end;
       const tail = text.slice(from).match(/^,?[ \t]+((?:[A-Z][A-Za-z'’\-]+,?[ \t]+){0,3}?)(?:([A-Z]{2}),?[ \t]+)?(\d{5}(?:-\d{4})?)\b/);
       if (tail) { const lead = tail[0].match(/^,?[ \t]+/)[0].length; spans.push({ start: from + lead, end: from + tail[0].length, type: 'LOCATION', source: 'rule', text: tail[0].slice(lead) }); continue; }
-      const town = text.slice(from).match(/^,?[ \t]+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)?)(?=[ \t]*(?:[.,;:\n]|$))/);
+      let town = text.slice(from).match(/^,?[ \t]+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)?)(?=[ \t]*(?:[.,;:\n]|$))/);
+      // a named complex between the street and the town: "14 Pine Ridge Mobile Home Park, Gorham Falls", "2 Elm Ct Apartments, Tisbury"
+      if (!town) town = text.slice(from).match(/^(?:[ \t]+(?:Mobile|Home|Trailer|RV|Park|Estates?|Manor|Village|Villas?|Towers?|Apartments?|Apts|Condos?|Condominiums?|Court|Commons|Gardens|Place|Plaza|Terrace|Senior|Living|Community|Residences?)\b){1,4},[ \t]+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)?)(?=[ \t]*(?:[.,;:\n]|$))/);
       if (town && !LEX.isClinical(town[1])) { const lead = town[0].length - town[1].length; spans.push({ start: from + lead, end: from + town[0].length, type: 'LOCATION', source: 'rule', text: town[1] }); }
     }
     run(RULES.AGE, 'AGE'); run(RULES.AGE_ORDINAL, 'AGE'); run(RULES.AGE_WORDS, 'AGE'); run(RULES.AGE_Y, 'AGE');
@@ -1754,6 +1756,10 @@
     if (cfg.layers.propagate && ctx.propagateRegex) {
       ctx.propagateRegex.lastIndex = 0; let m;
       while ((m = ctx.propagateRegex.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: 'propagate', conf: 0.65, text: m[0], fullText: text });
+      if (ctx.propagateRegex.places) {
+        const pl = ctx.propagateRegex.places; pl.lastIndex = 0;
+        while ((m = pl.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'LOCATION', source: 'propagate', conf: 0.6, text: m[0], fullText: text });
+      }
       if (ctx.propagateRegex.handleParts) {
         const hp = ctx.propagateRegex.handleParts; hp.lastIndex = 0;
         while ((m = hp.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: 'propagate', conf: 0.6, text: m[0], fullText: text });
@@ -1799,7 +1805,7 @@
 
   // Collect tokens worth propagating from a set of spans (document-level).
   function collectPropagation(allSpans, cfg) {
-    const terms = new Set(), ambTerms = new Set(), handleParts = new Set();
+    const terms = new Set(), ambTerms = new Set(), handleParts = new Set(), placeTerms = new Set();
     const titleCase = (w) => w.toLowerCase().replace(/(^|[-'’])([a-z])/g, (m, a, b) => a + b.toUpperCase());
     for (const s of allSpans) {
       // the words of a user name or e-mail address ("rosie.delgado62", "lally.marchbanks@...") are the person's names, and
@@ -1807,6 +1813,14 @@
       if ((s.type === 'EMAIL' || (s.type === 'ID_OTHER' && s.handle)) && s.text) {
         const local = s.text.split('@')[0].replace(/^@/, '');
         local.split(/[^A-Za-z]+/).forEach((w) => { if (w.length >= 4 && !COMMON_CAP.has(w.toLowerCase()) && !LEX.isClinical(w) && !LEX.isAmbiguous(w) && !LEX.ORG_SUFFIX_SET.has(w.toLowerCase()) && !LEX.ORG_NAMEWORD_SET.has(w.toLowerCase()) && !/^(?:user|admin|info|mail|noreply|reply|office|dept|nurse|clinic|health|care|team|help|support|contact|example|test|mychart|portal)$/i.test(w)) handleParts.add(w.toLowerCase()); });
+        continue;
+      }
+      // a town fixed by a street address, a ZIP or a state ("19 Tamarack Ln, Ashgrove 04120") is the same place when it is
+      // named again without them ("Disconnect at Ashgrove home")
+      if ((s.type === 'LOCATION' || s.type === 'ZIP') && s.source === 'rule' && s.text) {
+        const town = s.text.replace(/,?\s*(?:[A-Z]{2}\s+)?\d{5}(?:-\d{4})?\s*$/, '').replace(/,?\s+[A-Z]{2}$/, '').trim();
+        const ws = town.split(/\s+/);
+        if (town.length >= 4 && ws.length <= 3 && ws.every((w) => /^[A-Z][a-z'’\-]+$/.test(w)) && !(ws.length === 1 && (LEX.isClinical(town) || COMMON_CAP.has(town.toLowerCase()) || COMMON_LOWER.has(town.toLowerCase()) || LEX.isAmbiguous(town) || LEX.isFirstName(town) || PLACE_WORD.test(town) || LEX.ORG_SUFFIX_SET.has(town.toLowerCase()) || LEX.ORG_NAMEWORD_SET.has(town.toLowerCase()) || town.length < 5))) placeTerms.add(town);
         continue;
       }
       if (COARSE(s.type) !== 'NAME' || s.source === 'census' || s.source === 'propagate' || s.initials) continue;
@@ -1828,10 +1842,11 @@
         if (core === core.toUpperCase() && /[A-Z]{3}/.test(core)) terms.add(titleCase(core));
       }
     }
-    if (!terms.size && !ambTerms.size && !handleParts.size) return null;
+    if (!terms.size && !ambTerms.size && !handleParts.size && !placeTerms.size) return null;
     const mk = (set) => new RegExp(`(?<![\\w])(?:${[...set].sort((a, b) => b.length - a.length).map(escapeRe).join('|')})(?![\\w])`, 'g'); // case-sensitive on purpose
     const re = terms.size ? mk(terms) : /(?!)/g;
     re.ambiguous = ambTerms.size ? mk(ambTerms) : null;
+    re.places = placeTerms.size ? mk(placeTerms) : null;
     re.handleParts = handleParts.size ? new RegExp(`(?<![\\w])(?:${[...handleParts].sort((a, b) => b.length - a.length).map(escapeRe).join('|')})(?![\\w])`, 'gi') : null;
     return re;
   }
@@ -1841,9 +1856,12 @@
   function columnNameSpans(headers, rows, columns) {
     const out = [];
     columns.forEach((col) => {
-      if (col.role !== 'drop' || !PERSON_COLUMN.test(col.header || '')) return;
+      // a person column kept as free text (Visitor(s), Contact) holds short lists of people ("Yumi N. + grandson Kenta")
+      const textPerson = col.role === 'text' && PERSON_COLUMN.test(col.header || '') && !/\b(?:notes?|comments?|remarks?|log|history|instructions?)\b/i.test(col.header || '');
+      if ((col.role !== 'drop' && !textPerson) || !PERSON_COLUMN.test(col.header || '')) return;
       rows.forEach((row) => {
         const v = cellToString(row[col.index]).trim(); if (!v) return;
+        if (textPerson && (v.split(/\s+/).length > 8 || /[.!?]\s+\p{Lu}\p{Ll}/u.test(v))) return; // a sentence, not a list of people
         const m = v.match(/^([A-Z][A-Za-z'’\-]+(?:\s[A-Z][A-Za-z'’\-]+)?),\s*([A-Z][A-Za-z'’\-]+)/) || v.match(/^([A-Z][a-z][A-Za-z'’\-]+)\s+([A-Z][A-Za-z'’\-]+)(?=\s|$|\()/);
         const orgish = (w) => w.split(/[\s\-]+/).some((x) => { const l = x.toLowerCase(); return LEX.ORG_SUFFIX_SET.has(l) || LEX.ORG_NAMEWORD_SET.has(l) || LEX.ORG_PREFIX_SET.has(l) || COMMON_CAP.has(l); });
         if (m && [m[1], m[2]].some(orgish)) return; // "Home Health Aide", "Hospice of Buffalo": an agency, not a person
