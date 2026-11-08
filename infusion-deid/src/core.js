@@ -206,27 +206,33 @@
     const colByRole = (role) => columns.filter((c) => c.role === role).map((c) => c.index);
     const nameCols = colByRole('patient_name'), mrnCols = colByRole('mrn'), dobCols = colByRole('dob');
     const acctCols = colByRole('account'), phoneCols = colByRole('phone'), provCols = colByRole('provider');
-    const patients = new Map(); // key -> patient
+    const patients = new Map(); // entity id -> patient (census view of a registry entity)
     const providers = new Map(); // normalized surname+first -> provider
     const rowPatient = new Array(rows.length).fill(null);
+    const registry = (opts && opts.registry) || createRegistry();
     let order = 0;
 
     rows.forEach((row, ri) => {
       const mrn = mrnCols.map((c) => cellToString(row[c]).trim()).find(Boolean) || '';
       const nameRaw = nameCols.map((c) => cellToString(row[c]).trim()).find(Boolean) || '';
       const dob = dobCols.map((c) => row[c]).find((v) => v != null && v !== '');
-      const key = mrn ? `mrn:${mrn.replace(/^0+/, '')}` : nameRaw ? `name:${nameRaw.toLowerCase()}|${cellToString(dob)}` : null;
-      if (key) {
+      const accounts = acctCols.map((c) => cellToString(row[c]).trim()).filter(Boolean);
+      const phones = phoneCols.map((c) => cellToString(row[c]).trim()).filter(Boolean);
+      const entity = (mrn || nameRaw) ? registry.resolve({ name: nameRaw, mrn, dob, accounts, phones }) : null;
+      if (entity) {
+        const key = entity.id;
         let p = patients.get(key);
         if (!p) {
-          p = { key, order: order++, mrns: new Set(), names: new Set(), parsed: null, dob: null, accounts: new Set(), phones: new Set(), rows: [] };
+          p = { key, entity, order: order++, mrns: new Set(), names: new Set(), parsed: null, dob: null, accounts: new Set(), phones: new Set(), rows: [] };
           patients.set(key, p);
         }
-        if (mrn) { p.mrns.add(mrn); const st = mrn.replace(/^0+/, ''); if (st.length >= 5) p.mrns.add(st); }
-        if (nameRaw) { p.names.add(nameRaw); if (!p.parsed) p.parsed = parseName(nameRaw); }
-        if (dob != null && dob !== '' && !p.dob) p.dob = dob;
-        acctCols.forEach((c) => { const a = cellToString(row[c]).trim(); if (a) p.accounts.add(a); });
-        phoneCols.forEach((c) => { const ph = cellToString(row[c]).trim(); if (ph) p.phones.add(ph); });
+        // every MRN/name/DOB the registry knows for this person counts, including ones seen in earlier inputs
+        entity.mrns.forEach((m) => { p.mrns.add(m); const st = m.replace(/^0+/, ''); if (st.length >= 5) p.mrns.add(st); const nm = normalizeId(m); if (nm !== m) p.mrns.add(nm); });
+        entity.names.forEach((nm) => p.names.add(nm));
+        if (!p.parsed) { const firstName = nameRaw || [...entity.names][0]; if (firstName) p.parsed = parseName(firstName); }
+        if (!p.dob) { if (dob != null && dob !== '') p.dob = dob; else if (entity.dobs.size) p.dob = [...entity.dobs][0]; }
+        entity.accounts.forEach((a) => p.accounts.add(a));
+        entity.phones.forEach((ph) => p.phones.add(ph));
         p.rows.push(ri);
         rowPatient[ri] = key;
       }
@@ -261,7 +267,10 @@
       p.mrns.forEach((m) => addVariant(m, 'MRN', p.key));
       p.accounts.forEach((a) => addVariant(a, 'ACCOUNT', p.key));
       p.phones.forEach((ph) => { addVariant(ph, 'PHONE', p.key); const d = ph.replace(/\D/g, ''); if (d.length >= 7) addVariant(d, 'PHONE', p.key); });
-      if (p.parsed) nameVariants(p.parsed).forEach((v) => {
+      const allVariants = new Set();
+      p.names.forEach((nm) => { const pn = parseName(nm); if (pn) nameVariants(pn).forEach((v) => allVariants.add(v)); });
+      if (p.parsed) nameVariants(p.parsed).forEach((v) => allVariants.add(v));
+      [...allVariants].forEach((v) => {
         // single ambiguous/common-word tokens must match with a capital letter, and
         // tokens that are also months/clinical words only match inside that patient's own rows
         const single = !/\s|,/.test(v);
@@ -285,7 +294,9 @@
     // One alternation regex, longest first, word-boundary aware
     const keys = [...lookup.keys()].sort((a, b) => b.length - a.length);
     const regex = keys.length ? new RegExp(`(?<![\\w])(?:${keys.map(escapeRe).join('|')})(?![\\w])`, 'gi') : null;
-    return { patients, providers, rowPatient, lookup, regex, nameCols, mrnCols, dobCols, acctCols, phoneCols, provCols };
+    const mrnNorm = new Map();
+    for (const p of patients.values()) p.mrns.forEach((m) => { const k = mrnKeyOf(m); if (k) mrnNorm.set(k, p.key); });
+    return { patients, providers, rowPatient, lookup, regex, registry, mrnNorm, nameCols, mrnCols, dobCols, acctCols, phoneCols, provCols };
   }
 
   // ---------------------------------------------------------------------
@@ -673,6 +684,15 @@
       if (hit.rowScoped && !own) continue;
       spans.push({ start: m.index, end: m.index + m[0].length, type: hit.type, source: 'census', entity: own ? rowPatientKey : hit.entities[0], text: m[0], conf: 1 });
     }
+    if (census.mrnNorm && census.mrnNorm.size) {
+      // tokens that are MRNs with OCR confusions (O for 0, l for 1, S for 5 ...)
+      const idRe = /(?<![\w\/\-.:])[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w\/\-.:])/g; let k;
+      while ((k = idRe.exec(text))) {
+        if (/^\d+$/.test(k[0]) && census.lookup.has(k[0].toLowerCase())) continue; // exact match already handled
+        const ent = census.mrnNorm.get(mrnKeyOf(k[0]));
+        if (ent && (k[0].match(/\d/g) || []).length >= 4) spans.push({ start: k.index, end: k.index + k[0].length, type: 'MRN', source: 'census', entity: ent, text: k[0], conf: 0.9 });
+      }
+    }
     return spans;
   }
 
@@ -803,11 +823,20 @@
       let info = patientInfo.get(key);
       if (!info) {
         const p = census.patients.get(key);
-        const idx = p ? p.order : patientInfo.size;
-        info = { key, code: `P${String(idx + 1).padStart(3, '0')}`, fakeFirst: pick(LEX.FAKE_FIRST), fakeLast: pick(LEX.FAKE_LAST), offset: cfg.surrogate.dateShift ? randOffset() : 0 };
+        const e = p && p.entity ? p.entity : (census.registry && census.registry.get(key)) || null;
+        if (e) {
+          // identity persists across inputs: reuse what the registry already assigned
+          if (!e.fakeFirst) e.fakeFirst = pick(LEX.FAKE_FIRST); else taken.add(e.fakeFirst.toLowerCase());
+          if (!e.fakeLast) e.fakeLast = pick(LEX.FAKE_LAST); else taken.add(e.fakeLast.toLowerCase());
+          if (e.offset == null) e.offset = cfg.surrogate.dateShift ? randOffset() : 0;
+          info = { key, code: e.code, fakeFirst: e.fakeFirst, fakeLast: e.fakeLast, offset: e.offset };
+        } else {
+          const idx = p ? p.order : patientInfo.size;
+          info = { key, code: `P${String(idx + 1).padStart(3, '0')}`, fakeFirst: pick(LEX.FAKE_FIRST), fakeLast: pick(LEX.FAKE_LAST), offset: cfg.surrogate.dateShift ? randOffset() : 0 };
+        }
         patientInfo.set(key, info);
-        if (p && p.parsed) { tokenMap.set(p.parsed.first.toLowerCase(), info.fakeFirst); tokenMap.set(p.parsed.last.toLowerCase(), info.fakeLast); }
-        mapping.patients.push({ Code: info.code, SurrogateName: `${info.fakeLast}, ${info.fakeFirst}`, RealName: p ? [...p.names][0] || '' : '', MRN: p ? [...p.mrns][0] || '' : '', DOB: p && p.dob ? cellToString(p.dob) : '', Account: p ? [...p.accounts].join('; ') : '', Phone: p ? [...p.phones].join('; ') : '', DateOffsetDays: info.offset });
+        if (p) p.names.forEach((nm) => { const pn = parseName(nm); if (pn) { if (pn.first) tokenMap.set(pn.first.toLowerCase(), info.fakeFirst); if (pn.last) tokenMap.set(pn.last.toLowerCase(), info.fakeLast); } });
+        if (!e) mapping.patients.push({ Code: info.code, SurrogateName: `${info.fakeLast}, ${info.fakeFirst}`, RealName: p ? [...p.names][0] || '' : '', MRN: p ? [...p.mrns][0] || '' : '', DOB: p && p.dob ? cellToString(p.dob) : '', Account: p ? [...p.accounts].join('; ') : '', Phone: p ? [...p.phones].join('; ') : '', DateOffsetDays: info.offset });
       }
       return info;
     };
@@ -938,6 +967,138 @@
     return { text: out, replacements };
   }
 
+
+  // ---------------------------------------------------------------------
+  // 5b. Patient registry: one identity per real patient across inputs
+  // ---------------------------------------------------------------------
+  // OCR confusions for identifier tokens: letters that are really digits.
+  function normalizeId(s) {
+    const t = cellToString(s).trim().replace(/[\s\-\.]/g, '');
+    if (!t) return '';
+    const digits = (t.match(/\d/g) || []).length;
+    if (digits / t.length < 0.6) return t;
+    return t.replace(/[OoQ]/g, '0').replace(/[Il|!]/g, '1').replace(/[Ss]/g, '5').replace(/B/g, '8').replace(/[Zz]/g, '2').replace(/G/g, '6');
+  }
+  const mrnKeyOf = (mrn) => { const n = normalizeId(mrn); const d = n.replace(/^[A-Za-z]+/, '').replace(/^0+/, ''); return d.length >= 5 ? d : (n ? n.toLowerCase() : ''); };
+  const dobKeyOf = (dob) => { if (dob == null || dob === '') return ''; const d = isDate(dob) ? dob : parseDateString(cellToString(dob)); return d ? `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` : ''; };
+  // letters only, with the common OCR letter-pair confusions collapsed (rn→m, vv→w, cl→d)
+  const alpha = (x) => (x || '').toLowerCase().replace(/[^a-z]/g, '').replace(/rn/g, 'm').replace(/vv/g, 'w').replace(/cl/g, 'd');
+  function levenshtein(a, b) {
+    if (a === b) return 0; if (!a.length) return b.length; if (!b.length) return a.length;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) { const cur = [i]; for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
+    return prev[b.length];
+  }
+
+  function createRegistry(seedRows) {
+    const entities = [];
+    const byMrn = new Map();
+    let next = 1;
+    const newEntity = () => { const e = { id: `e${entities.length + 1}`, code: `P${String(next++).padStart(3, '0')}`, mrns: new Set(), names: new Set(), parsed: [], dobs: new Set(), accounts: new Set(), phones: new Set(), fakeFirst: null, fakeLast: null, offset: null }; entities.push(e); return e; };
+    const absorb = (e, rec) => {
+      const mk = rec.mrn ? mrnKeyOf(rec.mrn) : '';
+      if (mk) { e.mrns.add(cellToString(rec.mrn).trim()); byMrn.set(mk, e); }
+      if (rec.name) { const raw = cellToString(rec.name).trim(); if (raw && !e.names.has(raw)) { e.names.add(raw); const pn = parseName(raw); if (pn) e.parsed.push(pn); } }
+      const dk = dobKeyOf(rec.dob); if (dk) e.dobs.add(dk);
+      (rec.accounts || []).forEach((a) => a && e.accounts.add(a));
+      (rec.phones || []).forEach((p) => p && e.phones.add(p));
+      return e;
+    };
+    const nameMatch = (e, pn, dk, mk) => {
+      if (mk && e.mrns.size && !byMrn.has(mk)) return false; // both have MRNs and they differ
+      if (dk && e.dobs.size && !e.dobs.has(dk)) return false;  // both have DOBs and they differ
+      const last = alpha(pn.last), first = alpha(pn.first);
+      if (!last) return false;
+      for (const q of e.parsed) {
+        const ql = alpha(q.last), qf = alpha(q.first);
+        const lastOk = ql === last || (last.length >= 5 && ql.length >= 5 && levenshtein(last, ql) <= 1);
+        if (!lastOk) continue;
+        const firstOk = !first || !qf || first === qf || (first.length === 1 && qf.startsWith(first)) || (qf.length === 1 && first.startsWith(qf)) || (first.length >= 4 && qf.length >= 4 && levenshtein(first, qf) <= 1);
+        if (firstOk) return true;
+      }
+      return false;
+    };
+    const reg = {
+      entities,
+      get size() { return entities.length; },
+      get(id) { return entities.find((e) => e.id === id) || null; },
+      // rec: { name, mrn, dob, accounts?, phones? } — any subset. Returns the entity (created if new).
+      resolve(rec) {
+        const mk = rec.mrn ? mrnKeyOf(rec.mrn) : '';
+        if (mk && byMrn.has(mk)) return absorb(byMrn.get(mk), rec);
+        const pn = rec.name ? parseName(cellToString(rec.name)) : null;
+        const dk = dobKeyOf(rec.dob);
+        if (pn && pn.last) {
+          const hit = entities.find((e) => nameMatch(e, pn, dk, mk));
+          if (hit) return absorb(hit, rec);
+        }
+        if (!mk && !(pn && pn.last)) return null;
+        return absorb(newEntity(), rec);
+      },
+      toMappingRows() {
+        return entities.map((e) => ({ Code: e.code, SurrogateName: e.fakeLast ? `${e.fakeLast}, ${e.fakeFirst}` : '', RealName: [...e.names].join('; '), MRN: [...e.mrns].join('; '), DOB: [...e.dobs].join('; '), Account: [...e.accounts].join('; '), Phone: [...e.phones].join('; '), DateOffsetDays: e.offset == null ? '' : e.offset }));
+      },
+    };
+    (seedRows || []).forEach((r) => {
+      if (!r || !r.Code) return;
+      const e = newEntity(); e.code = String(r.Code).trim();
+      const num = parseInt(e.code.replace(/\D/g, ''), 10); if (!isNaN(num) && num >= next) next = num + 1;
+      String(r.MRN || '').split(/;\s*/).filter(Boolean).forEach((m) => absorb(e, { mrn: m }));
+      String(r.RealName || '').split(/;\s*/).filter(Boolean).forEach((nm) => absorb(e, { name: nm }));
+      String(r.DOB || '').split(/;\s*/).filter(Boolean).forEach((d) => absorb(e, { dob: d }));
+      String(r.Account || '').split(/;\s*/).filter(Boolean).forEach((a) => e.accounts.add(a));
+      String(r.Phone || '').split(/;\s*/).filter(Boolean).forEach((p) => e.phones.add(p));
+      if (r.SurrogateName) { const [l, f] = String(r.SurrogateName).split(/,\s*/); e.fakeLast = l || null; e.fakeFirst = f || null; }
+      if (r.DateOffsetDays !== '' && r.DateOffsetDays != null && !isNaN(+r.DateOffsetDays)) e.offset = +r.DateOffsetDays;
+    });
+    return reg;
+  }
+
+  // ---------------------------------------------------------------------
+  // 5c. Text documents (pasted text or OCR output) -> table with a line census
+  // ---------------------------------------------------------------------
+  const LINE_NAME_RE = /(?<![\w,])([A-Z][A-Za-z'’\-]+(?:[ -][A-Z][A-Za-z'’\-]+)?),\s*([A-Z][A-Za-z'’\-]+)(?:\s+([A-Z])\b\.?)?(?![\w,])/g;
+  const LINE_ID_RE = /(?<![\w\/\-.:])(?:MRN\s*[:#]?\s*)?([A-Z]{0,2}[0-9OIlSB]{6,10})(?![\w\/\-.:])/g;
+  function parseTextDocument(text, opts) {
+    const o = Object.assign({ carryForward: true, mrnPattern: null, sectionMarker: /^===/ }, opts || {});
+    const lines = cellToString(text).split(/\r?\n/).map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim());
+    const mrnRe = o.mrnPattern ? new RegExp(o.mrnPattern.replace(/^\\b|\\b$/g, ''), 'g') : null;
+    const thisYear = new Date().getFullYear();
+    const rows = []; let current = null; let found = 0, inherited = 0;
+    for (const line of lines) {
+      if (o.sectionMarker && o.sectionMarker.test(line)) { current = null; rows.push(['', '', '', line]); continue; }
+      let name = '', mrn = '', dob = '';
+      LINE_NAME_RE.lastIndex = 0; let m;
+      while ((m = LINE_NAME_RE.exec(line))) {
+        const last = m[1], first = m[2];
+        if (LEX.isClinical(last) || LEX.isClinical(first) || LEX.STATE_ABBR_SET.has(first) || LEX.CREDENTIAL_SET.has(first.toLowerCase()) || LEX.CITY_SET.has(last.toLowerCase()) || LEX.HONORIFIC_SET.has(last.toLowerCase())) continue;
+        if (first.length < 2 && !m[3]) continue;
+        name = m[0].trim(); break;
+      }
+      // identifiers: explicit MRN label wins; else the first id-looking token that is not a phone/date/time
+      const ids = [];
+      const scan = (re, groupIdx) => { re.lastIndex = 0; let k; while ((k = re.exec(line))) { const raw = k[groupIdx] || k[0]; const norm = normalizeId(raw); const dcount = (norm.match(/\d/g) || []).length; if (dcount < 6) continue; const before = line.slice(Math.max(0, k.index - 6), k.index); ids.push({ raw, norm, labeled: /mrn/i.test(k[0]) || /mrn\s*[:#]?\s*$/i.test(before), index: k.index }); } };
+      if (mrnRe) scan(mrnRe, 0);
+      scan(LINE_ID_RE, 1);
+      ids.sort((a, b) => (b.labeled - a.labeled) || (a.index - b.index));
+      const phoneLike = (t) => /^\d{10}$/.test(t.norm) && /\d{3}[-.\s]\d{3}[-.\s]\d{4}|\(\d{3}\)/.test(line);
+      const pick = ids.find((t) => !phoneLike(t) && !/^\d{4}-\d{2}-\d{2}$/.test(t.raw));
+      if (pick && (name || pick.labeled || !o.requireNameForMrn)) mrn = pick.norm;
+      // DOB: labeled, else a full date whose year makes an adult-ish age
+      const dateSpans = ruleSpans(line, { mrnRegex: null, accountRegex: null, extraRegexes: [] }).filter((sp) => sp.type === 'DATE' && sp.date && sp.date.hasYear);
+      const labeled = dateSpans.find((sp) => /dob|birth|born/i.test(line.slice(Math.max(0, sp.start - 12), sp.start)));
+      const cand = labeled || dateSpans.find((sp) => sp.date.y <= thisYear - 10 && sp.date.y >= 1900);
+      if (cand && (name || mrn || labeled)) dob = cand.text;
+      if (name || mrn) { current = { name, mrn, dob }; found++; }
+      else if (current && o.carryForward) { inherited++; }
+      const use = (name || mrn) ? { name, mrn, dob } : (current && o.carryForward ? current : { name: '', mrn: '', dob: '' });
+      rows.push([use.name, use.mrn, use.dob, line]);
+    }
+    const headers = ['Patient Name', 'MRN', 'DOB', 'Line'];
+    const columns = [{ header: 'Patient Name', index: 0, role: 'patient_name', reason: 'extracted from line', sample: [] }, { header: 'MRN', index: 1, role: 'mrn', reason: 'extracted from line', sample: [] }, { header: 'DOB', index: 2, role: 'dob', reason: 'extracted from line', sample: [] }, { header: 'Line', index: 3, role: 'text', reason: 'the text itself', sample: [] }];
+    return { headers, rows, columns, stats: { lines: lines.length, linesWithPatient: found, linesInherited: inherited } };
+  }
+
   // ---------------------------------------------------------------------
   // 6. Whole-table processing
   // ---------------------------------------------------------------------
@@ -994,7 +1155,8 @@
     const headers = table.headers.map((h) => cellToString(h));
     const rows = table.rows;
     let columns = cfg.columns && cfg.columns.length === headers.length ? cfg.columns.map((c, i) => ({ header: headers[i], index: i, role: c.role || c })) : classifyColumns(headers, rows);
-    const census = buildCensus(headers, rows, columns, cfg);
+    const registry = cfg.registry || createRegistry();
+    const census = buildCensus(headers, rows, columns, { registry });
     if (!cfg.mrnPattern && census.mrnCols.length) {
       const inferred = inferIdPattern(rows.map((r) => r[census.mrnCols[0]]));
       cfg.mrnRegex = inferred ? new RegExp(inferred, 'g') : null;
@@ -1107,8 +1269,10 @@
     if (cfg.auditColumn) { outHeaders.push('DeID Audit'); outRows.forEach((r, i) => { r.push(details[i].audit || ''); }); }
 
     const mapping = sur.mapping;
+    // the registry is the session-wide key: every patient linked so far, with codes, surrogates and offsets
+    mapping.patients = registry.toMappingRows();
     mapping.meta = { seed: cfg.seed, processedAt: new Date().toISOString(), documentOffsetDays: sur.docOffset, mrnPattern: cfg.inferredMrnPattern || cfg.mrnPattern || '', columns: columns.map((c) => ({ header: c.header, role: c.role })) };
-    return { headers: outHeaders, rows: outRows, columns, census, details, stats, mapping, cfg };
+    return { headers: outHeaders, rows: outRows, columns, census, details, stats, mapping, cfg, registry };
   }
 
   // Re-identify: reverse the mapping on a de-identified table.
@@ -1117,7 +1281,8 @@
     const roles = new Map((mapping.meta && mapping.meta.columns || []).map((c) => [c.header, c.role]));
     const byCode = new Map(mapping.patients.map((p) => [p.Code, p]));
     const reverse = [];
-    mapping.patients.forEach((p) => { if (p.SurrogateName) reverse.push([p.SurrogateName, p.RealName]); const [l, f] = p.SurrogateName.split(', '); if (f) reverse.push([`${f} ${l}`, p.RealName]); reverse.push([p.Code, p.MRN || p.RealName]); });
+    const firstOf = (v) => String(v || '').split(/;\s*/)[0];
+    mapping.patients.forEach((p) => { const real = firstOf(p.RealName), mrn = firstOf(p.MRN); if (p.SurrogateName) reverse.push([p.SurrogateName, real]); const [l, f] = String(p.SurrogateName || '').split(', '); if (f) reverse.push([`${f} ${l}`, real]); if (f) { reverse.push([f, firstOf(real.includes(',') ? real.split(',')[1].trim() : real.split(' ')[0])]); reverse.push([l, real.includes(',') ? real.split(',')[0] : real.split(' ').slice(-1)[0]]); } reverse.push([p.Code, mrn || real]); });
     mapping.providers.forEach((p) => { reverse.push([p.SurrogateName, p.RealName]); const [l, f] = p.SurrogateName.split(', '); if (f) reverse.push([`${f} ${l}`, p.RealName]); });
     mapping.others.forEach((o) => reverse.push([o.Surrogate, o.Original]));
     reverse.sort((a, b) => b[0].length - a[0].length);
@@ -1133,8 +1298,8 @@
         const v = row[ci]; if (v == null || v === '') return;
         const role = roles.get(h);
         if (role === 'date' && isDate(v)) { out[ci] = shiftDate(v, off); return; }
-        if (role === 'mrn' && p) { out[ci] = p.MRN || p.RealName; return; }
-        if (role === 'dob' && p) { out[ci] = p.DOB; return; }
+        if (role === 'mrn' && p) { out[ci] = firstOf(p.MRN) || firstOf(p.RealName); return; }
+        if (role === 'dob' && p) { out[ci] = firstOf(p.DOB); return; }
         let s = cellToString(v);
         if (re) s = s.replace(re, (m) => lookup.get(m) || m);
         if (off && (role === 'date' || role === 'text')) {
@@ -1153,6 +1318,7 @@
     detectText, ruleSpans, lexiconSpans, censusSpans, resolveSpans, mergeAdjacentNames, collectPropagation,
     parseDateString, renderDate, shiftDate, dateRenderings, bandAge,
     Surrogator, applySpans, defaultConfig, compileConfig, processTable, reidentify,
+    createRegistry, normalizeId, mrnKeyOf, dobKeyOf, levenshtein, parseTextDocument,
     cellToString, mulberry32, hashString, tokenize,
   };
 });

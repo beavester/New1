@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src blob: data:; form-action 'none'; base-uri 'none'">
 <title>Infusion De-ID</title>
 <style>
 :root{
@@ -255,6 +255,8 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
 <!--INLINE:src/core.js-->
 <!--INLINE:src/synth.js-->
 <!--INLINE:src/evaluate.js-->
+<!--INLINE:src/ocr.js-->
+<!--OCR-ASSETS-->
 <!--INLINE:src/app.js-->
 </body>
 </html>
