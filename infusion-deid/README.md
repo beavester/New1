@@ -52,6 +52,10 @@ Under **Advanced**: how names appear (made-up names or codes), dates (shifted pe
 
 Known gap: an out-of-lexicon surname with no cue at all (`Vanterpool called about labs`) is missed. That is the slot for the compact clinical transformer (Tier 1) from the memo; this build does not carry one.
 
+## Measured on blind red-team cases
+
+Rounds 1–4 were find-and-fix rounds: the fixed corpus in `test/redteam/` (170 text/table cases, 45 screenshots) is a regression guarantee, not a miss rate. Round 5 was measurement only (92 fresh cases, no fixes): with the curated lexicon, 10 of 56 ordinary comments and 12 of 24 hard ones leaked at least one identifier; screenshots 0 of 12. Nine of the ten ordinary leaks were a patient's full name in a stand-alone note; v0.3's large lexicon and person-cue rules target exactly that. The unbiased number for v0.3 comes from round 6 (see `docs/PLAN.md` §7). Run the scorer yourself: `node test/redteam/score.js --ocr`.
+
 ## Development
 
 ```
