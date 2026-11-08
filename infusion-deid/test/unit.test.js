@@ -551,3 +551,8 @@ test('nicknames given by cue are removed; audit column never carries the date of
   const audit = r.rows[0][r.headers.indexOf('DeID Audit')];
   assert.ok(!/shift:/.test(audit) && !/[+-]\d+d\b/.test(audit), 'offset in audit: ' + audit);
 });
+
+test('dates cut off by a line wrap are still removed', () => {
+  const r = rules('Teresa 012710386 1970-02-\nStewart 09\nDOB 3/26/\n1976');
+  assert.ok(r.includes('DATE=1970-02-'), r.join(',')); assert.ok(r.includes('DATE=3/26/'), r.join(','));
+});

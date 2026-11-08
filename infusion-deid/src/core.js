@@ -587,6 +587,8 @@
     run(RULES.ID_BARE, 'ID_OTHER', (m) => notPhoneExt(m) && !/^[ \t]*(?:mg|mcg|g|ml|mL|units?|cells|copies|iu|mEq|cc|pts?|steps|k)\b/i.test(text.slice(m.index + m[0].length)) && !/[$€£]\s*$/.test(text.slice(Math.max(0, m.index - 3), m.index)));
     (cfg.extraRegexes || []).forEach((r) => run(r, 'ID_OTHER'));
     run(RULES.PHONE_PLAIN, 'PHONE');
+    // a date cut off by a line wrap ("1970-02-" then "09" on the next line, "3/26/" then "1976"): still a date
+    run(/(?<![\w\/\-])(?:(?:19|20)\d{2}-\d{1,2}-|\d{1,2}\/\d{1,2}\/)(?=[ \t]*(?:$|\n))/gm, 'DATE');
     // dates
     for (const p of DATE_PATTERNS) {
       p.re.lastIndex = 0; let m;

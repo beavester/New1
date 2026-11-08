@@ -1513,6 +1513,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     run(RULES.ID_BARE, 'ID_OTHER', (m) => notPhoneExt(m) && !/^[ \t]*(?:mg|mcg|g|ml|mL|units?|cells|copies|iu|mEq|cc|pts?|steps|k)\b/i.test(text.slice(m.index + m[0].length)) && !/[$€£]\s*$/.test(text.slice(Math.max(0, m.index - 3), m.index)));
     (cfg.extraRegexes || []).forEach((r) => run(r, 'ID_OTHER'));
     run(RULES.PHONE_PLAIN, 'PHONE');
+    // a date cut off by a line wrap ("1970-02-" then "09" on the next line, "3/26/" then "1976"): still a date
+    run(/(?<![\w\/\-])(?:(?:19|20)\d{2}-\d{1,2}-|\d{1,2}\/\d{1,2}\/)(?=[ \t]*(?:$|\n))/gm, 'DATE');
     // dates
     for (const p of DATE_PATTERNS) {
       p.re.lastIndex = 0; let m;
@@ -4023,7 +4025,15 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
     }
     return out;
   }
-  function processItem(item) {
+  // A later input can teach the session a name an earlier screenshot could not read (a name wrapped over two
+  // lines, a cropped column). Re-protect those earlier items so they pick up the name and can pass the check.
+  function healEarlier(src) {
+    session.items.forEach((it) => {
+      if (it === src || !it.result || !it.leak || !it.leak.hits.some((h) => h.kind === 'unnamed')) return;
+      try { processItem(it, true); } catch (e) { console.error(e); }
+    });
+  }
+  function processItem(item, noHeal) {
     const before = snapshotRegistry();
     const result = DeID.processTable(item.table, collectConfig(item));
     item.result = result;
@@ -4036,6 +4046,7 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
     }
     item.leak = leakCheck(item);
     item.flagged = result.details.filter(isFlagged).length;
+    if (!noHeal) healEarlier(item);
     $('optMrnLearned').textContent = session.mrnPattern ? `Learned from your file: ${session.mrnPattern.replace(/\\b/g, '').replace(/\\d\{(\d+),(\d+)\}/, (m, a, b) => a === b ? `${a} digits` : `${a} to ${b} digits`).replace(/\\d/g, 'digits')}` : '';
     return result;
   }

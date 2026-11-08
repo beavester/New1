@@ -348,7 +348,15 @@
     }
     return out;
   }
-  function processItem(item) {
+  // A later input can teach the session a name an earlier screenshot could not read (a name wrapped over two
+  // lines, a cropped column). Re-protect those earlier items so they pick up the name and can pass the check.
+  function healEarlier(src) {
+    session.items.forEach((it) => {
+      if (it === src || !it.result || !it.leak || !it.leak.hits.some((h) => h.kind === 'unnamed')) return;
+      try { processItem(it, true); } catch (e) { console.error(e); }
+    });
+  }
+  function processItem(item, noHeal) {
     const before = snapshotRegistry();
     const result = DeID.processTable(item.table, collectConfig(item));
     item.result = result;
@@ -361,6 +369,7 @@
     }
     item.leak = leakCheck(item);
     item.flagged = result.details.filter(isFlagged).length;
+    if (!noHeal) healEarlier(item);
     $('optMrnLearned').textContent = session.mrnPattern ? `Learned from your file: ${session.mrnPattern.replace(/\\b/g, '').replace(/\\d\{(\d+),(\d+)\}/, (m, a, b) => a === b ? `${a} digits` : `${a} to ${b} digits`).replace(/\\d/g, 'digits')}` : '';
     return result;
   }
