@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>Infusion De-ID</title>
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --ink:#1d1f24; --muted:#5f646d; --line:#dcd9d3; --accent:#1f5f8b; --accent-ink:#ffffff;
+  --ok:#2b7a4b; --warn:#b2641d; --bad:#a63d40; --soft:#eef1f4;
+  --t-name:#fde2c8; --t-date:#d7ecf7; --t-phone:#e6ddf5; --t-id:#f8d7d7; --t-org:#dff2df; --t-loc:#fff3bf; --t-age:#e8e8e8; --t-manual:#ffd6e8;
+  --mono:ui-monospace,Menlo,Consolas,"Liberation Mono",monospace; --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#15171b; --panel:#1e2127; --ink:#e8e6e1; --muted:#a0a5ae; --line:#353a43; --accent:#6fb1dc; --accent-ink:#0f1a22; --soft:#262a31;
+  --t-name:#6b4323; --t-date:#234659; --t-phone:#473763; --t-id:#5e2f2f; --t-org:#2e5a2e; --t-loc:#5c4d14; --t-age:#3a3d44; --t-manual:#6b2f4b;
+}}
+:root[data-theme="dark"]{
+  --bg:#15171b; --panel:#1e2127; --ink:#e8e6e1; --muted:#a0a5ae; --line:#353a43; --accent:#6fb1dc; --accent-ink:#0f1a22; --soft:#262a31;
+  --t-name:#6b4323; --t-date:#234659; --t-phone:#473763; --t-id:#5e2f2f; --t-org:#2e5a2e; --t-loc:#5c4d14; --t-age:#3a3d44; --t-manual:#6b2f4b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--sans)}
+header{display:flex;align-items:baseline;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+header h1{font-size:18px;margin:0;letter-spacing:.2px}
+header .sub{color:var(--muted);font-size:13px}
+header .badge{margin-left:auto;font-size:12px;color:var(--ok);border:1px solid var(--ok);border-radius:3px;padding:2px 8px;white-space:nowrap}
+nav{display:flex;gap:2px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;color:var(--muted);font:inherit;cursor:pointer}
+nav button.active{color:var(--ink);border-bottom-color:var(--accent)}
+main{max-width:1280px;margin:0 auto;padding:18px 16px 60px}
+section.tab{display:none}section.tab.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:10px}
+.card h2 .step{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;align-items:center;justify-content:center}
+.muted{color:var(--muted)}.small{font-size:13px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+label.f input,label.f select,label.f textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+label.f textarea{min-height:64px;font-family:var(--mono);font-size:12px}
+button.btn{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;border-radius:4px;cursor:pointer}
+button.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.btn.danger{border-color:var(--bad);color:var(--bad)}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+.drop{border:2px dashed var(--line);border-radius:6px;padding:22px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);color:var(--ink)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;white-space:nowrap}
+td select{font:inherit;font-size:13px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:3px 6px;max-width:220px}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:var(--soft);color:var(--muted);margin-right:4px}
+.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}.pill.bad{color:var(--bad)}
+.stats{display:flex;gap:18px;flex-wrap:wrap}
+.stat{min-width:120px}.stat b{display:block;font-size:22px;font-weight:600}.stat span{font-size:12px;color:var(--muted)}
+mark{border-radius:3px;padding:0 2px;cursor:pointer;color:inherit;border-bottom:1px solid rgba(0,0,0,.15)}
+mark.NAME{background:var(--t-name)}mark.DATE{background:var(--t-date)}mark.PHONE,mark.EMAIL{background:var(--t-phone)}
+mark.MRN,mark.ACCOUNT,mark.ID{background:var(--t-id)}mark.ORG{background:var(--t-org)}mark.LOCATION{background:var(--t-loc)}mark.AGE{background:var(--t-age)}
+mark.manual{outline:2px solid var(--bad)}mark.removed{background:none;text-decoration:line-through;opacity:.6}
+.cell{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;line-height:1.5}
+.legend span{display:inline-block;margin-right:10px;font-size:12px}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.warn{color:var(--warn)}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.note{border-left:3px solid var(--accent);padding:8px 12px;background:var(--soft);border-radius:0 4px 4px 0;font-size:13px}
+.note.danger{border-color:var(--bad)}
+details summary{cursor:pointer;color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.toolbar input[type=search]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);min-width:220px}
+.review td:first-child{white-space:nowrap;color:var(--muted)}
+.hidden{display:none}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px}
+.kv b{font-weight:600}
+footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
+.progress{height:4px;background:var(--soft);border-radius:2px;overflow:hidden;margin:8px 0}.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+@media (max-width:700px){ header .badge{margin-left:0} main{padding:12px} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Infusion De-ID</h1>
+  <span class="sub">Schedule &amp; order report de-identification. Census dictionary + rules + cue detector + hide-in-plain-sight surrogates.</span>
+  <span class="badge" title="This page makes no network requests. Everything runs inside this browser tab.">Offline · nothing leaves this computer</span>
+</header>
+<nav>
+  <button data-tab="deid" class="active">De-identify</button>
+  <button data-tab="validate">Validate</button>
+  <button data-tab="reid">Re-identify</button>
+  <button data-tab="about">About &amp; limits</button>
+</nav>
+<main>
+
+<!-- ============================ DE-IDENTIFY ============================ -->
+<section class="tab active" id="tab-deid">
+  <div class="card">
+    <h2><span class="step">1</span> Load a report</h2>
+    <div class="drop" id="drop">
+      Drop an Excel (.xlsx/.xls) or CSV export here, or <label style="color:var(--accent);cursor:pointer"><u>choose a file</u><input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv,.txt" class="hidden"></label>.
+      <div class="small" style="margin-top:6px">The file is read by this page only. Nothing is uploaded.</div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="loadDemo">Load a synthetic demo report (no PHI)</button>
+      <span class="muted small" id="fileInfo"></span>
+    </div>
+    <div class="row" id="sheetRow" style="margin-top:10px;display:none">
+      <label class="f">Sheet <select id="sheetSel"></select></label>
+      <label class="f">Header row <select id="headerSel"></select></label>
+      <span class="muted small" id="shapeInfo"></span>
+    </div>
+  </div>
+
+  <div class="card hidden" id="colsCard">
+    <h2><span class="step">2</span> Confirm what each column is <span class="pill" id="cfgBadge"></span></h2>
+    <p class="small muted" style="margin:0 0 8px">Roles were guessed from the header and the values. Fix anything wrong. The guess is saved per report layout on this computer (headers only, never data).</p>
+    <div style="overflow:auto"><table id="colsTable"></table></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="saveCfg">Save roles for this layout</button>
+      <button class="btn" id="forgetCfg">Forget saved roles</button>
+      <span class="small" id="colWarnings"></span>
+    </div>
+  </div>
+
+  <div class="card hidden" id="optsCard">
+    <h2><span class="step">3</span> Options</h2>
+    <div class="grid">
+      <label class="f">Patient names in output<select id="optPatients"><option value="fake">Realistic surrogate names (hide in plain sight)</option><option value="code">Study codes (P001…)</option></select></label>
+      <label class="f">Provider names<select id="optProviders"><option value="fake">Surrogate names, credentials kept</option><option value="code">Dr. A / Dr. B</option></select></label>
+      <label class="f">Date of birth column<select id="optDob"><option value="drop">Remove (derive age instead)</option><option value="year">Year only</option><option value="shift">Shift like other dates</option></select></label>
+      <label class="f">Ages<select id="optAges"><option value="90plus">Exact, but 90+ collapsed</option><option value="bands5">5-year bands</option><option value="bands10">10-year bands</option></select></label>
+      <label class="f">Dates<select id="optDates"><option value="shift">Shift by a per-patient random offset (intervals preserved)</option><option value="remove">Remove all dates (Safe Harbor style)</option></select></label>
+      <label class="f">Shift range (days)<input id="optRange" value="30-365"></label>
+      <label class="f">MRN pattern (regex) <span class="muted" id="mrnInferred"></span><input id="optMrn" placeholder="auto from MRN column"></label>
+      <label class="f">Random seed (same seed → same surrogates)<input id="optSeed" value="12345"></label>
+    </div>
+    <div class="grid" style="margin-top:10px">
+      <label class="f">Always redact these terms (one per line: local facilities, departments, nicknames)<textarea id="optDeny" placeholder="e.g. Roswell Park&#10;ECMC&#10;Southtowns"></textarea></label>
+      <label class="f">Never redact these terms (one per line: local clinical vocabulary, drug names, chair names)<textarea id="optAllow" placeholder="e.g. Bay&#10;Willow&#10;Phoenix"></textarea></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="small"><input type="checkbox" id="optAudit" checked> Add an audit column</label>
+      <label class="small"><input type="checkbox" id="optAuditDetail"> Audit column lists every replacement (verbose)</label>
+      <label class="small"><input type="checkbox" id="optDerive" checked> Derive an age column when DOB is removed</label>
+    </div>
+  </div>
+
+  <div class="card hidden" id="runCard">
+    <h2><span class="step">4</span> Run</h2>
+    <div class="row">
+      <button class="btn primary" id="run">De-identify</button>
+      <span class="muted small" id="runInfo"></span>
+    </div>
+    <div class="progress hidden" id="prog"><i></i></div>
+    <div id="summary" class="hidden" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card hidden" id="reviewCard">
+    <h2><span class="step">5</span> Review free-text detections</h2>
+    <div class="legend small muted">
+      <span><i style="background:var(--t-name)"></i>Name</span><span><i style="background:var(--t-date)"></i>Date</span><span><i style="background:var(--t-phone)"></i>Phone / email</span>
+      <span><i style="background:var(--t-id)"></i>MRN / account / ID</span><span><i style="background:var(--t-org)"></i>Organization</span><span><i style="background:var(--t-loc)"></i>Location</span><span><i style="background:var(--t-age)"></i>Age 90+</span>
+      <span>Click a highlight to toggle it off. Select text and press <b>Mark selection</b> to add one.</span>
+    </div>
+    <div class="toolbar">
+      <select id="reviewFilter"><option value="all">All rows with text</option><option value="model">Rows with cue/lexicon detections (least certain)</option><option value="none">Rows with no detections</option><option value="manual">Rows I edited</option></select>
+      <input type="search" id="reviewSearch" placeholder="Search original text…">
+      <select id="markType"><option value="NAME_OTHER">Name</option><option value="ORG">Organization</option><option value="LOCATION">Location</option><option value="DATE">Date</option><option value="PHONE">Phone</option><option value="ID_OTHER">Other identifier</option></select>
+      <button class="btn" id="markSel">Mark selection</button>
+      <span class="muted small" id="reviewInfo"></span>
+    </div>
+    <div style="overflow:auto"><table class="review" id="reviewTable"></table></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="morePages">Show more</button></div>
+  </div>
+
+  <div class="card hidden" id="exportCard">
+    <h2><span class="step">6</span> Export</h2>
+    <div class="row">
+      <button class="btn primary" id="dlXlsx">Download de-identified workbook (.xlsx)</button>
+      <button class="btn" id="dlCsv">Download de-identified CSV</button>
+      <button class="btn" id="dlReport">Download run report (.txt, no PHI)</button>
+      <button class="btn danger" id="dlMap">Download mapping key (.xlsx) — contains PHI</button>
+    </div>
+    <div class="note danger small" style="margin-top:10px"><b>The mapping key is PHI.</b> It links study codes and surrogate names back to real patients and holds the date offsets. Keep it on the hospital drive next to the source report. Never send it with the de-identified file. Re-identification needs it (see the Re-identify tab).</div>
+  </div>
+</section>
+
+<!-- ============================ VALIDATE ============================ -->
+<section class="tab" id="tab-validate">
+  <div class="card">
+    <h2>Synthetic stress set</h2>
+    <p class="small muted" style="margin:0 0 10px">Generates infusion-schedule rows with identifiers injected at known positions, runs the full pipeline, and scores per-category recall with bootstrap 95% confidence intervals. Ground truth is exact by construction, so the set contains no PHI and can be shared. These numbers are an <b>upper bound</b>: the generator and the detector were built by the same hands. The number that matters is the gold set on real reports (see About).</p>
+    <div class="row">
+      <label class="f">Rows <input id="synN" value="600" style="width:90px"></label>
+      <label class="f">Seed <input id="synSeed" value="7" style="width:90px"></label>
+      <label class="f">Share of third-party names outside the lexicon <input id="synHold" value="0.3" style="width:90px"></label>
+      <button class="btn primary" id="synRun">Generate &amp; score</button>
+      <button class="btn" id="synDl">Download synthetic set (.xlsx)</button>
+      <button class="btn" id="synAdv">Run adversarial cases</button>
+      <button class="btn" id="synAbl">Run layer ablation</button>
+    </div>
+    <div id="synOut" style="margin-top:12px"></div>
+  </div>
+  <div class="card hidden" id="advCard"><h2>Adversarial cases (from the research memo)</h2><div id="advOut"></div></div>
+  <div class="card hidden" id="ablCard"><h2>Layer ablation — what each tier buys</h2><div id="ablOut"></div></div>
+</section>
+
+<!-- ============================ RE-IDENTIFY ============================ -->
+<section class="tab" id="tab-reid">
+  <div class="card">
+    <h2>Re-attach identity (hospital side only)</h2>
+    <p class="small muted">Load a de-identified workbook that came out of this tool plus the mapping key saved with it. Codes, surrogate names and shifted dates are reversed. Do this only on the hospital machine.</p>
+    <div class="row">
+      <label class="f">De-identified workbook <input type="file" id="reidFile" accept=".xlsx,.xls,.csv"></label>
+      <label class="f">Mapping key <input type="file" id="reidMap" accept=".xlsx"></label>
+      <button class="btn primary" id="reidRun">Re-identify &amp; download</button>
+    </div>
+    <div id="reidOut" class="small" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<!-- ============================ ABOUT ============================ -->
+<section class="tab" id="tab-about">
+  <div class="card">
+    <h2>What this is</h2>
+    <p>A single HTML file that de-identifies Epic schedule and ordering exports on a locked-down work computer: no install, no admin rights, no network. It implements the architecture from the PHI detection research memo, minus the trained encoder:</p>
+    <ol class="small">
+      <li><b>Schema pass.</b> Each column is classified (identifier, date, age, free text, keep, drop) from its header and values; you confirm once per report layout.</li>
+      <li><b>Census dictionary.</b> Every patient's name variants, MRN, DOB, account and phone from the structured columns, plus provider names, become an exact-match detector. For the identifiers that matter most this is recall by construction.</li>
+      <li><b>Tier 0 rules.</b> MRN pattern learned from your MRN column, phones with extensions, emails, SSNs, URLs, street addresses, ZIPs, ages 90+, and dates in every format Epic emits.</li>
+      <li><b>Tier 1-lite.</b> A lexicon and cue detector for names, organizations and locations: honorifics, credentials, relationship words ("pt's son Mark"), contact verbs, facility words and acronyms, "City, ST". Clinical eponyms (Hodgkin, Bell, Graves…) and drug names are protected.</li>
+      <li><b>Post-processing.</b> Overlap resolution, merging, and document-wide propagation of every detected name.</li>
+      <li><b>Hide in plain sight.</b> Realistic surrogate names consistent per person, per-patient date shifting that preserves intervals, age banding, 3-digit ZIPs, fake organizations. A mapping key is produced separately.</li>
+      <li><b>Audit.</b> Each row records what was found, by which layer, and its date offset.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>Limits you should know</h2>
+    <ul class="small">
+      <li><b>Out-of-lexicon names with no cue</b> ("Vanterpool called") are the known gap. The memo's fix is a compact clinical transformer (Tier 1). This file has the slot for it; it is not in this build.</li>
+      <li><b>Local facility names</b> without a generic word (ECMC, Kenmore Mercy) are caught only through patterns or your "always redact" list. Fill that list from your own referral sources.</li>
+      <li><b>Relative dates</b> ("next Tues") and years alone are not identifiers under Safe Harbor and are left as is.</li>
+      <li><b>Small cells.</b> A patient on a regimen nobody else gets is identifiable regardless of redaction. The tool cannot see that; the expert-determination memo must.</li>
+      <li><b>Synthetic scores are not your miss rate.</b> Build the 200–300 row gold set on real reports, two annotators, and report the worst category with its confidence interval.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Version</h2>
+    <div class="kv"><b>Build</b><span id="verInfo"></span><b>Libraries</b><span>SheetJS Community Edition 0.18.5 (Apache-2.0), bundled</span><b>Storage</b><span>Only column-role configurations are kept, in this browser's local storage, keyed by header names.</span></div>
+  </div>
+</section>
+
+<footer>Infusion De-ID · runs locally · <span id="verFoot"></span></footer>
+</main>
+
+<!--INLINE:vendor/xlsx.full.min.js-->
+<!--INLINE:src/lexicon.js-->
+<!--INLINE:src/core.js-->
+<!--INLINE:src/synth.js-->
+<!--INLINE:src/evaluate.js-->
+<!--INLINE:src/app.js-->
+</body>
+</html>

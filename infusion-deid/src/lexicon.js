@@ -1,0 +1,400 @@
+/* Infusion De-ID — lexicon
+ * Word lists used by the Tier 1-lite name/org/location detector and by the
+ * hide-in-plain-sight surrogate generator. Pure data; no PHI.
+ * Works in browser (window.DeIDLexicon) and Node (module.exports).
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.DeIDLexicon = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const words = (s) => s.trim().split(/\s+/);
+  const setOf = (arr) => new Set(arr.map((w) => w.toLowerCase()));
+
+  // ---------------------------------------------------------------------
+  // Common US first names (unambiguous: not also ordinary English words).
+  // Mixed eras and origins on purpose — an infusion census is multi-generational.
+  // ---------------------------------------------------------------------
+  const FIRST_NAMES = words(`
+    James John Robert Michael William David Richard Joseph Thomas Charles
+    Christopher Daniel Matthew Anthony Donald Steven Paul Andrew Joshua Kenneth
+    Kevin Brian George Timothy Ronald Edward Jason Jeffrey Ryan Jacob Gary
+    Nicholas Eric Jonathan Stephen Larry Justin Scott Brandon Benjamin Samuel
+    Gregory Alexander Patrick Raymond Dennis Jerry Tyler Aaron Jose Adam Nathan
+    Henry Douglas Zachary Peter Kyle Noah Ethan Jeremy Walter Christian Keith
+    Roger Terry Austin Sean Gerald Carl Harold Dylan Arthur Lawrence Jordan Jesse
+    Bryan Billy Bruce Gabriel Joe Logan Alan Juan Albert Willie Elijah Wayne
+    Randy Vincent Mason Roy Ralph Bobby Russell Bradley Philip Eugene Louis
+    Harry Howard Fred Herbert Leonard Norman Earl Stanley Lloyd Clarence Gordon
+    Leroy Floyd Marvin Vernon Bernard Melvin Milton Leon Lester Alvin Clyde
+    Cecil Glenn Wallace Elmer Rodney Darrell Francis Dale Lonnie Curtis Ricky
+    Dwight Wesley Marcus Darryl Antonio Luis Carlos Miguel Ricardo Pedro Jorge
+    Manuel Fernando Francisco Javier Roberto Alejandro Eduardo Raul Ramon Hector
+    Rafael Enrique Sergio Oscar Andres Mario Julio Cesar Arturo Ruben Ernesto
+    Salvador Gilberto Alfredo Rodrigo Mohammed Ahmed Ali Omar Hassan Ibrahim
+    Yusuf Kwame Kofi Chidi Emeka Tariq Rashid Jamal Darnell Tyrone Andre Malik
+    Terrence Demetrius Reginald Dominic Angelo Salvatore Vito Giuseppe Dmitri
+    Sergei Ivan Nikolai Andrei Viktor Stanislaw Krzysztof Tomasz Piotr Jakub
+    Hiroshi Kenji Takeshi Satoshi Yuki Wei Ming Jian Hong Feng Hyun Jin Min
+    Seung Nguyen Thanh Minh Tuan Raj Rajesh Vijay Sanjay Amit Arun Suresh Ravi
+    Anil Deepak Mohan Krishna Kumar Patel Ahmad Farid Nasser Samir Elias
+    Mary Patricia Jennifer Linda Elizabeth Barbara Susan Jessica Sarah Karen
+    Nancy Lisa Betty Margaret Sandra Ashley Kimberly Emily Donna Michelle
+    Dorothy Carol Amanda Melissa Deborah Stephanie Rebecca Sharon Laura Cynthia
+    Kathleen Amy Shirley Angela Helen Anna Brenda Pamela Nicole Emma Samantha
+    Katherine Christine Debra Rachel Catherine Carolyn Janet Ruth Maria Heather
+    Diane Virginia Julie Joyce Victoria Olivia Kelly Christina Lauren Joan
+    Evelyn Judith Megan Cheryl Andrea Hannah Martha Jacqueline Frances Gloria
+    Ann Teresa Kathryn Sara Janice Jean Alice Madison Doris Abigail Julia Judy
+    Grace Denise Amber Marilyn Beverly Danielle Theresa Sophia Marie Diana
+    Brittany Natalie Isabella Charlotte Rose Alexis Kayla Lori Tiffany Mildred
+    Edna Ethel Florence Gladys Hazel Irene Lillian Lucille Mabel Myrtle Thelma
+    Velma Viola Wilma Bernice Bertha Beulah Eleanor Elsie Estelle Geraldine
+    Harriet Henrietta Ida Josephine Loretta Louise Lorraine Marjorie Maxine
+    Minnie Norma Opal Pauline Phyllis Rosemary Vera Wanda Yvonne Zelda
+    Guadalupe Rosa Carmen Josefina Juana Teresita Lupe Marisol Elena Isabel
+    Adriana Alejandra Beatriz Lucia Pilar Soledad Yolanda Fatima Aisha Amina
+    Khadija Zainab Layla Nadia Yasmin Imani Aaliyah Ayana Ebony Keisha Latoya
+    Tamika Shaniqua Chantal Giovanna Francesca Alessandra Valentina Svetlana
+    Natasha Olga Tatiana Irina Ekaterina Agnieszka Malgorzata Katarzyna Yuki
+    Sakura Aiko Mei Ling Xiu Hui Yan Ji Soo Eun Priya Anjali Pooja Kavita
+    Sunita Lakshmi Deepa Meera Neha Shreya Hana Noor Mariam Sana Leila
+    Kaitlyn Brianna Destiny Alyssa Kaylee Makayla Addison Avery Harper Aubrey
+    Zoey Lillian Hailey Kennedy Riley Savannah Brooklyn Payton Peyton Taylor
+    Morgan Jayden Aiden Caden Landon Carter Hunter Connor Owen Gavin Wyatt
+    Liam Lucas Oliver Elliott Sebastian Julian Levi Isaac Asher Theodore Ezra
+    Thaddeus Cornelius Reginald Augustus Bartholomew Ignatius Leopold Rupert
+    Delphine Ottilie Philippa Rosalind Winifred Clementine Georgiana Honora
+    Hope Faith Joy Dawn Autumn Summer April Penny Sandy Ray Rich Rob Frank Grant
+    Chance Jack Jay Max Mark Bill Will Sue Pat Art Chase Hunter Lily Iris Ivy
+    Daisy Olive Hazel Willow Jasmine Holly Laurel Robin Angel Carmen Dolores
+    Mercedes Violet Ruby Pearl Amber Victor Lance Glen Glenn Norman Red Rusty
+    Sterling Cliff Clay Gale Storm Major Bell Rose June May Grace Lee Dean Wade
+  `);
+
+  // Common US surnames.
+  const SURNAMES = words(`
+    Smith Johnson Williams Brown Jones Garcia Miller Davis Rodriguez Martinez
+    Hernandez Lopez Gonzalez Wilson Anderson Thomas Taylor Moore Jackson Martin
+    Lee Perez Thompson White Harris Sanchez Clark Ramirez Lewis Robinson Walker
+    Young Allen King Wright Scott Torres Nguyen Hill Flores Green Adams Nelson
+    Baker Hall Rivera Campbell Mitchell Carter Roberts Gomez Phillips Evans
+    Turner Diaz Parker Cruz Edwards Collins Reyes Stewart Morris Morales Murphy
+    Cook Rogers Gutierrez Ortiz Morgan Cooper Peterson Bailey Reed Kelly Howard
+    Ramos Kim Cox Ward Richardson Watson Brooks Chavez Wood James Bennett Gray
+    Mendoza Ruiz Hughes Price Alvarez Castillo Sanders Patel Myers Long Ross
+    Foster Jimenez Powell Jenkins Perry Russell Sullivan Bell Coleman Butler
+    Henderson Barnes Gonzales Fisher Vasquez Simmons Romero Jordan Patterson
+    Alexander Hamilton Graham Reynolds Griffin Wallace Moreno West Cole Hayes
+    Bryant Herrera Gibson Ellis Tran Medina Aguilar Stevens Murray Ford Castro
+    Marshall Owens Harrison Fernandez McDonald Woods Washington Kennedy Wells
+    Vargas Henry Chen Freeman Webb Tucker Guzman Burns Crawford Olson Simpson
+    Porter Hunter Gordon Mendez Silva Shaw Snyder Mason Dixon Munoz Hunt Hicks
+    Holmes Palmer Wagner Black Robertson Boyd Rose Stone Salazar Fox Warren
+    Mills Meyer Rice Schmidt Garza Daniels Ferguson Nichols Stephens Soto
+    Weaver Ryan Gardner Payne Grant Dunn Kelley Spencer Hawkins Arnold Pierce
+    Vazquez Hansen Peters Santos Hart Bradley Knight Elliott Cunningham Duncan
+    Armstrong Hudson Carroll Lane Riley Andrews Alvarado Ray Delgado Berry
+    Perkins Hoffman Johnston Matthews Pena Richards Contreras Willis Carpenter
+    Lawrence Sandoval Guerrero George Chapman Rios Estrada Ortega Watkins
+    Greene Nunez Wheeler Valdez Harper Burke Larson Santiago Maldonado Morrison
+    Franklin Carlson Austin Dominguez Carr Lawson Jacobs OBrien Lynch Singh
+    Vega Bishop Montgomery Oliver Jensen Harvey Williamson Gilbert Dean Sims
+    Espinoza Howell Li Wong Reid Hanson Le McCoy Garrett Burton Fuller Wang
+    Weber Welch Rojas Lucas Marquez Fields Park Yang Little Banks Padilla Day
+    Walsh Bowman Schultz Luna Fowler Mejia Davidson Acosta Brewer May Holland
+    Juarez Newman Pearson Curtis Cortez Douglas Schneider Joseph Barrett Navarro
+    Figueroa Keller Avila Wade Molina Stanley Hopkins Campos Barnett Bates
+    Chambers Caldwell Beck Lambert Miranda Byrd Craig Ayala Lowe Frazier Powers
+    Neal Leonard Gregory Carrillo Sutton Fleming Rhodes Shelton Schwartz Norris
+    Jennings Watts Duran Walters Cohen McDaniel Moran Parks Steele Vaughn Becker
+    Holt DeLeon Barker Terry Hale Leon Hail Benson Haynes Horton Miles Lyons
+    Pham Graves Bush Thornton Wolfe Warner Cabrera McKinney Mann Zimmerman Dawson
+    Lara Fletcher Page McCarthy Love Robles Cervantes Solis Erickson Reeves
+    Chang Klein Salinas Fuentes Baldwin Daniel Simon Velasquez Hardy Higgins
+    Aguirre Lin Cummings Chandler Sharp Barber Bowen Ochoa Dennis Robbins
+    Rodgers Blake Kaur Dang Huynh Vu Hoang Phan Bui Do Ly Truong Ng Chan Cheung
+    Lam Leung Wu Zhang Liu Zhao Huang Zhou Xu Sun Ma Zhu Hu Guo He Gao Lin Luo
+    Kumar Sharma Shah Gupta Mehta Reddy Rao Nair Iyer Desai Joshi Malhotra
+    Kapoor Chaudhry Khan Hussain Ahmed Ali Malik Siddiqui Qureshi Farooq Rahman
+    Okafor Okoro Nwosu Adeyemi Oyelaran Mensah Boateng Abebe Tesfaye Haile
+    Kowalski Nowak Wisniewski Wojcik Kaminski Lewandowski Zielinski Szymanski
+    Novak Horvat Petrov Ivanov Smirnov Kuznetsov Popov Volkov Sokolov Rossi
+    Russo Ferrari Esposito Bianchi Romano Colombo Ricci Marino Greco Bruno
+    Mueller Schulz Fischer Meier Wagner Becker Hoffmann Koch Richter Wolf
+    Dubois Moreau Laurent Lefebvre Bernard Petit Durand Leroy Fontaine
+    OConnor OReilly Murphy Kelly Byrne Doyle McCarthy Gallagher Fitzgerald
+    Goldberg Friedman Rosenberg Katz Levine Shapiro Weinstein Feldman Kaplan
+    Beaver Whitaker Pendleton Ashcroft Thistlewood Castellano Delacroix Fairweather
+  `);
+
+  // ---------------------------------------------------------------------
+  // Names that are also ordinary words, months, drugs, or clinical terms.
+  // These need a cue (honorific, relation word, adjacent name) before we tag them.
+  // ---------------------------------------------------------------------
+  const AMBIGUOUS = setOf(words(`
+    Grace Bell May June Rose Hope Faith Joy Dawn Autumn Summer April Carol
+    Penny Sandy Ray Rich Rob Frank Grant Chance Jack Jay Max Mark Bill Will
+    Sue Pat Art Chase Hunter Hail Lane Park Day Love Page Sharp Little Long
+    Young Black White Green Brown Gray Stone Wood Woods Hill Hall King Price
+    Rice Fox Wolf Wolfe Bush Fields Banks Lake Rivers Brooks Shore Ford Lee
+    Dean Holland Simon Daniel Thomas James George Henry Lewis Allen Scott
+    Warren Wells West Cole Burns Mills Reed Marsh Gale Storm Cliff Clay Sterling
+    Victor Major Glen Glenn Norman Lance Rusty Red Ruby Pearl Amber Violet
+    Lily Iris Ivy Daisy Olive Hazel Willow Jasmine Heather Holly Laurel Fern
+    Robin Wren Raven Lark Dove Martin Sparrow Bishop Knight Dixon Mason Cook
+    Baker Carter Porter Hunt Ward Wright Carpenter Shepherd Taylor Weaver
+    Miller Fisher Barber Butler Brewer Gardner Turner Marshall Steele Sims
+    Welch Bowman Fowler Barker Hardy Dennis Terry Curtis Joseph Leon Miles
+    Hale Rhodes Powers Stanley Barrett Baldwin Bates Beck Wade Lowe Love Neal
+    Hamilton Jordan Austin Lincoln Madison Jackson Kennedy Washington Franklin
+    Morgan Riley Taylor Avery Harper Kelly Shelton Chambers Holt Walters
+    Cross Church Bridges Hollow Dale Vale Grove Field Forest Meadow
+    Angel Christian Noel Carmen Dolores Mercedes Concepcion Rosario Trinidad
+    Hong Ming Wei Jin Min Hu He Ma Do Ng Le Ly Li Lin Sun Ko Yu An Ha Ho So
+  `));
+
+  // ---------------------------------------------------------------------
+  // Clinical eponyms, drug names, and terms that look like names but must
+  // never be redacted. Oncology-heavy by design.
+  // ---------------------------------------------------------------------
+  const CLINICAL_ALLOWLIST = setOf(words(`
+    Hodgkin Hodgkins Hodgkin's Ewing Ewing's Wilms Wilms' Burkitt Burkitt's
+    Kaposi Kaposi's Waldenstrom Waldenström Richter Richter's Merkel Barrett
+    Barrett's Paget Paget's Cushing Cushing's Addison Addison's Crohn Crohn's
+    Graves Graves' Bell Bell's Parkinson Parkinson's Alzheimer Alzheimer's
+    Kussmaul Raynaud Raynaud's Sjogren Sjögren Sjogren's Hashimoto Hashimoto's
+    Down Downs Down's Turner Turner's Klinefelter Marfan Ehlers Danlos Hunter
+    Hurler Gaucher Fabry Pompe Tay Sachs Huntington Huntington's Wilson Wilson's
+    Lynch Li Fraumeni Peutz Jeghers Cowden Gardner Gardner's Fanconi Bloom
+    Nijmegen Rothmund Werner Stevens Johnson Lyell Guillain Barre Barré
+    Horner Horner's Pancoast Virchow Trousseau Courvoisier Murphy Murphy's
+    McBurney Rovsing Kehr Cullen Grey Homan Homans Babinski Brudzinski Kernig
+    Osler Weber Rendu Janeway Roth Reed Sternberg Auer Howell Jolly Heinz
+    Dohle Pelger Huet Chediak Higashi Mallory Weiss Zollinger Ellison
+    Whipple Whipple's Meckel Hirschsprung Barlow Ortolani Legg Calve Perthes
+    Osgood Schlatter Dupuytren Colles Monteggia Galeazzi Lisfranc Jones
+    Bankart Hill Sachs Gleason Nottingham Bloom-Richardson Breslow Clark
+    Ann Arbor Lugano Deauville Cheson RECIST Lansky Karnofsky ECOG Charlson
+    Glasgow Apgar Braden Morse Wells Geneva Child Pugh MELD Ranson Alvarado
+    Keytruda Opdivo Tecentriq Imfinzi Yervoy Herceptin Perjeta Kadcyla Enhertu
+    Avastin Erbitux Vectibix Rituxan Truxima Ruxience Gazyva Darzalex Sarclisa
+    Kyprolis Velcade Ninlaro Revlimid Pomalyst Thalomid Imbruvica Calquence
+    Brukinsa Venclexta Ibrance Kisqali Verzenio Lynparza Zejula Rubraca Talzenna
+    Tagrisso Tarceva Iressa Gilotrif Alecensa Xalkori Zykadia Alunbrig Lorbrena
+    Tabrecta Tepmetko Retevmo Gavreto Lumakras Krazati Rozlytrek Vitrakvi
+    Adcetris Polivy Padcev Trodelvy Blenrep Zynlonta Tivdak Elahere Lunsumio
+    Columvi Epkinly Talvey Tecvayli Elrexfio Carvykti Abecma Yescarta Kymriah
+    Breyanzi Tecartus Neulasta Neupogen Zarxio Udenyca Fulphila Nyvepria
+    Ziextenzo Fylnetra Granix Leukine Procrit Epogen Aranesp Retacrit Zofran
+    Aloxi Emend Cinvanti Akynzeo Varubi Sancuso Sustol Decadron Benadryl
+    Pepcid Tylenol Ativan Compazine Reglan Zyprexa Xgeva Prolia Zometa Aredia
+    Taxol Taxotere Abraxane Jevtana Halaven Ixempra Navelbine Oncovin Velban
+    Adriamycin Doxil Ellence Idamycin Cerubidine Mitomycin Bleo Blenoxane
+    Platinol Paraplatin Eloxatin Cytoxan Ifex Mesnex Treanda Bendeka Belrapzo
+    Alimta Pemfexy Fludara Leustatin Nipent Clolar Arranon Xeloda Adrucil
+    Camptosar Onivyde Hycamtin Vepesid Toposar Etopophos Gemzar Infugem
+    Lupron Eligard Zoladex Firmagon Trelstar Faslodex Arimidex Femara Aromasin
+    Nolvadex Soltamox Zytiga Xtandi Erleada Nubeqa Casodex Pluvicto Xofigo
+    Lutathera Azedra Sandostatin Somatuline Afinitor Sutent Nexavar Votrient
+    Inlyta Cabometyx Lenvima Stivarga Fotivda Welireg Jakafi Inrebic Vonjo
+    Ojjaara Sprycel Tasigna Bosulif Iclusig Scemblix Gleevec Hydrea Droxia
+    Vidaza Onureg Dacogen Inqovi Venetoclax Idhifa Tibsovo Rezlidhia Xospata
+    Vanflyta Rydapt Mylotarg Besponsa Blincyto Vyxeos Oncaspar Asparlas Rylaze
+    Erwinaze Purixan Trexall Otrexup Rasuvo Xatmep Elitek Fasturtec Kepivance
+    Ethyol Totect Zinecard Savene Mesna Leucovorin Fusilev Khapzory Voraxaze
+    Heparin Lovenox Fragmin Arixtra Eliquis Xarelto Pradaxa Coumadin Jantoven
+    Plavix Brilinta Effient Aspirin Lipitor Crestor Zocor Pravachol Lasix
+    Bumex Aldactone Norvasc Cardizem Lopressor Toprol Coreg Zestril Prinivil
+    Vasotec Cozaar Diovan Benicar Micardis Avapro Entresto Lanoxin Cordarone
+    Multaq Synthroid Levoxyl Unithroid Armour Cytomel Metformin Glucophage
+    Januvia Jardiance Farxiga Invokana Ozempic Trulicity Victoza Lantus Levemir
+    Humalog Novolog Tresiba Basaglar Toujeo Prilosec Nexium Protonix Prevacid
+    Zantac Carafate Miralax Colace Senokot Dulcolax Imodium Lomotil Flagyl
+    Cipro Levaquin Avelox Zithromax Biaxin Augmentin Keflex Bactrim Septra
+    Macrobid Diflucan Vfend Noxafil Cresemba Mycamine Cancidas Eraxis Valtrex
+    Zovirax Famvir Tamiflu Paxlovid Veklury Prednisone Medrol Solu-Medrol
+    Solu-Cortef Kenalog Depo-Medrol Celestone Florinef Dexamethasone
+    Port Port-a-Cath Portacath PICC Hickman Groshong Broviac Huber PowerPort
+    Mediport Infusaport BardPort Smart Port Vortex Xcela Dignity Titanium
+    Epic Hyperspace Beacon Cadence Prelude Haiku Canto
+    Rover Cupid Radiant Kaleidoscope Bugsy Optime Stork Wisdom Tapestry
+    Cerner Meditech Allscripts Athena NextGen eClinicalWorks CareCloud
+    Monday Tuesday Wednesday Thursday Friday Saturday Sunday Mon Tue Tues Wed
+    Thu Thur Thurs Fri Sat Sun January February March April May June July
+    August September October November December Jan Feb Mar Apr Jun Jul Aug
+    Sep Sept Oct Nov Dec AM PM EST EDT CST CDT MST MDT PST PDT
+    Chair Bay Room Pod Suite Infusion Chemo Oncology Hematology Radiation
+    Pharmacy Lab Labs CBC CMP BMP LFT INR PT PTT ANC Hgb Hct Plt WBC RBC MCV
+    Cr BUN eGFR AST ALT Alk Phos Bili Alb Mg Phos Ca K Na Cl CO2 Glu TSH
+    Tumor Marker CEA CA PSA AFP LDH Beta HCG BRCA HER2 ER PR Ki67 PDL1 MSI
+    CT MRI PET PETCT EKG ECG ED ER ICU OR PACU IR GI GU ENT OB OBGYN OT SLP
+    SNF LTC ALF DME IV IM SC SQ PO PRN BID TID QID QD NPO LVM VM VMS TC HC
+    NS RL D5 D5W KCL MGSO4 TPN PCA PICC CVC CVAD IVF ABX ABG VS BP HR RR TPA
+    Cathflo Alteplase Activase Onpro Huber Beacon Hyperspace MyChart Haiku
+    EGFR ALK ROS1 KRAS NRAS BRAF MET RET NTRK FGFR IDH FLT3 NPM1 TP53 BCR ABL
+    JAK STAT PIK3CA PTEN RB1 CDK CDKN2A MYC BCL2 BCL6 CD19 CD20 CD30 CD33 CD38
+    BCMA GPRC5D FcRH5 CTLA PD1 PD-L1 VEGF PDGF TKI PARP ADC CAR-T BiTE IO
+    Neutropenia Thrombocytopenia Anemia Mucositis Neuropathy Nausea Emesis
+    Fatigue Fever Rigors Chills Rash Pruritus Diarrhea Constipation Dyspnea
+    Cycle Day Dose Premed Premeds Prehydration Hydration Bolus Push Drip
+    Flush Saline Dextrose Lactated Ringers Ringer's Normal Half Quarter
+    Grade Stage Line Arm Regimen Protocol Study Trial Cohort Screening
+    Consent Pending Approved Denied Hold Held Holding Resume Resumed Delay
+    Delayed Reschedule Rescheduled Cancel Cancelled Canceled Completed Done
+    Will Call Called Calling Pt Pts Patient Patients Family Spouse Caregiver
+    Son Daughter Wife Husband Mother Father Brother Sister Grandson Granddaughter
+    North South East West Main Central Upper Lower Inner Outer Old New
+    ABVD BEACOPP CHOP R-CHOP EPOCH DA-EPOCH ICE DHAP ESHAP GDP GemOx BR
+    FOLFOX FOLFIRI FOLFOXIRI FOLFIRINOX CAPOX XELOX XELIRI AC TC TCH TCHP
+    ddAC EC FEC CMF CAF TAC ACT AC-T PCb EP EC-T VIP BEP TIP VeIP R-CVP CVP
+    CyBorD VRd KRd DRd DVd DPd DKd IRd Rd Vd VCD VTD MPT MPV VMP
+    HyperCVAD CALGB COG AALL ECOG SWOG NRG NSABP RTOG GOG NCCN ASCO ASH ESMO
+    MAID AIM VAC VDC IE VDC/IE VIDE VAI OPEC CEV ICE/VAC
+  `));
+
+  // Relationship words that signal a third-party name follows or precedes.
+  const RELATION_CUES = words(`
+    son daughter wife husband spouse partner mother father mom dad mum
+    sister brother grandson granddaughter grandmother grandfather grandma
+    grandpa aunt uncle niece nephew cousin friend neighbor neighbour caregiver
+    caretaker poa proxy guardian fiance fiancee fiancé fiancée boyfriend
+    girlfriend roommate companion driver sitter aide nurse navigator
+    coordinator pharmacist dietitian chaplain stepson stepdaughter stepmother
+    stepfather godmother godfather pastor
+  `);
+
+  const HONORIFICS = words(`Dr Dr. Doctor Mr Mr. Mrs Mrs. Ms Ms. Miss Mx Mx. Nurse Prof Prof. Rev Rev. Fr Fr. Sr Sr.`);
+  const CREDENTIALS = words(`MD DO NP PA PA-C RN LPN BSN MSN DNP APRN CRNP CNP ARNP PharmD RPh CPhT MSW LCSW RD RDN PhD PsyD DDS DMD DPM FNP ANP AGNP ACNP PMHNP CNM CNS`);
+
+  const ORG_SUFFIXES = words(`
+    Hospital Hospitals Medical Center Cancer Center Clinic Clinics Health
+    Healthcare Oncology Hematology Associates Institute Memorial Regional
+    General University Hospice Pharmacy Infusion Imaging Radiology Labs
+    Laboratory Laboratories Physicians Group Partners Specialists Center Centre
+    Network System Foundation Care Urgent Surgical Surgery Practice
+    Veterans Children's Childrens Women's Womens Rehab Rehabilitation Dialysis
+    Nursing Manor Village Senior Living Assisted Urology Cardiology
+    Neurology Neurologic Gastroenterology Dermatology Orthopedics Orthopedic
+    Community County Regional Memorial Home Agency Association Services
+  `);
+  // Words that frequently *name* a facility (not generic): they count as the specific part.
+  const ORG_NAMEWORDS = words(`
+    Mercy Sinai Presbyterian Methodist Baptist Lutheran Adventist Providence
+    Samaritan Trinity Ascension Sisters Charity Saint Kaiser Mayo Hamot
+    Roswell Wilmot Strong Oishei Kaleida Catholic Jewish Christian Episcopal
+    Mount Mt Holy Sacred Heart Good Shepherd Cross Grace Hope Faith Unity
+  `);
+
+  const US_STATES = {
+    AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+    CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+    HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas',
+    KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts',
+    MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana',
+    NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico',
+    NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma',
+    OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+    SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
+    VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+    DC: 'District of Columbia',
+  };
+
+  const US_CITIES = words(`
+    Buffalo Rochester Syracuse Albany Yonkers Brooklyn Queens Bronx Manhattan
+    Amherst Cheektowaga Tonawanda Niagara Lackawanna Hamburg Orchard Lockport
+    Batavia Jamestown Olean Dunkirk Erie Cleveland Pittsburgh Columbus Toledo
+    Akron Dayton Cincinnati Detroit Chicago Milwaukee Minneapolis Boston
+    Worcester Springfield Hartford Providence Philadelphia Newark Baltimore
+    Richmond Charlotte Raleigh Atlanta Jacksonville Orlando Tampa Miami
+    Nashville Memphis Louisville Indianapolis Kansas Omaha Denver Phoenix
+    Tucson Albuquerque Dallas Houston Austin Antonio Oklahoma Tulsa Seattle
+    Portland Sacramento Francisco Oakland Jose Angeles Diego Vegas Honolulu
+    Anchorage Birmingham Montgomery Mobile Jackson Orleans Rouge Little Rock
+    Des Moines Wichita Topeka Lincoln Fargo Sioux Billings Boise Salt Reno
+    Cheyenne Madison Lansing Grand Rapids Fort Wayne Toronto Hamilton Fort Erie
+    Welland Catharines Mississauga Ottawa Montreal Scranton Allentown Harrisburg
+    Ithaca Binghamton Elmira Utica Schenectady Troy Poughkeepsie Newburgh
+    Kingston Plattsburgh Watertown Oswego Auburn Geneva Canandaigua Corning
+    Falls Springs Beach Heights Park City Town Valley
+  `);
+
+  // Hold-out names: deliberately NOT in FIRST_NAMES/SURNAMES. The synthetic
+  // stress set uses these for a share of third-party names so recall on
+  // out-of-lexicon names is measured honestly.
+  const HOLDOUT_FIRST = words(`
+    Oluwaseun Keziah Thandiwe Siobhan Eamonn Anneliese Bartek Ngozi Rutger
+    Xiomara Yevgenia Tobias Marguerite Desmond Priyanka Lorcan Ingrid Baptiste
+    Zuleika Caoimhe Oisin Ferdinand Wilhelmina Esperanza Jedidiah Temperance
+    Leocadia Anselm Cressida Phineas Evangelina Barnaby Dorotea Lucinda Osric
+    Mireille Tadeo Giselle Hamish Perpetua Casimir Isadora Ludovic Seraphina
+    Vashti Zebediah Ottoline Lysander Fenella Ambrose Rosalba Ignacia Thorsten
+  `);
+  const HOLDOUT_LAST = words(`
+    Abernathy Vanterpool Okonkwo Szczepanski Featherstone Delacruz-Ortiz
+    Kirchhoff Ramasubramanian Whitlock Oyelowo Fairbanks Nakashima Thibodeaux
+    Brannigan Vasilenko Ostrowski Hightower Mbeki Castellanos Lindqvist
+    Quintanilla Pemberton Achterberg Tremblay Okunade Birkenstock Vandermeer
+    Greenblatt Haverford Ikemefuna Sallinen Dubrovsky Montalban Yarbrough
+    Kuzmenko Falconer Strickland Nwachukwu Eriksdottir Villanueva Papadakis
+    Brightwater Holmquist Zapatero Lindgren Marchetti Sowerby Traynor
+  `);
+
+  // Surrogate pools. Disjoint from everything above would be ideal but the
+  // generator also excludes anything that appears in the document being processed.
+  const FAKE_FIRST = words(`
+    Alden Bettina Caspian Delia Everett Flora Gideon Harriet Ivo Juniper Kit
+    Leander Maren Nils Orla Perrin Quill Rosalie Soren Tamsin Ulric Verity
+    Wren Xander Yara Zeph Ansel Brigid Cato Dahlia Elio Fenwick Greer Hollis
+    Idris Jolene Kerrigan Lowell Mirabel Nolan Odette Pascal Quinlan Rhoswen
+    Sorrel Thora Umber Vale Wilder Xanthe Yvaine Zane Adair Blythe Corin Dorian
+    Elowen Faye Garnet Haze Inigo Jessamine Kieran Lark Merritt Neve Oren
+    Ansgar Briar Cosima Dashiell Esme Fenn Gwendolen Hesper Ilsa Jory Keturah
+    Linnea Marisol Nerys Oswin Petra Quentin Rafferty Saskia Tobiah Una Vesper
+    Wendeline Yannick Zelie Aurelio Beatrix Cyprian Delphine Emrys Florian Gilda
+  `);
+  const FAKE_LAST = words(`
+    Ashgrove Brightwell Calloway Dunmore Ellery Fairchild Greenhalgh Holloway
+    Ingram Jessop Kingsley Lockhart Marlowe Northcote Oakes Pembridge Quayle
+    Ravenscroft Stanmore Thorne Underhill Vance Westbrook Yardley Aldridge
+    Blackwood Carrow Danforth Eastwick Farrow Glenmore Hartwell Islington
+    Jarrow Kestrel Lindell Moorcroft Nightingale Orchardson Prescott Quenby
+    Redfern Sallow Tennant Upton Vickery Whitmore Yeoman Ashby Bramwell Colfax
+    Dunstable Everleigh Fenwick Grantham Hollingsworth Iredale Jessamy Kittredge
+    Lanchester Mortlake Nethercott Oxley Pennington Quarrington Rowntree Selwyn
+    Thackeray Umberfield Vanbrugh Wakefield Yelverton Ashdown Beaumont Crewe
+  `);
+  const FAKE_ORGS = words(`
+    Riverside|Medical|Center Lakeview|Oncology|Associates Northgate|Regional|Hospital
+    Pinecrest|Cancer|Institute Harborview|Clinic Meadowbrook|Health Stonebridge|Hospice
+    Cedar|Hills|Infusion|Center Westfield|Memorial|Hospital Brookhaven|Hematology
+    Summit|Ridge|Medical|Group Oakdale|Community|Hospital Fairmont|Imaging
+    Silverlake|Pharmacy Elmwood|Home|Care Clearwater|University|Hospital
+  `).map((s) => s.replace(/\|/g, ' '));
+  const FAKE_CITIES = words(`Ashford Brimley Caldwell Dunbar Eastmere Fallbrook Glenhaven Hartsfield Ivydale Kessler Larkspur Millbrook Northfield Oakridge Pinehurst Quarryville Redmond Stonehaven Thornbury Wexley`);
+
+  const FIRST_SET = setOf(FIRST_NAMES);
+  const LAST_SET = setOf(SURNAMES);
+  const CITY_SET = setOf(US_CITIES);
+  const RELATION_SET = setOf(RELATION_CUES);
+  const HONORIFIC_SET = setOf(HONORIFICS.map((h) => h.replace(/\.$/, '')));
+  const CREDENTIAL_SET = setOf(CREDENTIALS);
+  const ORG_SUFFIX_SET = setOf(ORG_SUFFIXES);
+  const ORG_NAMEWORD_SET = setOf(ORG_NAMEWORDS);
+  const CA_PROVINCES = { ON: 'Ontario', QC: 'Quebec', BC: 'British Columbia', AB: 'Alberta', MB: 'Manitoba', SK: 'Saskatchewan', NS: 'Nova Scotia', NB: 'New Brunswick', PE: 'Prince Edward Island', NL: 'Newfoundland' };
+  const STATE_ABBR_SET = new Set([...Object.keys(US_STATES), ...Object.keys(CA_PROVINCES)]);
+  const STATE_NAME_SET = setOf([...Object.values(US_STATES), ...Object.values(CA_PROVINCES)]);
+
+  return {
+    FIRST_NAMES, SURNAMES, AMBIGUOUS, CLINICAL_ALLOWLIST, RELATION_CUES, HONORIFICS,
+    CREDENTIALS, ORG_SUFFIXES, US_STATES, US_CITIES, HOLDOUT_FIRST, HOLDOUT_LAST,
+    FAKE_FIRST, FAKE_LAST, FAKE_ORGS, FAKE_CITIES,
+    FIRST_SET, LAST_SET, CITY_SET, RELATION_SET, HONORIFIC_SET, CREDENTIAL_SET,
+    ORG_SUFFIX_SET, ORG_NAMEWORDS, ORG_NAMEWORD_SET, STATE_ABBR_SET, STATE_NAME_SET, CA_PROVINCES,
+    isFirstName: (w) => FIRST_SET.has(w.toLowerCase()),
+    isSurname: (w) => LAST_SET.has(w.toLowerCase()),
+    isAmbiguous: (w) => AMBIGUOUS.has(w.toLowerCase()),
+    isClinical: (w) => CLINICAL_ALLOWLIST.has(w.toLowerCase().replace(/[’']s$/, '')) || CLINICAL_ALLOWLIST.has(w.toLowerCase()),
+  };
+});
