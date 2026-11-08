@@ -1,0 +1,204 @@
+[
+  {
+    "id": "sched-caps-nospace-vietnamese",
+    "kind": "text",
+    "text": "SCHED COMMENT 11/04 0912: PT HUYNH,THANH LOAN (MRN# 004 81273) r/s from 11/12/2026 to 11/19/2026 per pt req. FOLFOX C4D1, needs 4.5 hr chair. Son Bao Huynh driving, call his cell: 555.0143 if running late. Pump d/c 11/21.",
+    "phi": ["HUYNH,THANH LOAN", "004 81273", "11/12/2026", "11/19/2026", "Bao Huynh", "555.0143", "11/21"],
+    "keep": ["FOLFOX", "C4D1", "4.5 hr"],
+    "note": "ALL CAPS Last,First with no space and two-word Vietnamese given name; spaced MRN; dotted phone without area code; relative named by role"
+  },
+  {
+    "id": "mychart-korean-username-dob-nosep",
+    "kind": "text",
+    "text": "MyChart message from jhpark_1951 (Park, Ji-hoon):\nHello nurse, this is Ji-hoon Park, Med Rec No. 77120934. My wife Seo-yeon will come with me Thursday 11/12. Can I take my Zofran 8 mg at home before the Rituxan? Last time I got the chills. My birthday is 03041951 if you need it for the pharmacy. Thank you.",
+    "phi": ["jhpark_1951", "Park, Ji-hoon", "Ji-hoon Park", "77120934", "Seo-yeon", "11/12", "03041951"],
+    "keep": ["Zofran 8 mg", "Rituxan", "chills"],
+    "note": "Korean hyphenated given name in both orders; MyChart username containing birth year; DOB with no separators; 'Med Rec No.' label; wife's given name alone"
+  },
+  {
+    "id": "pharm-verif-mbi-memberid",
+    "kind": "text",
+    "text": "PHARMACY VERIFICATION - O'SULLIVAN-REYES, MAIREAD C\nPembrolizumab 200 mg IV q3w verified against plan. Wt 61.2 kg, Cr 0.9, TSH 2.1.\nPrimary: Medicare MBI 3QW7-AB2-KX19. Secondary: BCBS member ID XKH884210037, group 00418.\nPrior auth #PA-2026-118842 good through 02/14/2027. OK to mix.",
+    "phi": ["O'SULLIVAN-REYES, MAIREAD C", "3QW7-AB2-KX19", "XKH884210037", "PA-2026-118842"],
+    "keep": ["Pembrolizumab 200 mg", "q3w", "Cr 0.9", "TSH 2.1"],
+    "note": "Apostrophe plus hyphenated surname in caps with middle initial; Medicare MBI; alphanumeric member ID; prior-auth number"
+  },
+  {
+    "id": "nickname-goes-by-peggy",
+    "kind": "text",
+    "text": "RN note: Pt Margaret Lindqvist-Oyelaran (goes by Peggy) arrived ambulatory with her sister Ingrid. Peggy reports grade 1 neuropathy fingertips since last oxaliplatin. Premeds given: dexamethasone 12 mg IV, palonosetron 0.25 mg IV. Peggy tolerated well.",
+    "phi": ["Margaret", "Lindqvist-Oyelaran", "Peggy", "Ingrid"],
+    "keep": ["grade 1 neuropathy", "oxaliplatin", "dexamethasone 12 mg IV", "palonosetron 0.25 mg IV"],
+    "note": "Nickname used repeatedly on its own after one mention of legal name; sister by first name only"
+  },
+  {
+    "id": "nonagenarian-turned-93-unit-address",
+    "kind": "text",
+    "text": "SW note: Nonagenarian pt, just turned 93 on 10/30, lives alone at 77 Quarry Hill Unit 2, Ashborough NH 03299. Niece Carol-Anne Fitzwater checks in weekly (603-555-0108). Requesting Meals on Wheels. Continues IVIG 0.4 g/kg monthly; premed Benadryl 25 mg PO.",
+    "phi": ["93", "10/30", "77 Quarry Hill Unit 2", "Ashborough", "03299", "Carol-Anne Fitzwater", "603-555-0108"],
+    "keep": ["IVIG 0.4 g/kg", "Benadryl 25 mg PO", "Meals on Wheels"],
+    "note": "Age over 89 as 'turned 93' plus birthday without year; street with unit but no suffix; town + state + ZIP; hyphenated given name"
+  },
+  {
+    "id": "phone-note-yoruba-family",
+    "kind": "text",
+    "text": "Telephone encounter 11/05/2026 1432\nCaller: Oluwaseun Adeyemi-Bakare (daughter), 1 (312) 555-0177\nRe: pt Mrs. Folasade Adeyemi. Daughter states mother vomited x3 since yesterday's cisplatin 75 mg/m2. Advised olanzapine 5 mg qHS, push fluids. Callback # for pt's husband Chief Babatunde Adeyemi 312.555.0129.",
+    "phi": ["11/05/2026", "Oluwaseun Adeyemi-Bakare", "1 (312) 555-0177", "Folasade Adeyemi", "Babatunde Adeyemi", "312.555.0129"],
+    "keep": ["cisplatin 75 mg/m2", "olanzapine 5 mg qHS", "vomited x3"],
+    "note": "Nigerian names with honorifics (Mrs., Chief); country-code phone; dotted phone; caller vs patient"
+  },
+  {
+    "id": "arabic-kunya-bint",
+    "kind": "text",
+    "text": "Interpreter (Arabic) used, ID 40112. Pt Fatima bint Yusuf Al-Masri here for Zometa 4 mg IV. Husband, who goes by Abu Tariq, asked about bone pain. Cal 9.1, Cr 1.0. Pt asked that results be sent to her son Tariq Al-Masri at tariq.almasri77@example.com.",
+    "phi": ["Fatima bint Yusuf Al-Masri", "Abu Tariq", "Tariq Al-Masri", "tariq.almasri77@example.com"],
+    "keep": ["Zometa 4 mg IV", "Cal 9.1", "Cr 1.0", "bone pain"],
+    "note": "bint patronymic, capital Al- particle, kunya nickname (Abu X) for relative, email with name"
+  },
+  {
+    "id": "initials-jr-surname-hyphen",
+    "kind": "text",
+    "text": "Pt J.R. Whitcombe-Faraday prefers to be called J.R. Wife Delphine at bedside. Infusion reaction to Erbitux at 15 min: flushing, SBP 88. Stopped infusion, gave hydrocortisone 100 mg IV and famotidine 20 mg IV. J.R. stable after 30 min.",
+    "phi": ["J.R. Whitcombe-Faraday", "J.R.", "Delphine"],
+    "keep": ["Erbitux", "hydrocortisone 100 mg IV", "famotidine 20 mg IV", "SBP 88"],
+    "note": "Initials-only given name reused alone; wife by first name"
+  },
+  {
+    "id": "tbl-dangelo-caps-dob-nosep",
+    "kind": "table",
+    "headers": ["Appt Date", "Patient Name", "MRN", "DOB", "Comments"],
+    "rows": [["11/17/2026", "D'ANGELO, ROSEMARIE T", "E2049981", "19480715", "Pt's husband Sal D'Angelo has walker, needs wheelchair at door. Venofer 200 mg #3 of 5."]],
+    "phi": ["11/17/2026", "D'ANGELO, ROSEMARIE T", "E2049981", "19480715", "Sal D'Angelo"],
+    "keep": ["Venofer 200 mg", "#3 of 5", "wheelchair"],
+    "note": "Apostrophe surname in caps; E-prefixed MRN; YYYYMMDD DOB; husband shares surname inside comment"
+  },
+  {
+    "id": "outside-providers-fax-vietnamese-order",
+    "kind": "text",
+    "text": "Referral received from Dr. Ifeoma Chukwu, Lakeshore Hematology, fax (774) 555-0188. Pt's PCP is Dr. Tran Van Minh in Pocasset. Request records from Dr. Minh's office re: LVEF 55% echo. Plan trastuzumab 6 mg/kg maintenance; echo q3 months.",
+    "phi": ["Ifeoma Chukwu", "(774) 555-0188", "Tran Van Minh", "Pocasset", "Minh"],
+    "keep": ["LVEF 55%", "trastuzumab 6 mg/kg", "q3 months"],
+    "note": "Outside providers named with Dr.; Vietnamese surname-first name then referred to by given name; fax number; town"
+  },
+  {
+    "id": "transport-county-van-pobox",
+    "kind": "text",
+    "text": "Transport: County ADA van booked for 11/10. Pickup 1209 Larkspur #4B, Millbrook Falls ME 04912 at 0700. Mailing addr P.O. Box 77, Grangeville ME 04913. Driver Earl Pettibone, dispatch 207 555 0150. Pt on O2 2L NC, bring portable tank.",
+    "phi": ["11/10", "1209 Larkspur #4B", "Millbrook Falls", "04912", "P.O. Box 77", "Grangeville", "04913", "Earl Pettibone", "207 555 0150"],
+    "keep": ["O2 2L NC", "portable tank"],
+    "note": "Street with no suffix and # unit; dotted P.O. Box; two towns with ZIPs; outside transport driver; space-separated phone"
+  },
+  {
+    "id": "sw-poa-grandson-email",
+    "kind": "text",
+    "text": "Social Work: Grandson Dmitri Volkonsky-Hale holds healthcare POA (copy scanned to media tab). He lives in Cedar Gap and prefers email dvh.poa@example.com or text 555-0164. Pt eligible for copay assistance for Neulasta OnPro via foundation; ANC today 1.2.",
+    "phi": ["Dmitri Volkonsky-Hale", "Cedar Gap", "dvh.poa@example.com", "555-0164"],
+    "keep": ["Neulasta OnPro", "ANC today 1.2", "copay assistance"],
+    "note": "Relative POA with hyphenated surname; town of relative; email; short phone"
+  },
+  {
+    "id": "eponym-surname-collision-graves-addison",
+    "kind": "text",
+    "text": "Pt Addison Graves, 34F, classic Hodgkin lymphoma stage IIA, here for ABVD C2D15. PMH Graves' disease s/p RAI, on levothyroxine 100 mcg. No Addison's disease. Ms. Graves reports fatigue, no fevers.",
+    "phi": ["Addison Graves", "Ms. Graves"],
+    "keep": ["Hodgkin lymphoma", "ABVD C2D15", "Graves' disease", "Addison's disease"],
+    "note": "Patient name collides with eponyms in the same note; eponymous diseases must survive while the name is removed"
+  },
+  {
+    "id": "drug-like-surname-carboni",
+    "kind": "text",
+    "text": "Lucia Carboni-Platt here for carboplatin AUC 5 + paclitaxel 175 mg/m2. Mrs. Carboni-Platt states her neighbor Gus Taxter will pick her up. Hgb 10.4, plt 142.",
+    "phi": ["Lucia Carboni-Platt", "Mrs. Carboni-Platt", "Gus Taxter"],
+    "keep": ["carboplatin AUC 5", "paclitaxel 175 mg/m2", "Hgb 10.4", "plt 142"],
+    "note": "Surnames that resemble drug names (Carboni-Platt / carboplatin, Taxter / taxol); visitor named"
+  },
+  {
+    "id": "mrn-csn-label-zoo",
+    "kind": "text",
+    "text": "Duplicate chart alert: MR#: 0045-1288 and Epic MRN E 004 51288 appear to be the same pt (KOWALCZYK-NAIR, ANJALI). CSN 1029384756 for today's visit. HAR acct no. 88-310442. Merge request sent to HIM. Gemzar 1000 mg/m2 D1, D8 today.",
+    "phi": ["0045-1288", "E 004 51288", "KOWALCZYK-NAIR, ANJALI", "1029384756", "88-310442"],
+    "keep": ["Gemzar 1000 mg/m2", "D1, D8"],
+    "note": "Multiple MRN label styles, spaced MRN with prefix, encounter CSN, hyphenated hospital account; Polish-Indian hyphenated name"
+  },
+  {
+    "id": "plate-placard-license",
+    "kind": "text",
+    "text": "Security note: Pt's car (plate MA 7KXR219, handicap placard HP-448120) parked in ambulance bay. Pt's driver's license S53044178821 held at front desk until car moved. Pt Bertrand Okafor-Lindgren aware. Infusion of Kyprolis 56 mg/m2 not delayed.",
+    "phi": ["7KXR219", "HP-448120", "S53044178821", "Bertrand Okafor-Lindgren"],
+    "keep": ["Kyprolis 56 mg/m2", "ambulance bay"],
+    "note": "Vehicle plate, placard number and driver's licence number in free text"
+  },
+  {
+    "id": "port-serial-device",
+    "kind": "text",
+    "text": "Port access: Right chest PowerPort, implant card shows SN 18FMK3302, ref 1708000. Accessed with 20G 0.75in Huber, +blood return. Flushed 10 mL NS, locked with heparin 100 units/mL 5 mL. Pt Imelda Santoro-Vance tolerated.",
+    "phi": ["18FMK3302", "Imelda Santoro-Vance"],
+    "keep": ["20G 0.75in Huber", "10 mL NS", "heparin 100 units/mL 5 mL"],
+    "note": "Implanted device serial number labelled SN; product ref number is not PHI"
+  },
+  {
+    "id": "mychart-username-email-signature",
+    "kind": "text",
+    "text": "From MyChart (rosie.delgado62):\nhi its rosie, i cant make tues 11/10 my grandson Mateo has his surgery. can we move to wed?? also is the Aloxi still before the taxotere. call me 413-555-0112 or rosedelgado1962@example.com\n- Rosario Delgado Ybarra",
+    "phi": ["rosie.delgado62", "rosie", "11/10", "Mateo", "413-555-0112", "rosedelgado1962@example.com", "Rosario Delgado Ybarra"],
+    "keep": ["Aloxi", "taxotere"],
+    "note": "Lowercase nickname in patient message; username and email with birth year; Hispanic double surname without hyphen in signature"
+  },
+  {
+    "id": "hispanic-particles-de-los",
+    "kind": "text",
+    "text": "Pt Maria de los Angeles Ibarra de la Fuente (prefers Marielena) presents for Taxotere 75 mg/m2 C3. Spanish interpreter declined; daughter Ximena Ibarra interpreting. Marielena denies mouth sores. WBC 5.6.",
+    "phi": ["Maria de los Angeles", "Ibarra de la Fuente", "Marielena", "Ximena Ibarra"],
+    "keep": ["Taxotere 75 mg/m2", "WBC 5.6", "mouth sores"],
+    "note": "Compound given name with particles and double surname with de la; nickname; daughter"
+  },
+  {
+    "id": "vietnamese-diacritics-and-ascii",
+    "kind": "text",
+    "text": "Name alert: Registration has NGUYEN THI HONG NHUNG but ID shows Nguyễn Thị Hồng Nhung. Same pt, DOB 1957-02-09. Please fix in Epic. Pt here for Herceptin Hylecta 600 mg SC; no premeds needed.",
+    "phi": ["NGUYEN THI HONG NHUNG", "Nguyễn Thị Hồng Nhung", "1957-02-09"],
+    "keep": ["Herceptin Hylecta 600 mg SC", "no premeds"],
+    "note": "Four-part Vietnamese name in ASCII caps and with diacritics; ISO DOB"
+  },
+  {
+    "id": "phone-format-zoo",
+    "kind": "text",
+    "text": "Contact update for pt Thaddeus Ojukwu-Marsh: home (508)555-0123, cell: 508 555 0156, work 508.555.0198 ext 4412, fax#5085550171. Pt prefers cell. Okay to leave msg re: Lupron Depot 22.5 mg q3mo.",
+    "phi": ["Thaddeus Ojukwu-Marsh", "(508)555-0123", "508 555 0156", "508.555.0198 ext 4412", "5085550171"],
+    "keep": ["Lupron Depot 22.5 mg", "q3mo"],
+    "note": "Phone formats: no-space parens, spaces, dots with extension, run-together digits after fax#"
+  },
+  {
+    "id": "admit-dates-outside-hospital",
+    "kind": "text",
+    "text": "Interval hx: admitted Mercy St. Columba 10/28 - 11/2 for neutropenic fever, ANC 0.3 on admit, tx cefepime then d/c 11/02/26 on Augmentin. Seen by outside ID Dr. Rashida Kwarteng. Hold cycle, resume 11/16 if ANC >1.5.",
+    "phi": ["10/28", "11/2", "11/02/26", "Rashida Kwarteng", "11/16"],
+    "keep": ["ANC 0.3", "cefepime", "Augmentin", "ANC >1.5"],
+    "note": "Admission and discharge dates in several short forms; outside consultant; ANC thresholds must survive"
+  },
+  {
+    "id": "death-notice-cancel",
+    "kind": "text",
+    "text": "Pt expired at home 11/6/2026 per wife Lorraine (call from Hospice of the Valley RN Joanne Pruett, 555-0181). Please cancel remaining Opdivo 480 mg q4w appts and notify Dr. Halvorsen-Ito (outside rad onc). Condolence card to 52 Birchwood Ln, Tisbury MA 02568.",
+    "phi": ["11/6/2026", "Lorraine", "Joanne Pruett", "555-0181", "Halvorsen-Ito", "52 Birchwood Ln", "Tisbury", "02568"],
+    "keep": ["Opdivo 480 mg", "q4w"],
+    "note": "Date of death; wife; outside hospice nurse; outside provider surname only; full street address"
+  },
+  {
+    "id": "ssn-dl-registration",
+    "kind": "text",
+    "text": "Registration: Pt Koffi Mensah-Abernathy brought SS card, SSN 900-55-0172; DL #M2041-55839-17 (exp 2029). Updated insurance: Aetna ID W287645193. Note: pt's last 4 on file was 0172. Chair 12 for Darzalex Faspro 1800 mg SC.",
+    "phi": ["Koffi Mensah-Abernathy", "900-55-0172", "M2041-55839-17", "W287645193"],
+    "keep": ["Darzalex Faspro 1800 mg SC", "Chair 12"],
+    "note": "SSN, driver's licence with dashes, insurance ID; chair number must survive"
+  },
+  {
+    "id": "tbl-age-over-89-two-word-given",
+    "kind": "table",
+    "headers": ["Appt Date", "Patient Name", "MRN", "Age", "Comments"],
+    "rows": [["Mon 11/23", "SAINT-JUST,MARIE CLAIRE", "MRN 3301-994", "102 y.o.", "Waldenstrom macroglobulinemia, rituximab 375 mg/m2. Great-granddaughter Aurelie drives. Lives at Bayview Manor rm 214, Wareham."]],
+    "phi": ["Mon 11/23", "SAINT-JUST,MARIE CLAIRE", "3301-994", "102", "Aurelie", "Wareham"],
+    "keep": ["Waldenstrom macroglobulinemia", "rituximab 375 mg/m2"],
+    "note": "Hyphenated caps surname, no space, two-word given name; age 102 as 'y.o.'; weekday-prefixed date; relative and town in comments"
+  }
+]

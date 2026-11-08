@@ -350,9 +350,15 @@
   }
   // A later input can teach the session a name an earlier screenshot could not read (a name wrapped over two
   // lines, a cropped column). Re-protect those earlier items so they pick up the name and can pass the check.
+  // The same goes for any earlier input once the session knows a patient (name or record number) it did not know when that
+  // input was protected: a later tile view can name a patient that an earlier table listed, and the earlier output is rescanned.
+  const registryStamp = () => session.registry.entities.reduce((n, e) => n + e.names.size + e.mrns.size + 1, 0);
   function healEarlier(src) {
+    const stamp = registryStamp();
     session.items.forEach((it) => {
-      if (it === src || !it.result || !it.leak || !it.leak.hits.some((h) => h.kind === 'unnamed')) return;
+      if (it === src || !it.result) return;
+      const unnamed = it.leak && it.leak.hits.some((h) => h.kind === 'unnamed');
+      if (!unnamed && it.regStamp === stamp) return;
       try { processItem(it, true); } catch (e) { console.error(e); }
     });
   }
@@ -369,6 +375,7 @@
     }
     item.leak = leakCheck(item);
     item.flagged = result.details.filter(isFlagged).length;
+    item.regStamp = registryStamp();
     if (!noHeal) healEarlier(item);
     $('optMrnLearned').textContent = session.mrnPattern ? `Learned from your file: ${session.mrnPattern.replace(/\\b/g, '').replace(/\\d\{(\d+),(\d+)\}/, (m, a, b) => a === b ? `${a} digits` : `${a} to ${b} digits`).replace(/\\d/g, 'digits')}` : '';
     return result;
@@ -715,9 +722,11 @@
         if (/loading|initializ/i.test(m.status)) stage(`${prefix}Starting text recognition…`);
         else if (/recognizing/i.test(m.status)) { const p = Math.round((m.progress || 0) * 100); stage(`${prefix}Reading the screenshot… ${p}%`); $('workProg').firstElementChild.style.width = `${Math.max(10, p)}%`; }
       } });
-      item.ocr = { lines: res.lines, confidence: res.confidence, text: res.text, edited: false };
+      const fixLines = res.lines.map((l) => Object.assign({}, l, { text: DeID.normalizeOcrText(l.text) }));
+      const fixedText = DeID.normalizeOcrText(res.text);
+      item.ocr = { lines: fixLines, confidence: res.confidence, text: fixedText, edited: false };
       stage('Finding patients…');
-      buildTextItem(item, `=== screenshot ${item.n} ===\n${res.text}`);
+      buildTextItem(item, `=== screenshot ${item.n} ===\n${fixedText}`);
     } catch (e) {
       console.error(e); dropItem(item);
       const msg = /no OCR engine/i.test(e.message) ? PLAIN_BUILD_MSG : /SIMD/i.test(e.message) ? NO_SIMD_MSG : `Could not read the screenshot: ${esc(e.message)}`;

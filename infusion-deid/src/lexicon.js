@@ -505,6 +505,8 @@
   `).map((s) => s.replace(/\|/g, ' '));
   const FAKE_CITIES = words(`Ashford Brimley Coldwater Dunbar Eastmere Fallbrook Glenhaven Hartsfield Ivydale Kessler Larkspur Millbrook Northfield Oakridge Pinehurst Quarryville Redmond Stonehaven Thornbury Wexley`);
 
+  // accents folded away for lexicon lookups: Nguyễn → nguyen, Bríd → brid, Đặng → dang
+  const fold = (w) => String(w).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
   const FIRST_SET = setOf(FIRST_NAMES);
   const LAST_SET = setOf(SURNAMES);
   const CITY_SET = setOf(US_CITIES);
@@ -531,8 +533,9 @@
     GEO_SUFFIXES, GEO_SUFFIX_SET, PLACE_PREFIXES, PLACE_PREFIX_SET, ONES_WORDS, ORG_PREFIXES, ORG_PREFIX_SET,
     NICKNAMES, EPONYM_FOLLOW, LOCAL_ORGS, LOCAL_ORG_SET,
     nicknamesOf: (w) => NICKNAMES[w.toLowerCase()] || [],
-    isFirstName: (w) => FIRST_SET.has(w.toLowerCase()),
-    isSurname: (w) => LAST_SET.has(w.toLowerCase()),
+    isFirstName: (w) => FIRST_SET.has(w.toLowerCase()) || FIRST_SET.has(fold(w)),
+    isSurname: (w) => LAST_SET.has(w.toLowerCase()) || LAST_SET.has(fold(w)),
+    fold,
     isAmbiguous: (w) => AMBIGUOUS.has(w.toLowerCase()),
     isClinical: (w) => CLINICAL_ALLOWLIST.has(w.toLowerCase().replace(/[’']s$/, '')) || CLINICAL_ALLOWLIST.has(w.toLowerCase()),
   };

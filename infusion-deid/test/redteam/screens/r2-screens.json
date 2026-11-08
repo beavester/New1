@@ -1,0 +1,254 @@
+[
+ {
+  "id": "scr-narrow-grid-wrapped-names",
+  "htmls": [
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#fff;color:#222;font-family:'DejaVu Sans',Arial,sans-serif;font-size:12px}table{border-collapse:collapse;width:100%%;table-layout:fixed}td,th{border:1px solid #b8c4d6;padding:3px;vertical-align:top;word-wrap:break-word}th{background:#dde6f3;text-align:left}th:nth-child(1){width:44px}th:nth-child(2){width:120px}.h{background:#2b5797;color:#fff;padding:4px 6px;margin-bottom:4px;font-weight:bold}</style></head><body><div class=\"h\">Infusion Schedule &middot; Mon 11/09/2026 &middot; Chairs 1-6</div><table><tr><th>Time</th><th>Patient</th><th>Treatment</th><th>Notes</th></tr><tr><td>08:00</td><td><b>Vanterpool-Okonkwo, Philippa Rosalind</b><br>MRN 70044819<br>DOB 04/17/1958</td><td>FOLFOX C3D1 oxaliplatin 85 mg/m2</td><td>Port flush first</td></tr><tr><td>08:45</td><td><b>Szczepanski, Bartholomew Aurelio</b><br>MRN 70051236<br>DOB 12/02/1949</td><td>Pembrolizumab 200 mg q3w</td><td>Wife Henrietta drives, call <span style=\"white-space:nowrap\">555-0136</span></td></tr><tr><td>09:30</td><td><b>Nakashima-Ferreira, Iolanthe Grace</b><br>MRN 70063390<br>DOB 07/30/1971</td><td>Iron sucrose 200 mg</td><td>TSH pending</td></tr><tr><td>10:15</td><td><b>Oduya-Brandvold, Cassius</b><br>MRN 70070021<br>DOB 01/09/1933</td><td>Darzalex Faspro SC</td><td>Age 93, needs wheelchair</td></tr></table></body></html>"
+  ],
+  "viewport": {
+   "width": 460,
+   "height": 640
+  },
+  "phi": [
+   "Vanterpool",
+   "Okonkwo",
+   "Philippa Rosalind",
+   "70044819",
+   "04/17/1958",
+   "Szczepanski",
+   "Bartholomew",
+   "Aurelio",
+   "70051236",
+   "12/02/1949",
+   "Henrietta",
+   "555-0136",
+   "Nakashima",
+   "Ferreira",
+   "Iolanthe",
+   "70063390",
+   "07/30/1971",
+   "Oduya",
+   "Brandvold",
+   "Cassius",
+   "70070021",
+   "01/09/1933",
+   "Age 93",
+   "11/09/2026"
+  ],
+  "keep": [
+   "oxaliplatin 85 mg/m2",
+   "Pembrolizumab",
+   "Iron sucrose 200 mg"
+  ],
+  "note": "Narrow 460px grid: hyphenated surnames, middle names, MRN and DOB stacked and wrapping inside one cell; relative first name + phone in notes; age 93."
+ },
+ {
+  "id": "scr-snapboard-bay-tiles",
+  "htmls": [
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#f7f9fb;color:#222;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px}.top{font-weight:bold;font-size:15px;margin-bottom:8px}.g{display:grid;grid-template-columns:repeat(3,230px);gap:8px}.t{border:1px solid #9aa;border-radius:4px;padding:6px;min-height:96px}.b{font-size:12px;color:#555}.n{font-weight:bold;font-size:14px}.s{font-size:12px}.r{font-size:12px;color:#1a4b8c}.st{font-size:12px;margin-top:3px;font-style:italic}</style></head><body><div class=\"top\">Snapboard &ndash; Infusion Center East &nbsp;|&nbsp; 11/09/2026 10:42</div><div class=\"g\"><div class=\"t\" style=\"background:#e8f5e9\"><div class=\"b\">Bay 1</div><div class=\"n\">Abernathy-Sloane, Gwendolyn</div><div class=\"s\">MRN: 81120457 &nbsp; DOB: 03/22/1962</div><div class=\"r\">R-CHOP C2</div><div class=\"st\">Rituximab 375 mg/m2 running</div></div><div class=\"t\" style=\"background:#fff8e1\"><div class=\"b\">Bay 2</div><div class=\"n\">Thistlewood, Marek</div><div class=\"s\">MRN: 81134402 &nbsp; DOB: 09/05/1990</div><div class=\"r\">Hydration</div><div class=\"st\">Hgb 9.8 - hold</div></div><div class=\"t\" style=\"background:#e3f2fd\"><div class=\"b\">Bay 3</div><div class=\"n\">Quaresma, Leocadia</div><div class=\"s\">MRN: 81147719 &nbsp; DOB: 11/30/1931</div><div class=\"r\">Zometa</div><div class=\"st\">94 yo, son Ambrose at bedside</div></div><div class=\"t\" style=\"background:#fce4ec\"><div class=\"b\">Bay 4</div><div class=\"n\">Kowalczyk-Imbert, Severin</div><div class=\"s\">MRN: 81150086 &nbsp; DOB: 06/14/1977</div><div class=\"r\">Keytruda</div><div class=\"st\">Pre-meds given</div></div><div class=\"t\" style=\"background:#eeeeee\"><div class=\"b\">Bay 5</div><div class=\"st\">CLEANING</div></div><div class=\"t\" style=\"background:#e8f5e9\"><div class=\"b\">Bay 6</div><div class=\"n\">Delahunty, Orla Brigid</div><div class=\"s\">MRN: 81163350 &nbsp; DOB: 02/28/1955</div><div class=\"r\">Herceptin</div><div class=\"st\">Echo due 12/01/2026</div></div></div></body></html>"
+  ],
+  "viewport": {
+   "width": 740,
+   "height": 360
+  },
+  "phi": [
+   "Abernathy-Sloane",
+   "Gwendolyn",
+   "81120457",
+   "03/22/1962",
+   "Thistlewood, Marek",
+   "81134402",
+   "09/05/1990",
+   "Quaresma, Leocadia",
+   "81147719",
+   "11/30/1931",
+   "94 yo",
+   "Ambrose",
+   "Kowalczyk-Imbert, Severin",
+   "81150086",
+   "06/14/1977",
+   "Delahunty, Orla Brigid",
+   "81163350",
+   "02/28/1955",
+   "12/01/2026",
+   "11/09/2026"
+  ],
+  "keep": [
+   "Rituximab 375 mg/m2",
+   "Hgb 9.8",
+   "R-CHOP"
+  ],
+  "note": "3x2 grid of bay tiles: OCR reads across tiles so name of tile 1 sits next to tile 2 on one line; bay numbers must survive; age 94 and son's first name in status line."
+ },
+ {
+  "id": "scr-mar-order-cards-header-banner",
+  "htmls": [
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#fff;color:#222;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px}.ban{background:#e9eef5;border-bottom:2px solid #5a7bb0;padding:6px;font-size:12px;line-height:1.5}.pn{font-weight:bold;font-size:15px}h3{font-size:14px;margin:8px 0 4px}.c{border:1px solid #ccd;border-left:5px solid #3c8d4f;margin:5px 0;padding:5px;background:#fbfcfe}.d{font-weight:bold}.m{color:#666;font-size:12px}.f{font-size:12px;margin-top:6px}</style></head><body><div class=\"ban\"><span class=\"pn\">Lindqvist, Evander J</span> &nbsp; 67 y.o. M &nbsp; DOB: 8/3/1959 &nbsp; MRN: E2047713 &nbsp; HAR: 4400918823<br>Cov: Harborview Mutual &middot; Member ID HMX-55120874 &nbsp; Allergies: Sulfa<br>Referring: Marisol Quintanilla-Reyes, MD (Lakeshore Hematology, fax 555-0174)</div><h3>MAR &ndash; Today 11/09/2026</h3><div class=\"c\"><div class=\"d\">Carboplatin AUC 5</div><div>IV piggyback over 30 min</div><div class=\"m\">Due 11:15 &middot; Verified by pharmacy</div></div><div class=\"c\"><div class=\"d\">Paclitaxel 175 mg/m2</div><div>IV over 3 hr, non-PVC tubing, 0.22 micron filter</div><div class=\"m\">Due 11:45 &middot; Given</div></div><div class=\"c\"><div class=\"d\">Ondansetron 8 mg IV</div><div>Once, 30 min prior to chemo</div><div class=\"m\">Given 10:40 &middot; Given</div></div><div class=\"c\"><div class=\"d\">Diphenhydramine 25 mg IV</div><div>Once</div><div class=\"m\">Given 10:41 &middot; Given</div></div><div class=\"f\">Weight 81.4 kg &nbsp; BSA 1.98 m2 &nbsp; CrCl 72 mL/min</div></body></html>"
+  ],
+  "viewport": {
+   "width": 640,
+   "height": 520
+  },
+  "phi": [
+   "Lindqvist, Evander J",
+   "8/3/1959",
+   "E2047713",
+   "4400918823",
+   "HMX-55120874",
+   "Marisol Quintanilla-Reyes",
+   "555-0174",
+   "11/09/2026"
+  ],
+  "keep": [
+   "Carboplatin AUC 5",
+   "Paclitaxel 175 mg/m2",
+   "Ondansetron 8 mg IV",
+   "CrCl 72 mL/min"
+  ],
+  "note": "Epic patient header banner with alphanumeric MRN, HAR account, insurance member ID, outside referring MD + fax, single-digit-month DOB; MAR cards below must keep drugs/doses."
+ },
+ {
+  "id": "scr-mychart-proxy-thread",
+  "htmls": [
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#fff;color:#222;font-family:'DejaVu Sans',Arial,sans-serif;font-size:14px}.bar{background:#0a6fb5;color:#fff;padding:7px;font-weight:bold;font-size:15px}.sub{font-size:12px;color:#444;margin:6px 0}.msg{border-radius:8px;padding:7px;margin:7px 0;max-width:470px;line-height:1.4}.me{background:#e3f0fb;margin-left:auto}.them{background:#f1f1f1}.hd span{color:#777;font-size:12px}</style></head><body><div class=\"bar\">MyChart &nbsp;&rsaquo;&nbsp; Messages &nbsp;&rsaquo;&nbsp; RE: Side effects after cycle 2</div><div class=\"sub\">Conversation with Infusion Nursing Pool &middot; Patient: Rosamund Achebe-Whitlock &middot; Proxy access: Cordelia Whitlock</div><div class=\"msg me\"><div class=\"hd\"><b>Rosamund Achebe-Whitlock</b> <span>11/06/2026 3:12 PM</span></div><div>Hi, my mom had her Neulasta on-body injector put on yesterday. She has bone pain in her hips. Is that normal? You can reach me at 555-0147. &ndash; Cordelia (daughter)</div></div><div class=\"msg them\"><div class=\"hd\"><b>Infusion Nursing Pool</b> <span>11/06/2026 4:05 PM</span></div><div>Hi Cordelia, bone pain is common after pegfilgrastim. Loratadine 10 mg daily can help. Call right away for temperature above 100.4 F.</div></div><div class=\"msg me\"><div class=\"hd\"><b>Rosamund Achebe-Whitlock</b> <span>11/07/2026 8:20 AM</span></div><div>Thank you. Her ANC from Thursday was 0.9 - should she still come Monday? Cordelia Whitlock, proxy</div></div></body></html>"
+  ],
+  "viewport": {
+   "width": 620,
+   "height": 560
+  },
+  "scale": 1.25,
+  "phi": [
+   "Rosamund Achebe-Whitlock",
+   "Cordelia Whitlock",
+   "Cordelia",
+   "555-0147",
+   "11/06/2026",
+   "11/07/2026"
+  ],
+  "keep": [
+   "Neulasta",
+   "temperature above 100.4",
+   "ANC"
+  ],
+  "note": "MyChart proxy thread: relative's first name alone in salutation and sign-off, patient name repeated in sender line, phone in body; message dates tied to patient."
+ },
+ {
+  "id": "scr-dark-theme-worklist",
+  "htmls": [
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#1b1d21;color:#e2e2e2;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px}table{border-collapse:collapse;margin-top:6px}td,th{padding:5px 9px;border-bottom:1px solid #444;text-align:left}th{color:#8fb8ff}.h{font-weight:bold;font-size:15px;color:#fff}.ft{margin-top:10px;color:#c9c9c9;font-size:12px}</style></head><body><div class=\"h\">Infusion Worklist (Dark mode) &mdash; Tue 11/10/2026</div><table><tr><th>Patient</th><th>MRN</th><th>DOB</th><th>Home Phone</th><th>Medication</th><th>Last Lab</th></tr><tr><td>Montgomery-Hale, Ignatius</td><td>60218834</td><td>05/11/1946</td><td>(555) 010-9921</td><td>Zoledronic acid 4 mg</td><td>Calcium 8.9</td></tr><tr><td>Featherstonhaugh, Primrose</td><td>60225517</td><td>10/23/1983</td><td>555-0158</td><td>Vedolizumab 300 mg</td><td>CRP 4.1</td></tr><tr><td>Abiodun, Tobiloba</td><td>60239061</td><td>03/03/1968</td><td>555-0193</td><td>Infliximab 5 mg/kg</td><td>TB Quant neg</td></tr></table><div class=\"ft\">Selected: Montgomery-Hale, Ignatius &middot; Emergency contact: Lucinda Hale (sister) 555-0102</div></body></html>"
+  ],
+  "viewport": {
+   "width": 900,
+   "height": 260
+  },
+  "phi": [
+   "Montgomery-Hale, Ignatius",
+   "60218834",
+   "05/11/1946",
+   "(555) 010-9921",
+   "Featherstonhaugh, Primrose",
+   "60225517",
+   "10/23/1983",
+   "555-0158",
+   "Abiodun, Tobiloba",
+   "60239061",
+   "03/03/1968",
+   "555-0193",
+   "Lucinda Hale",
+   "555-0102",
+   "11/10/2026"
+  ],
+  "keep": [
+   "Zoledronic acid 4 mg",
+   "Vedolizumab 300 mg",
+   "Calcium 8.9"
+  ],
+  "note": "Light-on-dark theme stresses OCR binarization; sister's name sharing part of hyphenated surname in footer."
+ },
+ {
+  "id": "scr-two-column-interleave",
+  "htmls": [
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#fff;color:#222;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px}.t{font-weight:bold;font-size:15px;margin-bottom:6px}.w{display:flex;gap:28px}.col{width:300px;line-height:1.55;border:1px solid #d5d9e0;padding:6px}</style></head><body><div class=\"t\">Patient Summary &ndash; Neuro Infusion</div><div class=\"w\"><div class=\"col\"><b>Demographics</b><br>Name: Marchbanks, Eulalie Constance<br>Preferred: Lally<br>DOB: 02/14/1952<br>MRN: 33019845<br>Address: 1182 Juniper Hollow Rd<br>Pembrook, NH 03299<br>Cell: 555-0128<br>Email: lally.marchbanks@example.com<br>PCP (outside): Dr. Anselm Okafor-Price<br>Next appt: 11/16/2026 09:00</div><div class=\"col\"><b>Treatment Plan</b><br>Plan: Ocrelizumab maintenance<br>Ocrevus 600 mg IV q6 months<br>Premed: methylprednisolone 100 mg IV<br>Premed: cetirizine 10 mg PO<br>Hep B surface Ag neg 10/2026<br>Rate titration per protocol<br>Observe 1 hr post infusion<br>Infusion 1 of 2 this cycle<br>Prior auth: approved</div></div></body></html>"
+  ],
+  "viewport": {
+   "width": 700,
+   "height": 340
+  },
+  "phi": [
+   "Marchbanks, Eulalie Constance",
+   "Lally",
+   "02/14/1952",
+   "33019845",
+   "1182 Juniper Hollow Rd",
+   "Pembrook",
+   "03299",
+   "555-0128",
+   "lally.marchbanks@example.com",
+   "Anselm Okafor-Price",
+   "11/16/2026"
+  ],
+  "keep": [
+   "Ocrevus 600 mg IV",
+   "methylprednisolone 100 mg IV",
+   "cetirizine 10 mg PO"
+  ],
+  "note": "Side-by-side columns at equal line heights: OCR may splice 'Address: 1182 Juniper Hollow Rd Premed: methylprednisolone' into one line; nickname, town, ZIP, email, outside PCP."
+ },
+ {
+  "id": "scr-cropped-right-edge-names",
+  "htmls": [
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#fff;color:#222;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px}table{border-collapse:collapse;width:1250px;table-layout:fixed}td,th{border:1px solid #c9ced6;padding:4px;white-space:nowrap;overflow:hidden;text-align:left}th{background:#eef1f5}th:nth-child(1){width:55px}th:nth-child(2){width:230px}th:nth-child(3){width:95px}th:nth-child(4){width:85px}th:nth-child(5){width:300px}th:nth-child(6){width:100px}.h{font-weight:bold;font-size:15px;margin-bottom:5px}</style></head><body><div class=\"h\">Department Appointments &ndash; 11/12/2026</div><table><tr><th>Time</th><th>Visit / Med</th><th>Provider</th><th>MRN</th><th>Patient Name</th><th>DOB</th><th>Comments</th></tr><tr><td>07:30</td><td>Daratumumab 1800 mg SC</td><td>Dr. Patel</td><td>52170033</td><td class=\"pn\">Throckmorton-Villanueva, Anastasia</td><td>06/06/1941</td><td>Ride: Medicaid van</td></tr><tr><td>08:15</td><td>Bortezomib 1.3 mg/m2 SC</td><td>Dr. Patel</td><td>52184410</td><td class=\"pn\">Wojciechowski-Lund, Barnaby</td><td>09/19/1960</td><td>Ride: Medicaid van</td></tr><tr><td>09:00</td><td>Ferric carboxymaltose 750 mg</td><td>Dr. Ngata</td><td>52191258</td><td class=\"pn\">Ellingsworth-Mbeki, Theodosia</td><td>12/25/1987</td><td>Ride: Medicaid van</td></tr></table></body></html>"
+  ],
+  "viewport": {
+   "width": 610,
+   "height": 220
+  },
+  "phi": [
+   "52170033",
+   "Throckmorton",
+   "52184410",
+   "Wojciechowski",
+   "52191258",
+   "Ellingsworth",
+   "11/12/2026"
+  ],
+  "keep": [
+   "Daratumumab 1800 mg SC",
+   "Bortezomib 1.3 mg/m2 SC",
+   "Ferric carboxymaltose 750 mg"
+  ],
+  "note": "Viewport 610px cuts the Patient Name column mid-name ('Throckmorton-Vill...'): truncated name fragments with no comma/first name must still be redacted; DOB column is off-screen."
+ },
+ {
+  "id": "scr-same-three-two-layouts",
+  "htmls": [
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#fff;color:#222;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:4px 8px;text-align:left}th{background:#e6ecf4}.h{font-weight:bold;margin-bottom:5px}</style></head><body><div class=\"h\">Appointment Desk &ndash; Wed 11/11/2026</div><table><tr><th>Chair</th><th>Patient</th><th>MRN</th><th>DOB</th><th>Order</th></tr><tr><td>Chair 2</td><td>Oyelaran, Benedikta</td><td>91004473</td><td>04/02/1957</td><td>Cyclophosphamide 600 mg/m2</td></tr><tr><td>Chair 5</td><td>Haverkamp, Ruairi</td><td>91017728</td><td>08/16/1979</td><td>Docetaxel 75 mg/m2</td></tr><tr><td>Chair 7</td><td>Pemberton-Sixkiller, Delphine</td><td>91029915</td><td>01/27/1964</td><td>Trastuzumab 6 mg/kg</td></tr></table></body></html>",
+   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{margin:0;padding:10px;background:#fff;color:#222;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px}.g{display:flex;gap:10px}.t{width:220px;border:2px solid #6a8;border-radius:6px;padding:6px;background:#f4fbf6}.c{font-size:12px;color:#666}.n{font-weight:bold;font-size:14px}.o{color:#2a5d9f;font-size:12px}.h{font-weight:bold;margin-bottom:6px}</style></head><body><div class=\"h\">Track Board &middot; Infusion &middot; 11/11/2026</div><div class=\"g\"><div class=\"t\"><div class=\"c\">Chair 2</div><div class=\"n\">Benedikta Oyelaran</div><div>04/02/1957 &middot; #91004473</div><div class=\"o\">Cyclophosphamide 600 mg/m2</div></div><div class=\"t\"><div class=\"c\">Chair 5</div><div class=\"n\">Ruairi Haverkamp</div><div>08/16/1979 &middot; #91017728</div><div class=\"o\">Docetaxel 75 mg/m2</div></div><div class=\"t\"><div class=\"c\">Chair 7</div><div class=\"n\">PEMBERTON-SIXKILLER, D</div><div>01/27/1964 &middot; #91029915</div><div class=\"o\">Trastuzumab 6 mg/kg</div></div></div></body></html>"
+  ],
+  "expectPatients": 3,
+  "viewport": {
+   "width": 760,
+   "height": 240
+  },
+  "phi": [
+   "Oyelaran, Benedikta",
+   "Benedikta Oyelaran",
+   "91004473",
+   "04/02/1957",
+   "Haverkamp, Ruairi",
+   "Ruairi Haverkamp",
+   "91017728",
+   "08/16/1979",
+   "Pemberton-Sixkiller, Delphine",
+   "PEMBERTON-SIXKILLER, D",
+   "91029915",
+   "01/27/1964",
+   "11/11/2026"
+  ],
+  "keep": [
+   "Cyclophosphamide 600 mg/m2",
+   "Docetaxel 75 mg/m2",
+   "Trastuzumab 6 mg/kg"
+  ],
+  "note": "Same 3 patients: table with 'Last, First' then tiles with 'First Last' / all-caps initial form and '#MRN'; tool should link to 3 patients, not 6."
+ }
+]

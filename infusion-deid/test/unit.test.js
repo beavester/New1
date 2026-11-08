@@ -223,7 +223,7 @@ test('OCR-noisy dates and phones are covered whole and the date still shifts', (
 });
 test('labelled identifiers, MBI, handles; weak labels and plan group numbers stay', () => {
   const ids = (t) => D.ruleSpans(t, cfg()).filter((s) => s.type === 'ID_OTHER').map((s) => s.text);
-  assert.deepEqual(ids('member ID ZXK123456789, ref 2026-1107-44, serial # BRD-77120931, SN 2201994-B, driver license 123 456 789, plate KDX 4471, health card 1234-567-890-AB'), ['ZXK123456789', '2026-1107-44', 'BRD-77120931', '2201994-B', '123 456 789', 'KDX 4471', '1234-567-890-AB']);
+  assert.deepEqual(ids('member ID ZXK123456789, ref 2026-1107-44, serial # BRD-77120931, SN 2201994-B, driver license 123 456 789, plate KDX 4471, health card 1234-567-890-AB').sort(), ['ZXK123456789', '2026-1107-44', 'BRD-77120931', '2201994-B', '123 456 789', 'KDX 4471', '1234-567-890-AB'].sort());
   assert.deepEqual(ids('Medicare 1EG4-TE5-MK72 and 1EG4TE5MK72'), ['1EG4-TE5-MK72', '1EG4TE5MK72']);
   assert.deepEqual(ids('MyChart username cnwachukwu71 locked; fyi @dubrovsky').sort(), ['@dubrovsky', 'cnwachukwu71']);
   assert.deepEqual(ids('Order 2 units PRBC. Lot 2201. Group 77A2. Room 214, ext 5521. ID 2. case 3'), []);
@@ -411,7 +411,7 @@ test('self-check is over-sensitive: spaced MRN digits, nicknames, initials, bare
   const res = D.processTable({ headers: RT_HEADERS, rows: [['Schwartz, Benjamin', '00412369', '10/31/1956', 'ok']] }, { seed: 1, columns: RT_COLS });
   const probe = (text) => D.selfCheck({ rows: [[res.rows[0][0], 'P001', '', text]], headers: res.headers, census: res.census, cfg: res.cfg, details: res.details }).hits.map((h) => `${h.kind}:${h.text}`);
   assert.deepEqual(probe('MRN#0041 2369 and 0041-2369 and 412369 and Ben and Benny and B.S. and Benj S. and Zofia, 95, and turned 91; call 716-555-0142; j@gmail.com'),
-    ['census:412369', 'census:Ben', 'census:Benny', 'census:0041 2369', 'census:0041-2369', 'token:B.S.', 'token:Benj S.', 'age:95', 'age:91', 'shape:j@gmail.com', 'shape:716-555-0142']);
+    ['census:412369', 'census:Ben', 'census:Benny', 'census:B.S.', 'census:0041 2369', 'census:0041-2369', 'token:Benj S.', 'age:95', 'age:91', 'shape:j@gmail.com', 'shape:716-555-0142']);
   // the digits-only comparison stands on its own when the census regex is not available
   const noRegex = Object.assign({}, res.census, { regex: null, lookup: new Map() });
   assert.deepEqual(D.selfCheck({ rows: [['x', 'P001', '', 'MRN 0041 2369 and 0041-2369']], headers: res.headers, census: noRegex, cfg: res.cfg, details: res.details }).hits.map((h) => `${h.kind}:${h.text}`), ['digits:0041 2369', 'digits:0041-2369']);
@@ -580,4 +580,228 @@ test('a name wrapped over two table lines is rebuilt, so a single screenshot can
   const r = D.processTable({ headers: t.headers, rows: t.rows }, { columns: t.columns, seed: 2 });
   const out = r.rows.map((x) => x[3]).join('\n');
   for (const leak of ['Teresa', 'Stewart', 'Reynolds', 'Deepa', '1970-02', '12710386', '5749277']) assert.ok(!out.includes(leak), leak + ' leaked:\n' + out);
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Red-team round 1 (r1): one test per class of bug fixed. Strings are invented for these tests, not copied from the cases.
+// ---------------------------------------------------------------------------------------------------------------------
+const one = (headers, row, opts) => D.processTable({ headers, rows: [row] }, Object.assign({ seed: 5 }, opts || {}));
+const textOut = (t) => { const doc = D.parseTextDocument(t); const res = D.processTable({ headers: doc.headers, rows: doc.rows }, { columns: doc.columns, seed: 5 }); return res.rows.map((r) => r[3]).join('\n'); };
+const noneOf = (out, list) => list.forEach((x) => assert.ok(!out.includes(x), `leak "${x}" in: ${out}`));
+
+test('r1 columns: a bare "Patient" header, a date header over mixed date formats, values that hold identifiers under generic headers', () => {
+  const cols = D.classifyColumns(['Patient', 'Appt', 'MR#', 'Contact', 'Ref', 'Ride', 'Attending Notes', 'Payor'], [
+    ['Okafor-Wynn, Bertil', '4-Dec-2026', '5512093', 'h 555 0144', 'bwynn@example.org', 'Nephew Casimir Dorne', 'PFTs ok', 'Aetna'],
+    ['Lisle, Margit R', 'Wed 12/02', '5512107', '555.0190', 'https://portal.example.org/u/mlisle', 'Self', 'hold if ANC low', 'BCBS'],
+    ['Margit Lisle', '2026.12.09', '5512107', '(555) 010-0133', 'n/a', 'Cab', 'labs today', 'Medicare'],
+    ['Haldane Price, J.', 'December 9th, 2026', '5512200', 'c: 555-0101', 'n/a', 'Self', 'ok', 'Aetna'],
+  ]).map((c) => c.role);
+  assert.deepEqual(cols, ['patient_name', 'date', 'mrn', 'phone', 'text', 'text', 'text', 'keep']);
+  // the date column shifts every one of those renderings
+  const res = D.processTable({ headers: ['Patient', 'Appt'], rows: [['Lisle, Margit', '2026.12.09'], ['Lisle, Margit', 'Wed 12/02'], ['Lisle, Margit', 'December 9th, 2026']] }, { seed: 5 });
+  noneOf(res.rows.map((r) => r[1]).join(' '), ['2026.12.09', '12/02', 'December 9th']);
+  assert.match(res.rows[0][1], /^\d{4}\.\d{2}\.\d{2}$/);
+});
+
+test('r1 rules: PO box, street with a unit but no suffix and the town after it, licence/plate with a state, turned N, table ages', () => {
+  const r = rules('Mail to P.O. Box 3310, Brightwell 04412. Moved to 77 Kestrel Run apt 4D, Linden Vale 04415. RR 3 Box 12. NY plate 8TK-442; Driver lic PA LX20991 on file.');
+  for (const x of ['ADDRESS=P.O. Box 3310', 'ADDRESS=77 Kestrel Run apt 4D', 'ADDRESS=RR 3 Box 12', 'ID_OTHER=8TK-442', 'ID_OTHER=LX20991']) assert.ok(r.includes(x), x + ' in ' + r);
+  assert.ok(r.some((x) => /^LOCATION=Brightwell(,)? 04412$/.test(x)), r.join(',')); assert.ok(r.some((x) => /^LOCATION=Linden Vale 04415$/.test(x)), r.join(','));
+  const ages = (t) => D.ruleSpans(t, cfg()).filter((s) => s.type === 'AGE').map((s) => s.text);
+  assert.deepEqual(ages('Mr. Osei just turned 92 on Sunday. Grandpa is 96 now. | 94 y | 101y F | turned 90 degrees | Hgb 9.1 turned 95 mg').sort(), ['101y', '92', '94 y', 'Grandpa is 96']);
+  // a 7-digit phone with a dot or a space after a contact word; a dotted ISO date
+  const r2 = rules('cell 555.0177, home 555 0123; seen 2026.10.30');
+  assert.ok(r2.includes('PHONE=555.0177') && r2.includes('PHONE=555 0123') && r2.includes('DATE=2026.10.30'), r2.join(','));
+  // negatives: a drug number is not an address, chair/room numbers stay
+  assert.equal(rules('Take 2 Tylenol #3 tabs; Chair 4 #2; 6 Minute Walk test').filter((x) => x.startsWith('ADDRESS')).length, 0);
+});
+
+test('r1 names without a lexicon hit: particles, sentence/label position + person verb, sign-offs, message senders, companions, eponym surnames', () => {
+  const L = (t) => D.detectText(t, { cfg: cfg(), census: null }).filter((x) => x.type.startsWith('NAME')).map((x) => `${x.type}=${x.text}`);
+  assert.deepEqual(L('Consent signed by Joost van den Hoek today.'), ['NAME_OTHER=Joost van den Hoek']);
+  assert.deepEqual(L('Driver: Yusuf ibn Tariq al-Masri at curb.'), ['NAME_OTHER=Yusuf ibn Tariq al-Masri']);
+  assert.deepEqual(L('Aurelio dos Santos Pereira tolerated C2.'), ['NAME_OTHER=Aurelio dos Santos Pereira']);
+  assert.deepEqual(L('Ottoline Varga called to cancel.'), ['NAME_OTHER=Ottoline Varga']);
+  assert.deepEqual(L('Pt Wilhelmus Braakman died 10/2 per hospice.'), ['NAME_OTHER=Wilhelmus Braakman']);
+  assert.deepEqual(L('Chart check: Ilse Kowarsch, hx HTN.'), ['NAME_OTHER=Ilse Kowarsch']);
+  assert.deepEqual(L('Fiammetta Orsini-Lowe: cell 555 018 2211, work 555 019 0000'), ['NAME_OTHER=Fiammetta Orsini-Lowe']);
+  assert.deepEqual(L('See you soon. Thanks, Wendeline'), ['NAME_OTHER=Wendeline']);
+  assert.deepEqual(L('Voicemail from DRAGOMIR PETKOV ILIEV re: ride.'), ['NAME_OTHER=DRAGOMIR PETKOV ILIEV']);
+  assert.deepEqual(L('Pump sent home with Ottilie Brandvold today.'), ['NAME_OTHER=Ottilie Brandvold']);
+  // given names with ordinary-word endings (-ance, -ity, -ment, -ory) are still names
+  assert.deepEqual(L('Constance Marchbanks called to cancel. Chart check: Amory Quist, hx HTN. Bag sent home with Clement Varga today.'), ['NAME_OTHER=Constance Marchbanks', 'NAME_OTHER=Amory Quist', 'NAME_OTHER=Clement Varga']);
+  assert.deepEqual(L('Verified: Simon Addison (MRN 1234567) for C1. Addison disease on steroids.'), ['NAME_OTHER=Simon Addison']);
+  // negatives that must stay
+  assert.deepEqual(L('Front Desk called. Social Work called back. Next MD visit 12/10. Infusion Triage RN aware. Will call back. Subacute de Quervain thyroiditis. Hope to resume.'), []);
+  assert.deepEqual(L('Plan: Continue Current dose, recheck. Dx: Hodgkin Lymphoma, stage II.'), []);
+});
+
+test('r1 propagation: names from removed contact columns, word-names found mid-sentence in the same row, ALL-CAPS names in Title Case', () => {
+  const res = one(['Pt Name', 'MRN', 'Emergency Contact', 'Notes'], ['Brask, Ulla', '40551234', 'Brask, Tormod (son) 555-0101', 'Tormod in lobby. Ok to treat.']);
+  noneOf(res.rows[0][3], ['Tormod']);
+  assert.ok(res.rows[0][3].includes('in lobby'));
+  noneOf(textOut('Hope Calloway called re: ride. Told Hope the van comes at 9.'), ['Hope Calloway', 'Told Hope']);
+  assert.ok(textOut('Will call back. Hope to resume.').includes('Will call back. Hope to resume.'));
+  noneOf(textOut('Message from ANSELM KOVACIC re: dose. Regards, Anselm'), ['ANSELM', 'Anselm', 'KOVACIC']);
+});
+
+test('r1 text and screenshots: a name wrapped over three lines, a record number on the next line, tiles side by side', () => {
+  const wrap = D.parseTextDocument('0900 Ravensworth-     02/03/1950     C1D1\nAllardyce, Benedikt |MRN     premed\nTheophil        40991234\n0930 | Quist-Ballantyne,    04/05/1961\nIngeborg       40991299');
+  assert.deepEqual(wrap.rows.map((r) => r.slice(0, 2)), [['Ravensworth-Allardyce, Benedikt Theophil', '40991234'], ['Ravensworth-Allardyce, Benedikt Theophil', '40991234'], ['Ravensworth-Allardyce, Benedikt Theophil', '40991234'], ['Quist-Ballantyne, Ingeborg', '40991299'], ['Quist-Ballantyne, Ingeborg', '40991299']]);
+  // a record number on its own line right under a name with none attaches to that patient instead of making an unnamed one
+  const under = D.parseTextDocument('Name: Szell-Orban, Amalie R      Plan: C3\nDOB: 07/08/1955\nMRN: 61234987   Hold if ALT high');
+  assert.deepEqual(under.rows.map((r) => r.slice(0, 3)), Array(3).fill(['Szell-Orban, Amalie R', '61234987', '07/08/1955']));
+  // two tiles on one line, their record numbers on the next: paired in order, nothing unnamed, every name protected
+  const tiles = 'Bay 3 board\nKettering, Odile           Marchbanks, Luitpold\nMRN 7712340 | 61 y F        MRN 7712399 | 72 y M\nIron sucrose 200 mg        Rituximab 375 mg/m2';
+  const doc = D.parseTextDocument(tiles);
+  const res = D.processTable({ headers: doc.headers, rows: doc.rows }, { columns: doc.columns, seed: 5 });
+  assert.equal(res.registry.size, 2);
+  const sc = D.selfCheck(res, { kind: 'image' }); assert.deepEqual(sc.unnamed, []); assert.deepEqual(sc.hits, []);
+  noneOf(JSON.stringify(res.rows), ['Kettering', 'Odile', 'Marchbanks', 'Luitpold', '7712340', '7712399']);
+  assert.ok(JSON.stringify(res.rows).includes('Rituximab 375 mg/m2'));
+  // label words are never half of a patient's name; a pair that runs on into a possessive is not "Last, First"
+  assert.equal(D.parseTextDocument('Coverage: Blue Plan, Member ID XQ12345678').rows[0][0], '');
+  assert.equal(D.parseTextDocument('Hi this is Teddy, Imelda Roskova\'s grandson').rows[0][0], '');
+});
+
+test('r1 census: a patient read in one input is caught in the next, even in "First Last" order with only a record number', () => {
+  const reg = D.createRegistry();
+  const a = D.parseTextDocument('Ostrander, Philippa     55109876   03/03/1960\nVanbrugh, Caspar     55109911   04/04/1961');
+  D.processTable({ headers: a.headers, rows: a.rows }, { columns: a.columns, registry: reg, seed: 5 });
+  const b = D.parseTextDocument('Philippa Ostrander     Caspar Vanbrugh\n59 y F - 55109876     65 y M - 55109911');
+  const res = D.processTable({ headers: b.headers, rows: b.rows }, { columns: b.columns, registry: reg, seed: 5 });
+  assert.equal(reg.size, 2);
+  noneOf(JSON.stringify(res.rows), ['Philippa', 'Ostrander', 'Caspar', 'Vanbrugh', '55109876', '55109911']);
+  // a known patient from another input never counts as "name not read" here
+  assert.deepEqual(D.selfCheck(res, { kind: 'image' }).unnamed, []);
+});
+
+test('r1 places, surname-initial references, particles kept in surrogates, OCR clinical misreads', () => {
+  assert.ok(lex('We are at the ER in Tallow Springs now.').includes('LOCATION=Tallow Springs'));
+  assert.ok(lex('Rennick Hollow, OH 45001').includes('LOCATION=Rennick Hollow, OH 45001'));
+  const res = D.processTable({ headers: ['Patient', 'MRN', 'Comments'], rows: [['Aldous, Perpetua', '7700123', 'ok'], ['Brightman, Osric', '7700177', "Same bag as Aldous P.'s; per Brightman, O. order"]] }, { seed: 5 });
+  noneOf(res.rows[1][2], ['Aldous', 'Brightman', 'P.\'s', ' O. ']);
+  assert.match(res.rows[1][2], /^Same bag as [A-Z][a-z]+ [A-Z]\.'s; per [A-Z][a-z]+, [A-Z]\. order$/);
+  const out = textOut('Visitor: Ines de la Fuente Arroyo at desk.');
+  assert.ok(/ de la /.test(out) && !/Fuente|Arroyo/.test(out), out);
+  assert.equal(D.normalizeOcrText('Infuse over 30 min, g21 days; g4wk; stage Ill; mg/kg'), 'Infuse over 30 min, q21 days; q4wk; stage III; mg/kg');
+});
+
+// ---------------------------------------------------------------- red-team round 2 (r2): one test per class of fix
+test('r2 rules: d/c date, sentence-final run-together phone, no phone read out of a year, spaced plates, placards, ordinal ages, compact and day-first dates', () => {
+  assert.ok(rules('Line d/c 12/14.').includes('DATE=12/14'));
+  assert.ok(rules('fax#6175550134. Thanks').includes('PHONE=6175550134'));
+  const dobPhone = rules('Jones, Al 07/12/1981 555-0142 Keytruda');
+  assert.ok(dobPhone.includes('DATE=07/12/1981') && dobPhone.includes('PHONE=555-0142'), dobPhone.join(' '));
+  assert.ok(rules('tow truck plate KRT 5521').includes('ID_OTHER=KRT 5521'));
+  assert.ok(rules('disability placard DP-7733102 on dash').some((x) => x === 'ID_OTHER=DP-7733102'));
+  assert.ok(rules('family threw her a 102nd birthday party').some((x) => x.startsWith('AGE=102nd birthday')));
+  assert.deepEqual(rules('turned 45 and her 50th birthday').filter((x) => x.startsWith('AGE')), []);
+  const d1 = D.ruleSpans('Next dose 05DEC2026 then 21/12/2026', cfg()).filter((s) => s.type === 'DATE');
+  assert.deepEqual(d1.map((s) => [s.text, s.date.m, s.date.d]).sort(), [['05DEC2026', 12, 5], ['21/12/2026', 12, 21]]);
+  const res = one(['Visit', 'Patient', 'Notes'], ['05DEC2026', 'Quimby, Ottoline', 'seen 21/12/2026']);
+  assert.match(res.rows[0][0], /^\d{2}[A-Z]{3}\d{4}$/);
+  assert.match(res.rows[0][2], /^seen \d{1,2}\/\d{1,2}\/\d{4}$/);
+  assert.ok(!res.rows[0][2].includes('21/12/2026'));
+});
+
+test('r2 columns: authorization, serial and vehicle columns are removed; a merged "Patient / MRN" cell feeds the census', () => {
+  const cols = D.classifyColumns(['Auth #', 'Pump Serial', 'Vehicle', 'Ref', 'Pump', 'Prior Auth Notes'], [
+    ['PA-2027-0001234', 'SN 2027-QX-551203', 'plate 4TRB771', 'XQ-55120943', 'CADD-Solis', 'auth for 6 doses'],
+    ['PA-2027-0001290', 'QX551299', 'van plate KRT 5521', 'XQ-55120988', 'Ambit', 'pending'],
+    ['PA-2027-0001301', 'AMB-0044120', 'none', 'XQ-55121003', 'CADD-Solis', 'approved']]);
+  assert.deepEqual(cols.map((c) => c.role), ['drop', 'drop', 'drop', 'drop', 'keep', 'text']);
+  const res = D.processTable({ headers: ['Patient / MRN', 'Comments'], rows: [['VASQUEZ-ORTT,ILSE (MRN:4410982)', 'Ilse prefers left arm'], ['LINDQVIST,BO (4411037)', 'Bo needs interpreter']] }, { seed: 5 });
+  assert.equal(res.columns[0].role, 'patient_name');
+  assert.equal(res.registry.size, 2);
+  assert.deepEqual([...res.registry.entities[0].mrns], ['4410982']);
+  noneOf(JSON.stringify(res.rows), ['VASQUEZ', 'Ilse', '4410982', 'LINDQVIST', '4411037']);
+  assert.ok(res.rows[0][1].includes('prefers left arm'));
+});
+
+test('r2 census: another patient\'s given name in a different row is hidden; a word-name stays row-scoped', () => {
+  const res = D.processTable({ headers: ['Patient', 'MRN', 'Comments'], rows: [['Ostrowski, Leopold', '8810021', 'carpools with spouse'], ['Ostrowski, Ludmila', '8810045', 'same chair as Leopold; Will call if late']] }, { seed: 5 });
+  noneOf(res.rows[1][2], ['Leopold']);
+  assert.ok(res.rows[1][2].includes('Will call if late'));
+  const res2 = D.processTable({ headers: ['Patient', 'MRN', 'Comments'], rows: [['Hale, May', '8810021', 'ok'], ['Ruiz, Ana', '8810045', 'seen in May for labs']] }, { seed: 5 });
+  assert.ok(res2.rows[1][2].includes('seen in May for labs'));
+});
+
+test('r2 pasted text: a label before the surname, an all-caps two-word given name, a street is not a patient, "Med Rec No." and a sentence-final record number', () => {
+  assert.deepEqual(D.parseTextDocument('NOTE: PT TRAN,MINH CHAU (MRN# 77012345) here').rows[0].slice(0, 2), ['TRAN,MINH CHAU', '77012345']);
+  assert.equal(D.parseTextDocument('Card to 18 Quarry Ln, Holbrook MA 02343.').rows[0][0], '');
+  assert.deepEqual(D.parseTextDocument('Message from user (Okafor, Chidi):\nthis is Chidi Okafor, Med Rec No. 66120934.').rows.map((r) => r.slice(0, 2)), [['Okafor, Chidi', '66120934'], ['Okafor, Chidi', '66120934']]);
+  assert.equal(D.parseTextDocument('SMITH, JOHN MRN 1234567').rows[0][0], 'SMITH, JOHN');
+});
+
+test('r2 user names: unlabelled handles are identifiers and the name inside them is found in lower case; versions and files stay', () => {
+  const out = textOut('From MyChart (marguerite.vance71):\nhi its marguerite, can we move to fri\n- Marguerite Vance');
+  noneOf(out.toLowerCase(), ['marguerite', 'vance71']);
+  assert.ok(rules('msg from kpatel_1960 re refill').includes('ID_OTHER=kpatel_1960'));
+  assert.deepEqual(rules('order set v2.1 updated; see scan_01.pdf and e.g. notes').filter((x) => x.startsWith('ID_OTHER')), []);
+});
+
+test('r2 names: initials as a given name, credential before a name, "Hospice of the Valley", great-grand relatives, eponym given name after Pt, Vietnamese names, places beside a person', () => {
+  const out = textOut('Pt T.J. Abernathy-Ruiz wants to be called T.J. today. T.J. tolerated.');
+  noneOf(out, ['T.J.', 'Abernathy']);
+  assert.ok(/^Pt [A-Z]\.[A-Z]\. /.test(out), out);
+  const a = lex('Call from Hospice of the Lakes RN Marisela Quintero, 555-0101.');
+  assert.ok(a.includes('ORG=Hospice of the Lakes') && a.includes('NAME_PROVIDER=Marisela Quintero'), a.join(' '));
+  assert.ok(lex('Great-grandson Teodoro drives.').includes('NAME_OTHER=Teodoro'));
+  assert.ok(lex('Step-daughter Anneliese called.').includes('NAME_OTHER=Anneliese'));
+  assert.ok(lex('Pt Addison Whitlock, 41F, here for C2. Hx Addison\'s disease.').includes('NAME_OTHER=Addison Whitlock'));
+  assert.ok(lex('Pt Gerhardt Okonjo-Bassey aware of plan.').includes('NAME_OTHER=Gerhardt Okonjo-Bassey'));
+  noneOf(textOut('ID shows Phạm Thị Thu Hà but chart has PHAM THI THU HA.'), ['Phạm', 'PHAM THI']);
+  const p = lex('PCP is Dr. Ines Qadir in Mattapoisett. Please fix in Epic. Dr. Lee in Clinic today.');
+  assert.ok(p.includes('LOCATION=Mattapoisett') && !p.some((x) => /Epic|Clinic/.test(x)), p.join(' '));
+  assert.ok(lex('Lives at Seaview House rm 12, Marion.').includes('LOCATION=Marion'));
+  assert.ok(lex('Preferred: Bitsy').includes('NAME_OTHER=Bitsy'));
+  assert.deepEqual(lex('Pt Sneha aware. Keytruda given.').filter((x) => /Keytruda/.test(x)), []);
+});
+
+test('r2 screenshots: an I read as l in a given name, a wrapped tile name beside paired tiles', () => {
+  assert.equal(D.normalizeOcrText('Ferreira, lngrid\nAbbott, lolanthe\nSmith, left arm\nDoe, lab'), 'Ferreira, Ingrid\nAbbott, Iolanthe\nSmith, left arm\nDoe, lab');
+  const t = 'Bay 1                Bay 2                 Bay 3\nRavenscroft-Moyo,       Pettigrew, Anselm       Quist, Odalys\nWinifred                MRN: 61134402 DOB: 09/05/1990 | MRN: 61147719 DOB: 11/30/1931\nMRN: 61120457 DOB: 03/22/1962 | |\nR-CHOP C2';
+  const doc = D.parseTextDocument(D.normalizeOcrText(t));
+  const res = D.processTable({ headers: doc.headers, rows: doc.rows }, { columns: doc.columns, seed: 5 });
+  assert.equal(res.registry.size, 3);
+  assert.deepEqual(D.selfCheck(res, { kind: 'image' }).unnamed, []);
+  noneOf(JSON.stringify(res.rows), ['Ravenscroft', 'Winifred', 'Pettigrew', 'Anselm', 'Quist', 'Odalys', '61120457', '61134402', '61147719']);
+  assert.ok(JSON.stringify(res.rows).includes('R-CHOP C2'));
+});
+
+test('r2 surrogates: a fake phone never spells out a real number; a fake name is never one letter from a real word', () => {
+  for (let seed = 1; seed <= 40; seed++) {
+    const res = D.processTable({ headers: ['Patient', 'MRN', 'Notes'], rows: [['Ambler, Gwendolyn', '7012001', 'cell (555) 555-0102; sister 555-0102'], ['Ambler, Odette', '7012002', 'call 555-0102']] }, { seed });
+    const digits = res.rows.map((r) => r.join(' ')).join(' ').replace(/\D/g, '');
+    assert.ok(!digits.includes('5550102'), `seed ${seed}: ${res.rows.map((r) => r[2]).join(' | ')}`);
+    const words = res.rows.map((r) => r.join(' ')).join(' ').toLowerCase().match(/[a-z]{5,}/g) || [];
+    assert.ok(!words.some((w) => w !== 'gwendolyn' && D.levenshtein(w, 'gwendolyn') <= 1), `seed ${seed}`);
+  }
+});
+
+test('r2 negatives: dotted clinical abbreviations, departments after a doctor, chair numbers, lot numbers and residence descriptions stay', () => {
+  const out = textOut('Pt: I.V. access x2. Plan: P.O. intake. Daughter N.P.O. after midnight. Dr. Shah in Radiology reviewed. Lives alone, Independent.');
+  ['I.V. access', 'P.O. intake', 'N.P.O. after', 'in Radiology', 'alone, Independent'].forEach((k) => assert.ok(out.includes(k), `lost "${k}" in: ${out}`));
+  const cols = D.classifyColumns(['Chair', 'Lot #'], [['Chair 4', 'L2231A'], ['Chair 5', 'L2231B'], ['Chair 6', 'L2231C']]);
+  assert.deepEqual(cols.map((c) => c.role), ['keep', 'keep']);
+  // a 10-digit fax after its label is a phone, not a record number; "pt First Last:" is a name; two eponym surnames after Pt
+  const t = D.parseTextDocument('Contact update for pt Odile Marchetti-Rao: fax 7745550163.');
+  assert.equal(t.rows[0][1], '');
+  noneOf(textOut('Contact update for pt Odile Marchetti-Rao: fax 7745550163.'), ['Odile', 'Marchetti', '7745550163']);
+  const g = textOut('Pt Wilson Graves, 70M, hx Graves disease.');
+  assert.ok(!g.startsWith('Pt Wilson') && g.includes('hx Graves disease'), g);
+});
+
+test('r2 self-check on pasted text: "First Last (MRN …)" is the line\'s patient; numbers labelled as other identifiers are not record numbers; snake_case is not a user name', () => {
+  const chk = (t) => { const doc = D.parseTextDocument(t); const res = D.processTable({ headers: doc.headers, rows: doc.rows }, { columns: doc.columns, seed: 5 }); return { doc, sc: D.selfCheck(res, { kind: 'text' }), out: res.rows.map((r) => r[3]).join('\n') }; };
+  const a = chk('C3 FOLFOX for Ottoline Brandvold (MRN 55120934), chair 4.');
+  assert.equal(a.doc.rows[0][0], 'Ottoline Brandvold'); assert.deepEqual(a.sc.unnamed, []);
+  noneOf(a.out, ['Ottoline', 'Brandvold', '55120934']);
+  const b = chk('Port SN 19GHK4410, ref 1708000. Aetna ID W287645111. Flushed 10 mL NS.');
+  assert.equal(b.doc.rows[0][1], ''); assert.deepEqual(b.sc.unnamed, []);
+  assert.ok(b.out.includes('Flushed 10 mL NS'));
+  assert.ok(chk('used pre_chemo smartphrase; see lab_results').out.includes('pre_chemo smartphrase; see lab_results'));
+  // a record number with no name anywhere still stops the download
+  assert.equal(chk('MRN 55120999 called about labs').sc.unnamed.length, 1);
 });
