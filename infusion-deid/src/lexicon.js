@@ -252,7 +252,43 @@
     CyBorD VRd KRd DRd DVd DPd DKd IRd Rd Vd VCD VTD MPT MPV VMP
     HyperCVAD CALGB COG AALL ECOG SWOG NRG NSABP RTOG GOG NCCN ASCO ASH ESMO
     MAID AIM VAC VDC IE VDC/IE VIDE VAI OPEC CEV ICE/VAC
+    PCP SW MSW CSW RT EMS DNR DNI MOLST POLST HCP POA MPOA DPOA ADL IADL PMH PSH
+    FH SH ROS HPI HEENT CV RESP ABD EXT NEURO PSYCH MSK LVM VM FU RTC DC DX TX HX
+    SX RX OTC QOL AE SAE DLT MTD ORR PFS OS CR SD PD NED SUV FDG IVC SVC DVT PE CVA
+    TIA MI CHF COPD CKD ESRD HTN DM DM2 GERD OSA CAD AFIB UTI URI MRSA VRE HIV HCV
+    HBV CMV EBV HPV TB PNA ARDS AKI SIRS DIC TLS CRS ICANS GVHD HSCT BMT SCT PBSC
+    ASCT NSCLC SCLC HCC RCC CRC TNBC DCIS LCIS IDC ILC GBM AML ALL CLL CML MDS MM
+    MGUS DLBCL FL MCL MZL PTCL CTCL WM HL NHL GIST NET SCC BCC PNET SBRT IMRT XRT
+    SRS EBRT AUC BSA Wt Ht Temp SpO2 RA ANC WBC BID TID QID NPO BP HR RR
+    Vomiting Cough Pain Weakness Dizziness Headache Swelling Bleeding Bruising
+    Infection Sepsis Hypotension Hypertension Tachycardia Dehydration Hyponatremia
+    Hypokalemia Hypomagnesemia Hyperglycemia Hypoglycemia Edema Erythema Flushing
+    Itching Numbness Tingling Tolerated Discharged Ambulatory Precautions Given
+    Reviewed Verified Confirmed Noted Signed Entered Updated Scheduled Arrived
+    Teaching Education Consent Verbalized Understanding Tolerating Stable Improved
+    Worsening Unchanged Resolved Ongoing Controlled Uncontrolled Mild Moderate Severe
+    Carboplatin Cisplatin Oxaliplatin Paclitaxel Docetaxel Gemcitabine Irinotecan
+    Fluorouracil Capecitabine Pemetrexed Etoposide Doxorubicin Cyclophosphamide
+    Vincristine Rituximab Trastuzumab Pertuzumab Bevacizumab Pembrolizumab Nivolumab
+    Atezolizumab Durvalumab Ipilimumab Cetuximab Panitumumab Daratumumab Bortezomib
+    Carfilzomib Lenalidomide Dexamethasone Ondansetron Palonosetron Fosaprepitant
+    Diphenhydramine Famotidine Acetaminophen Lorazepam Prochlorperazine Metoclopramide
+    Methotrexate Leucovorin Bendamustine Azacitidine Decitabine Venetoclax Zoledronic
+    Denosumab Filgrastim Pegfilgrastim Epoetin Darbepoetin Ferumoxytol Venofer Injectafer
+    Feraheme Infed Monoferric Ocrevus Entyvio Remicade Inflectra Renflexis Avsola Stelara
+    Tysabri Actemra Orencia Benlysta Soliris Ultomiris Krystexxa Reclast Evenity IVIG
+    Gammagard Gamunex Privigen Octagam Alaris Baxter Plum Sapphire Smiths Medfusion CADD
+    Walgreens CVS Rite Wegmans Tops Kroger Costco Walmart Quest LabCorp Medicare Medicaid
+    MRN DOB Acct CSN HAR FIN SSN MBI HICN NPI DEA Uber Lyft NEXUS
   `));
+  // After one of these words an eponym that is also a surname stays clinical (Grey Turner sign, Cullen sign, Babinski reflex).
+  const EPONYM_FOLLOW = setOf(words(`sign signs syndrome disease test reflex palsy lymphoma tumor tumour sarcoma phenomenon maneuver manoeuvre
+    triad node nodes fracture point criteria score scale classification staging stage curve period turner arbor garden geranium lodge`));
+  // Well-known regional employers, facilities and chains that identify a patient's workplace or residence when named.
+  const LOCAL_ORGS = words(`Moog GEICO Elderwood Sumitomo Praxair Linde Delaware|North Rich|Products Tops Wegmans Kaleida Catholic|Health
+    Erie|County|Medical|Center ECMC Roswell Brothers|of|Mercy Canterbury|Woods Weinberg|Campus Amberleigh Beechwood Terrace|View
+    Schofield Father|Baker Absolut Hospice|Buffalo Mercy|Flight McGuire|Group Garden|Gate Harris|Hill Autumn|View Ellicott|Center`).map((s) => s.replace(/\|/g, ' '));
+  const LOCAL_ORG_SET = setOf(LOCAL_ORGS);
 
   // Relationship words that signal a third-party name follows or precedes.
   const RELATION_CUES = words(`
@@ -263,6 +299,14 @@
     girlfriend roommate companion driver sitter aide nurse navigator
     coordinator pharmacist dietitian chaplain stepson stepdaughter stepmother
     stepfather godmother godfather pastor
+    dtr dghtr dau hus husb bro sis gma gpa gson gdaughter granddtr kin nok
+    contact caller interpreter translator clerk scheduler visitor therapist
+    counselor volunteer attorney lawyer executor hcp mpoa dpoa
+    son-in-law daughter-in-law mother-in-law father-in-law sister-in-law brother-in-law
+    stepbrother stepsister grandchild twin fiancé fiancee ex-wife ex-husband
+    mgr manager navigator worker financial scheduler coordinator chaplain imam rabbi
+    reverend deacon priest minister pastor coach boss supervisor coworker colleague
+    employer landlord tenant neighbour roomate housemate caregiver aide companion
   `);
 
   const HONORIFICS = words(`Dr Dr. Doctor Mr Mr. Mrs Mrs. Ms Ms. Miss Mx Mx. Nurse Prof Prof. Rev Rev. Fr Fr. Sr Sr.`);
@@ -278,7 +322,15 @@
     Nursing Manor Village Senior Living Assisted Urology Cardiology
     Neurology Neurologic Gastroenterology Dermatology Orthopedics Orthopedic
     Community County Regional Memorial Home Agency Association Services
+    Township Parish SNF ALF LTC Insurance BCBS Inc LLC Corp Corporation Company Ltd
+    Industries Motors Transport Transportation Ambulance EMS Funeral
+    Church Chapel Mosque Masjid Temple Synagogue Shul Ministries Congregation Cathedral
+    Products Foods Bank Credit Union Mall Market Plaza Apartments Towers
   `);
+  // Words that take the NEXT capitalized token as the specific part (Masjid An-Noor, Camp Good Days, Hotel Lafayette).
+  const ORG_PREFIXES = words(`Masjid Mosque Temple Church Chapel Synagogue Camp Hotel Hospice Villa Casa`);
+  // Suffix words that make the whole phrase a geographic unit rather than an organization.
+  const GEO_SUFFIXES = words(`County Township Parish`);
   // Words that frequently *name* a facility (not generic): they count as the specific part.
   const ORG_NAMEWORDS = words(`
     Mercy Sinai Presbyterian Methodist Baptist Lutheran Adventist Providence
@@ -318,7 +370,14 @@
     Ithaca Binghamton Elmira Utica Schenectady Troy Poughkeepsie Newburgh
     Kingston Plattsburgh Watertown Oswego Auburn Geneva Canandaigua Corning
     Falls Springs Beach Heights Park City Town Valley
+    Williamsville Clarence Lancaster Depew Kenmore Lewiston Wheatfield Sanborn
+    Springville Angola Gowanda Salamanca Fredonia Westfield Attica Geneseo
+    Medina Albion Brockport Irondequoit Penfield Webster Fairport Pittsford
+    Henrietta Hornell Wellsville Bradford Meadville Blasdell Getzville Snyder
+    Eggertsville Aurora Seneca Lakewood Fairview Riverside Lakeside Hillside
   `);
+  // Directional/compound prefixes that start a two-word place name (East Aurora, North Tonawanda, Fort Erie).
+  const PLACE_PREFIXES = words(`North South East West New Fort Ft Mount Mt Lake Port Saint St San Los Las Grand Upper Lower Cape Santa Little Big`);
 
   // Hold-out names: deliberately NOT in FIRST_NAMES/SURNAMES. The synthetic
   // stress set uses these for a share of third-party names so recall on
@@ -341,38 +400,110 @@
     Brightwater Holmquist Zapatero Lindgren Marchetti Sowerby Traynor
   `);
 
+  // Diminutives and short forms that a census first name may appear as in free text (English, Spanish, Polish, Italian,
+  // Vietnamese and Arabic conventions). Lower-case formal name -> list of forms. Reverse forms are derived at load.
+  const NICKNAMES = {
+    benjamin: ['Ben', 'Benny', 'Benji', 'Benjie'], william: ['Bill', 'Billy', 'Will', 'Willy', 'Liam'], robert: ['Rob', 'Bob', 'Bobby', 'Robbie', 'Bert'],
+    richard: ['Rick', 'Ricky', 'Dick', 'Rich', 'Richie'], james: ['Jim', 'Jimmy', 'Jamie'], john: ['Jack', 'Johnny', 'Jon'], joseph: ['Joe', 'Joey', 'Jos'],
+    michael: ['Mike', 'Mikey', 'Mick'], thomas: ['Tom', 'Tommy'], charles: ['Charlie', 'Chuck', 'Chas'], christopher: ['Chris', 'Kit', 'Topher'],
+    daniel: ['Dan', 'Danny'], matthew: ['Matt', 'Matty'], anthony: ['Tony', 'Ant'], donald: ['Don', 'Donny'], steven: ['Steve', 'Stevie'],
+    stephen: ['Steve', 'Stevie'], paul: ['Paulie'], andrew: ['Andy', 'Drew'], joshua: ['Josh'], kenneth: ['Ken', 'Kenny'], kevin: ['Kev'],
+    brian: ['Bri'], george: ['Georgie'], timothy: ['Tim', 'Timmy'], ronald: ['Ron', 'Ronnie'], edward: ['Ed', 'Eddie', 'Ted', 'Teddy', 'Ned'],
+    jeffrey: ['Jeff'], jeffery: ['Jeff'], jacob: ['Jake'], nicholas: ['Nick', 'Nicky'], jonathan: ['Jon', 'Jonny'], lawrence: ['Larry'],
+    gregory: ['Greg'], alexander: ['Alex', 'Al', 'Sasha', 'Xander'], patrick: ['Pat', 'Paddy', 'Patty'], raymond: ['Ray'], dennis: ['Denny'],
+    gerald: ['Gerry', 'Jerry'], samuel: ['Sam', 'Sammy'], nathan: ['Nate'], henry: ['Hank', 'Harry'], douglas: ['Doug'], zachary: ['Zach', 'Zack'],
+    peter: ['Pete'], walter: ['Walt', 'Wally'], leonard: ['Len', 'Lenny', 'Leo'], harold: ['Hal', 'Harry'], arthur: ['Art', 'Artie'],
+    albert: ['Al', 'Bert', 'Bertie'], eugene: ['Gene'], louis: ['Lou', 'Louie'], frederick: ['Fred', 'Freddie', 'Freddy'], herbert: ['Herb', 'Herbie'],
+    norman: ['Norm'], stanley: ['Stan'], vincent: ['Vince', 'Vinny'], russell: ['Russ', 'Rusty'], philip: ['Phil'], phillip: ['Phil'],
+    bernard: ['Bernie'], melvin: ['Mel'], lester: ['Les'], alvin: ['Al'], wallace: ['Wally'], francis: ['Frank', 'Frankie'], theodore: ['Ted', 'Teddy', 'Theo'],
+    salvatore: ['Sal', 'Sally', 'Tore'], giuseppe: ['Beppe', 'Peppe', 'Joe'], vito: ['Vit'], angelo: ['Ang'], dominic: ['Dom', 'Nick'],
+    francisco: ['Paco', 'Pancho', 'Frank'], jose: ['Pepe', 'Joe'], manuel: ['Manny', 'Manolo'], ignacio: ['Nacho'], guillermo: ['Memo'],
+    enrique: ['Quique', 'Kike'], alejandro: ['Alex', 'Ale'], eduardo: ['Lalo', 'Eddie'], roberto: ['Beto', 'Rob'], ricardo: ['Ricky', 'Richie'],
+    antonio: ['Tony', 'Toño'], jesus: ['Chuy'], rafael: ['Rafa'], javier: ['Javi'], santiago: ['Santi'], sergio: ['Checo'], fernando: ['Fer', 'Nando'],
+    krzysztof: ['Krzysiek', 'Krys', 'Chris'], stanislaw: ['Stas', 'Stan', 'Stasiek'], tomasz: ['Tomek', 'Tom'], piotr: ['Piotrek', 'Peter'],
+    jakub: ['Kuba'], grzegorz: ['Grzesiek', 'Grzes', 'Greg'], wojciech: ['Wojtek'], andrzej: ['Andrzejek', 'Andrew'], bartosz: ['Bartek'], bartlomiej: ['Bartek'],
+    mohammed: ['Mo', 'Mohd', 'Hamid'], mohammad: ['Mo', 'Mohd'], muhammad: ['Mo', 'Mohd'], abdullah: ['Abdul'], ibrahim: ['Ibi'], hassan: ['Hass'],
+    nguyen: ['Nguyen'], thanh: ['Thanh'], dmitri: ['Dima', 'Mitya'], sergei: ['Seryozha'], nikolai: ['Kolya', 'Nick'], andrei: ['Andryusha'],
+    viktor: ['Vitya', 'Vic'], ivan: ['Vanya'], hiroshi: ['Hiro'], takeshi: ['Take'], satoshi: ['Sato'], rajesh: ['Raj'], sanjay: ['Sanj'], vijay: ['Vij'],
+    elizabeth: ['Liz', 'Beth', 'Betty', 'Lizzie', 'Eliza', 'Betsy', 'Libby', 'Lisa'], katherine: ['Kate', 'Katie', 'Kathy', 'Kat', 'Kay'], catherine: ['Cathy', 'Cat', 'Kate', 'Katie'],
+    kathleen: ['Kathy', 'Kath', 'Kate'], margaret: ['Maggie', 'Meg', 'Peggy', 'Marge', 'Margie', 'Greta'], patricia: ['Pat', 'Patty', 'Tricia', 'Trish'],
+    jennifer: ['Jen', 'Jenny'], barbara: ['Barb', 'Barbie', 'Babs', 'Basia'], susan: ['Sue', 'Susie', 'Suzy'], jessica: ['Jess', 'Jessie'], sarah: ['Sally'],
+    deborah: ['Deb', 'Debbie'], debra: ['Deb', 'Debbie'], rebecca: ['Becky', 'Becca'], sharon: ['Shari'], cynthia: ['Cindy'], pamela: ['Pam'],
+    christine: ['Chris', 'Christy', 'Tina'], christina: ['Chris', 'Christy', 'Tina'], rachel: ['Rach'], carolyn: ['Carol', 'Lyn'], janet: ['Jan'],
+    virginia: ['Ginny', 'Ginger'], victoria: ['Vicky', 'Vicki', 'Tori'], jacqueline: ['Jackie'], frances: ['Fran', 'Frannie'], kimberly: ['Kim'],
+    michelle: ['Shelly', 'Mich'], dorothy: ['Dot', 'Dottie', 'Dolly'], melissa: ['Mel', 'Missy'], stephanie: ['Steph'], theresa: ['Terry', 'Tess', 'Tessa'],
+    teresa: ['Terry', 'Tess', 'Tessa'], kathryn: ['Kathy', 'Kate'], judith: ['Judy'], samantha: ['Sam', 'Sammy'], abigail: ['Abby', 'Gail'],
+    danielle: ['Dani'], amanda: ['Mandy'], nicole: ['Nicki', 'Nikki'], angela: ['Angie'], beverly: ['Bev'], marilyn: ['Mari'], gloria: ['Glo'],
+    florence: ['Flo', 'Flossie'], mildred: ['Millie'], lillian: ['Lily', 'Lil'], josephine: ['Jo', 'Josie'], henrietta: ['Hattie', 'Etta'],
+    geraldine: ['Geri', 'Gerry'], marjorie: ['Marge', 'Margie'], loretta: ['Lottie', 'Retta'], lucille: ['Lucy', 'Lu'], louise: ['Lou', 'Lulu'],
+    eleanor: ['Ellie', 'Nell', 'Nora'], winifred: ['Winnie', 'Freda'], rosemary: ['Rosie', 'Ro'], bertha: ['Bertie'], beulah: ['Bea'],
+    guadalupe: ['Lupe', 'Lupita'], josefina: ['Josie', 'Fina'], maria: ['Mari'], alejandra: ['Ale'], beatriz: ['Bea', 'Betty'], lucia: ['Lucy'],
+    soledad: ['Sole', 'Chole'], yolanda: ['Yoli'], concepcion: ['Concha', 'Conchita'], dolores: ['Lola', 'Loli'], mercedes: ['Meche', 'Merche'],
+    rosario: ['Charo'], francisca: ['Paca', 'Paquita'], isabel: ['Isa', 'Chabela'], katarzyna: ['Kasia', 'Kate', 'Kat'], malgorzata: ['Gosia', 'Malgosia'],
+    agnieszka: ['Aga'], magdalena: ['Magda'], joanna: ['Asia', 'Jo'], anna: ['Ania', 'Annie', 'Ann'], zofia: ['Zosia', 'Sophie'],
+    ekaterina: ['Katya'], svetlana: ['Sveta'], natasha: ['Nat'], tatiana: ['Tanya'], olga: ['Olya'], irina: ['Ira'], anastasiya: ['Nastya'],
+    giovanna: ['Gio', 'Vanna'], francesca: ['Fran', 'Franca'], alessandra: ['Ale', 'Sandra'], valentina: ['Vale', 'Tina'], fatima: ['Fati'],
+    aisha: ['Ish'], khadija: ['Dija'], priyanka: ['Pri'], priya: ['Pri'], lakshmi: ['Laks'], hong: ['Hong'], thi: ['Thi'],
+    mary: ['Molly', 'Polly', 'Mae', 'Mamie'], martha: ['Marty', 'Patsy'], harriet: ['Hattie'], charlotte: ['Lottie', 'Charlie'], caroline: ['Carrie'],
+    emily: ['Em', 'Emmy'], emma: ['Em', 'Emmy'], alexandra: ['Alex', 'Lexi', 'Sasha'], gabriel: ['Gabe'], gabriela: ['Gabi', 'Gaby'], isabella: ['Bella', 'Izzy'],
+    olivia: ['Liv', 'Livvy'], sophia: ['Sophie'], madeline: ['Maddie'], genevieve: ['Gen', 'Genny', 'Vivi', 'Gigi'], evelyn: ['Evie'], ingrid: ['Inga'],
+    miriam: ['Mimi'], mordechai: ['Motti'], chukwuemeka: ['Emeka'], oluwaseun: ['Seun'], adaeze: ['Ada'], ngozi: ['Ngo'],
+    keiko: ['Kei'], yusuf: ['Yusy'], omar: ['Omi'], duncan: ['Dunc'], padraig: ['Paddy', 'Podge'],
+    siobhan: ['Shiv', 'Shivaun'], astrid: ['Asta'], erik: ['Rik'], sven: ['Svenne'], luc: ['Lucky'], marguerite: ['Margo', 'Daisy', 'Peggy'],
+    anneliese: ['Anne', 'Liese', 'Anna'], devika: ['Devi'], bartholomew: ['Bart', 'Barty'], rosa: ['Rosie'], fiona: ['Fi'],
+    rafiqul: ['Rafi'], jean: ['Jeannie'], thandiwe: ['Thandi'], luz: ['Lucecita'], ana: ['Anita'], rose: ['Rosie'], joao: ['Jo'], pedro: ['Pete'],
+  };
   // Surrogate pools. Disjoint from everything above would be ideal but the
   // generator also excludes anything that appears in the document being processed.
   const FAKE_FIRST = words(`
-    Alden Bettina Caspian Delia Everett Flora Gideon Harriet Ivo Juniper Kit
-    Leander Maren Nils Orla Perrin Quill Rosalie Soren Tamsin Ulric Verity
-    Wren Xander Yara Zeph Ansel Brigid Cato Dahlia Elio Fenwick Greer Hollis
-    Idris Jolene Kerrigan Lowell Mirabel Nolan Odette Pascal Quinlan Rhoswen
-    Sorrel Thora Umber Vale Wilder Xanthe Yvaine Zane Adair Blythe Corin Dorian
-    Elowen Faye Garnet Haze Inigo Jessamine Kieran Lark Merritt Neve Oren
-    Ansgar Briar Cosima Dashiell Esme Fenn Gwendolen Hesper Ilsa Jory Keturah
-    Linnea Marisol Nerys Oswin Petra Quentin Rafferty Saskia Tobiah Una Vesper
-    Wendeline Yannick Zelie Aurelio Beatrix Cyprian Delphine Emrys Florian Gilda
+    Alden Bettina Caspian Delia Everett Flora Gideon Hollis Ivo Juniper Leander Maren Nils Orla Perrin Quill
+    Rosalie Soren Tamsin Ulric Verity Xander Yara Zeph Ansel Brigid Cato Dahlia Elio Greer Idris Jolene Kerrigan
+    Lowell Mirabel Odette Pascal Quinlan Rhoswen Sorrel Thora Umber Wilder Xanthe Yvaine Zane Adair Blythe Corin
+    Dorian Elowen Faye Garnet Inigo Jessamine Kieran Merritt Neve Oren Ansgar Cosima Esme Gwendolen Hesper Ilsa
+    Jory Keturah Linnea Nerys Oswin Petra Quentin Rafferty Saskia Tobiah Una Vesper Wendeline Yannick Zelie Aurelio
+    Beatrix Cyprian Emrys Gilda Alaric Brunhild Cedric Dagny Eberhard Godfrey Hedwig Ingram Jocasta Kasimir
+    Leopoldine Marius Nerissa Octavian Philomena Quintus Romilly Sigrid Thaddea Ulrika Valentin Wilhelmine Ximena
+    Yolande Zbigniew Anselma Bertram Clothilde Eulalia Fabrice Gisela Isolde Jerome Kristof Lucasta
+    Morwenna Noelle Peregrine Quenild Rosamund Sylvester Theodora Urban Vivienne Winthrop Yseult Zephyrine
+    Amadeus Benedikta Drusilla Elspeth Florentin Guinevere Hyacinth Jemima Kasper
+    Melisande Nikolaus Oriel Persis Reinhold Seraphine Tancred Ursula Vitus Wolfram Yorick Zinnia Ambrosine
+    Barnabas Clemency Dorothea Ephraim Fulvia Gerhardt Honorine Ivor Josiane Konstantin Marcelline
+    Nathanael Ottavia Radegund Sebastienne Tiberius Ulysse Valery Wenceslas Zenobia Aurelian
+    Bellamy Dulcie Evander Fiorella Gaspard Hildegard Isidore Jolyon Kerensa Maud Norbert Olympe
+    Percival Rhiannon Sabina Torvald Udo Veronika Wystan Zora Anneke Bram Cordelia Dimitra Ewan Freya Gunnar Hanne
   `);
   const FAKE_LAST = words(`
-    Ashgrove Brightwell Calloway Dunmore Ellery Fairchild Greenhalgh Holloway
-    Ingram Jessop Kingsley Lockhart Marlowe Northcote Oakes Pembridge Quayle
-    Ravenscroft Stanmore Thorne Underhill Vance Westbrook Yardley Aldridge
-    Blackwood Carrow Danforth Eastwick Farrow Glenmore Hartwell Islington
-    Jarrow Kestrel Lindell Moorcroft Nightingale Orchardson Prescott Quenby
-    Redfern Sallow Tennant Upton Vickery Whitmore Yeoman Ashby Bramwell Colfax
-    Dunstable Everleigh Fenwick Grantham Hollingsworth Iredale Jessamy Kittredge
-    Lanchester Mortlake Nethercott Oxley Pennington Quarrington Rowntree Selwyn
-    Thackeray Umberfield Vanbrugh Wakefield Yelverton Ashdown Beaumont Crewe
+    Ashgrove Brightwell Calloway Dunmore Ellery Fairchild Greenhalgh Holloway Jessop Kingsley Lockhart Marlowe
+    Northcote Oakes Pembridge Quayle Ravenscroft Stanmore Thorne Underhill Vance Westbrook Yardley Aldridge
+    Blackwood Carrow Danforth Eastwick Farrow Glenmore Hartwell Islington Jarrow Kestrel Lindell Moorcroft
+    Nightingale Orchardson Prescott Quenby Redfern Sallow Tennant Upton Vickery Whitmore Yeoman Ashby Bramwell
+    Colfax Dunstable Everleigh Fenwick Grantham Hollingsworth Iredale Jessamy Kittredge Lanchester Mortlake
+    Nethercott Oxley Pennington Quarrington Rowntree Selwyn Thackeray Umberfield Vanbrugh Wakefield Yelverton
+    Ashdown Beaumont Crewe Abbotsley Barrowcliffe Chadwell Dalrymple Elphinstone Gainsford Hatherley
+    Ingleby Jocelyn Kenworthy Lanyon Marchbank Netherby Ormerod Pelham Quilliam Ridgeway Sandringham Tollemache
+    Uppingham Verlander Wentworth Yaxley Ambleside Birkdale Cottingham Dovercourt Egerton Fulwood Garsington
+    Hurlingham Ivinghoe Jevington Kelmscott Lydgate Melbury Northallerton Oakhurst Petworth Quantock Rydal
+    Stavely Tredegar Upwell Vexley Wimpole Yardwick Allerton Bexley Clavering Dunsford Elmhurst Fairlie Godolphin
+    Harcourt Inchbald Jerningham Kirkbride Lancing Mowbray Nunnery Orwell Pelletier Quincey Rosedale Silvester
+    Tremaine Ulverston Vanterpol Wrexham Yelland Ashcombe Brindley Cavendish Doverley Eskdale Fenchurch Gresham
+    Hawkesbury Ingleton Josselin Kenilworth Lindisfarne Marchmont Newbold Osterley Pickering Quenington Ravensworth
+    Shelbourne Thirlwall Urquhart Vanstone Wethersfield Yellowley Ambridge Blakeney Charlbury Dunwich Elsworth
+    Fontwell Gillingham Haverstock Ickworth Jesmond Kingswood Lambourne Milbrook Nettlebed Oxenford Pangbourne
+    Quorn Ramsbury Stoneleigh Tilbrook Ullswater Verwood Whitacre Yarrowby Amherley Bilsdale Cressley Dunholme
+    Ettrick Fernleigh Gatcombe Hartsby Ingoldsby Jarvisley Keswick Lavenham Marwood Nethershaw Ottery Penhallow
+    Quarmby Rushbrook Sedgwick Tarrant Underwood Vanbury Wyndham Yeovil Ashwell Bradworthy Cheverell Draycott
+    Ellingham Farncombe Glynde Hambleden Iffley Kelsall Lisle Marlston Norbury Ottershaw Pyecombe Ramsgate Stanwick
+    Thornleigh Upcott Villiers Wrayburn Yateley Ashperton Boscastle Chilcombe Dunkeswell Exford Fowey Godrevy Hallsands
   `);
   const FAKE_ORGS = words(`
     Riverside|Medical|Center Lakeview|Oncology|Associates Northgate|Regional|Hospital
     Pinecrest|Cancer|Institute Harborview|Clinic Meadowbrook|Health Stonebridge|Hospice
     Cedar|Hills|Infusion|Center Westfield|Memorial|Hospital Brookhaven|Hematology
     Summit|Ridge|Medical|Group Oakdale|Community|Hospital Fairmont|Imaging
-    Silverlake|Pharmacy Elmwood|Home|Care Clearwater|University|Hospital
+    Silverlake|Pharmacy Elmwood|Home|Care Clearwater|University|Hospital Greywater|Industries
+    Tallmadge|Foods Halvorsen|Motors Brightwater|Insurance Ironbridge|Church Hillmere|Temple
   `).map((s) => s.replace(/\|/g, ' '));
-  const FAKE_CITIES = words(`Ashford Brimley Caldwell Dunbar Eastmere Fallbrook Glenhaven Hartsfield Ivydale Kessler Larkspur Millbrook Northfield Oakridge Pinehurst Quarryville Redmond Stonehaven Thornbury Wexley`);
+  const FAKE_CITIES = words(`Ashford Brimley Coldwater Dunbar Eastmere Fallbrook Glenhaven Hartsfield Ivydale Kessler Larkspur Millbrook Northfield Oakridge Pinehurst Quarryville Redmond Stonehaven Thornbury Wexley`);
 
   const FIRST_SET = setOf(FIRST_NAMES);
   const LAST_SET = setOf(SURNAMES);
@@ -382,6 +513,11 @@
   const CREDENTIAL_SET = setOf(CREDENTIALS);
   const ORG_SUFFIX_SET = setOf(ORG_SUFFIXES);
   const ORG_NAMEWORD_SET = setOf(ORG_NAMEWORDS);
+  const GEO_SUFFIX_SET = setOf(GEO_SUFFIXES);
+  const ORG_PREFIX_SET = setOf(ORG_PREFIXES);
+  const PLACE_PREFIX_SET = setOf(PLACE_PREFIXES);
+  // Number words for written-out ages (ninety-two year old).
+  const ONES_WORDS = words(`one two three four five six seven eight nine`);
   const CA_PROVINCES = { ON: 'Ontario', QC: 'Quebec', BC: 'British Columbia', AB: 'Alberta', MB: 'Manitoba', SK: 'Saskatchewan', NS: 'Nova Scotia', NB: 'New Brunswick', PE: 'Prince Edward Island', NL: 'Newfoundland' };
   const STATE_ABBR_SET = new Set([...Object.keys(US_STATES), ...Object.keys(CA_PROVINCES)]);
   const STATE_NAME_SET = setOf([...Object.values(US_STATES), ...Object.values(CA_PROVINCES)]);
@@ -392,6 +528,9 @@
     FAKE_FIRST, FAKE_LAST, FAKE_ORGS, FAKE_CITIES,
     FIRST_SET, LAST_SET, CITY_SET, RELATION_SET, HONORIFIC_SET, CREDENTIAL_SET,
     ORG_SUFFIX_SET, ORG_NAMEWORDS, ORG_NAMEWORD_SET, STATE_ABBR_SET, STATE_NAME_SET, CA_PROVINCES,
+    GEO_SUFFIXES, GEO_SUFFIX_SET, PLACE_PREFIXES, PLACE_PREFIX_SET, ONES_WORDS, ORG_PREFIXES, ORG_PREFIX_SET,
+    NICKNAMES, EPONYM_FOLLOW, LOCAL_ORGS, LOCAL_ORG_SET,
+    nicknamesOf: (w) => NICKNAMES[w.toLowerCase()] || [],
     isFirstName: (w) => FIRST_SET.has(w.toLowerCase()),
     isSurname: (w) => LAST_SET.has(w.toLowerCase()),
     isAmbiguous: (w) => AMBIGUOUS.has(w.toLowerCase()),
