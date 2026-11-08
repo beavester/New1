@@ -1021,3 +1021,21 @@ test('round 6 classes: split name columns, insurance IDs, spelled phones, tile r
   for (const neg of ['pt doing well in chair 3; w/ fall risk; MS. Premed solumedrol given', '(ILD screen negative) from ECMC', 'Pt Zbigniew arrived']) assert.ok(!names(neg).some((n) => /fall|risk|Premed|ILD|doing/.test(n)), neg + ' -> ' + names(neg));
   assert.deepEqual(names('Pt Zbigniew arrived'), ['Zbigniew']);
 });
+
+test('round 7 classes: dose dates vs scores, lower-case own-row names, org towns, movement places, first name before phone, regimen-follow names, glued OCR digits', () => {
+  const dates = (t) => D.ruleSpans(t, cfg()).filter((s) => s.type === 'DATE').map((s) => s.text);
+  assert.deepEqual(dates('Second dose 11/12. 2nd half dose 12/03 timing.'), ['11/12', '12/03']);
+  assert.deepEqual(dates('Pt reports fatigue 6/10. pain 4/10. dose 1/2 today. cycle 3/6. days 1-3.'), []);
+  const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Lane, Grace', '6133901', "Call grace's husband if late. grace period for labs ok."], ['Rose, Winter', '6120034', 'Spoke w/ winter re: precautions; winter weather expected.']] }, { seed: 2 });
+  assert.ok(!/\bgrace's/.test(r.rows[0][2]) && / grace period/.test(r.rows[0][2]), r.rows[0][2]);
+  assert.ok(!/w\/ winter/.test(r.rows[1][2]) && /winter weather/.test(r.rows[1][2]), r.rows[1][2]);
+  const found = (t) => D.lexiconSpans(t, cfg()).map((s) => s.text).sort();
+  assert.ok(found('Records requested from Riverbend Oncology, Tulsa.').includes('Tulsa'));
+  assert.ok(found('traffic from Mattapan; plant in Saint-Jérôme').join('|').match(/Mattapan/) && found('traffic from Mattapan; plant in Saint-Jérôme').join('|').match(/Saint-Jérôme/));
+  assert.ok(found('pump  Rosalba 555-0109').includes('Rosalba'));
+  assert.deepEqual(found('Ifeoma Nwachukwu C6D1 FOLFOX. Pt reports cold sensitivity.'), ['Ifeoma Nwachukwu']);
+  assert.deepEqual(found('Katarzyna "Kasia" Zielinska here for cycle 2 Taxol.'), ['Katarzyna "Kasia" Zielinska']);
+  const row = D.parseTextDocument('0730 Sanchez-Ibarra, Marisol 339017509/09/1976 Daughter will stay').rows[0];
+  assert.equal(row[1], '3390175'); assert.equal(row[2], '09/09/1976');
+  assert.ok(!found('C2. Carbo AUC 5. Taxol 80 mg/m2.').length, 'drug abbreviations are not names');
+});

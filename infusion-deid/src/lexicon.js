@@ -234,6 +234,8 @@
     NS RL D5 D5W KCL MGSO4 TPN PCA PICC CVC CVAD IVF ABX ABG VS BP HR RR TPA
     Cathflo Alteplase Activase Onpro Huber Beacon Hyperspace MyChart Haiku
     Calvert Cockcroft Gault Mosteller Jelliffe Chatelut Haycock Egorin Kelman
+    Carbo Cisplat Cis Oxali Gem Vinc Dox Adria Cytox Bleo Iri Irino Topo Etop Pacli Doce Pem Lenal Bortez Dara Ritux Obin
+    Bren Niv Pembro Ipi Atezo Durva Avel Cemi Tras Pertuz Cetux Pani Decad Benadryl Zofran Ativan Pepcid
     HOH NKDA NKA NKFA DNR DNI MOLST POLST PMH PSH FHx SHx ROS HPI SOB CHF COPD CAD HTN CKD ESRD GERD OSA AFib CVA TIA DVT BPH SLE
     HLD DM2 T2DM IDDM NIDDM PNA AKI ARF UTI URI BM GI GU HEENT MSK CNS PNS PVD PAD AAA CABG PCI PTCA ICD PPM LVAD
     EGFR ALK ROS1 KRAS NRAS BRAF MET RET NTRK FGFR IDH FLT3 NPM1 TP53 BCR ABL

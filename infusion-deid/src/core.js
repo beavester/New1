@@ -838,7 +838,13 @@
           // "C1D1"-style, "cycle 1/2", "days 1-3" are not dates
           const before = text.slice(Math.max(0, m.index - 10), m.index);
           const nextCycle = /next\s+cycle\s*$/i.test(text.slice(Math.max(0, m.index - 14), m.index));
-          if (RANGE_BEFORE.test(before) && !nextCycle) continue;
+          if (RANGE_BEFORE.test(before) && !nextCycle) {
+            // a score, grade or ratio ("fatigue 6/10", "grade 1/4", "ratio 1/2") is never a date; after dose/day/cycle an
+            // m/d is a date unless it looks like a small fraction ("dose 1/2", "cycle 3/6") -- "Second dose 11/12." is a date
+            const scoreCtx = /(?:pain|fatigue|nausea|distress|anxiety|depression|dyspnea|scores?|rated?|rating|scale|severity|intensity|vas|nrs|esas|ratio|grade|levels?|pages?|items?|fractions?|fx|sessions?|times|courses?|x|q)\s*$/i.test(before);
+            const smallFraction = pd.m < pd.d && pd.d <= (/cycle|cycles|c\d/i.test(before) ? 8 : 4) && pd.m <= 3;
+            if (scoreCtx || smallFraction || pd.sep === '-' || !/^[.,;)\s]|^\s*(?:timing|appt|visit|at|@|\d{1,2}:\d{2})/i.test(after)) continue;
+          }
           if (/^\s*(?:today|tomorrow|tmrw|tonight|each|every|strength|rate|dose|tabs?|caps?)\b/i.test(after)) continue;
           // hyphen form (1-3) and small fractions (1/2, 3/4) are ranges/doses unless the context says date
           const fractionLike = pd.m <= 3 && pd.d <= 4;
@@ -1056,6 +1062,14 @@
         i = j - 1;
       }
     }
+    // Pass F1b: an organisation followed by ", Town" ("Riverbend Oncology, Tulsa")
+    for (const sp of spans.filter((x) => x.type === 'ORG')) {
+      const after = text.slice(sp.end).match(/^,\s+(\p{Lu}[\p{Ll}\p{M}'’\-]+)(?=[\s.;,)]|$)/u);
+      if (!after) continue;
+      const w = after[1]; const ti = toks.findIndex((x) => x.start === sp.end + after[0].length - w.length);
+      if (ti < 0 || used[ti] || LEX.isClinical(w) || LEX.isFirstName(w) || LEX.isAnchorName(w) || (LEX.isEnglishWord(w) && !LEX.CITY_SET.has(w.toLowerCase())) || LEX.STATE_ABBR_SET.has(w)) continue;
+      used[ti] = true; spans.push({ start: toks[ti].start, end: toks[ti].end, type: 'LOCATION', source: 'cue:org-town', conf: 0.6, text: w });
+    }
     // Pass F2: facility names after an anchor (from Kenmore Mercy; at UPMC Hamot; (ECMC); from ECMC)
     for (let i = 0; i < toks.length - 1; i++) {
       const t = toks[i];
@@ -1155,6 +1169,15 @@
       for (let q = i + 1; q <= j; q++) used[q] = true;
       spans.push({ start: toks[i + 1].start, end: toks[j].end, type: 'LOCATION', source: 'cue:place', conf: 0.6, text: text.slice(toks[i + 1].start, toks[j].end) });
       i = j;
+    }
+    // Pass F7: a quoted nickname inside a name (Adebayo "Bayo" Ogunwale)
+    for (let i = 0; i + 4 < toks.length; i++) {
+      const a = toks[i], q1 = toks[i + 1], nick = toks[i + 2], q2 = toks[i + 3], b = toks[i + 4];
+      if (used[i] || used[i + 4] || !a.cap || !b.cap || !/^["“]$/.test(q1.raw) || !/^["”]$/.test(q2.raw) || !nick.word || !nick.cap) continue;
+      if (LEX.isClinical(a.core) || LEX.isClinical(b.core) || wordNotName(a) || wordNotName(b)) continue;
+      if (!(LEX.isFirstName(a.core) || LEX.isSurname(a.core) || LEX.isSurname(b.core) || LEX.isFirstName(b.core)) && (LEX.isEnglishWord(a.core) || LEX.isEnglishWord(b.core))) continue;
+      addRun(i, i + 5, 'NAME_OTHER', 'cue:nickname', 0.7);
+      i += 4;
     }
     // Pass A: honorific + name  (Dr. Lee, Mrs. Thaddeus Abernathy)
     for (let i = 0; i < toks.length - 1; i++) {
@@ -1463,6 +1486,7 @@
       if ((ptLabel || colonLabel || sentStart) && verbAfter && (lexHit || ptLabel || ((colonLabel || (a.core.length >= 3 && b.core.length >= 3)) && !plainWords))) ok = true;
       else if ((ptLabel || colonLabel) && punctAfter && (ptLabel || !plainWords)) ok = true;
       else if (lineStart && punctAfter && !plainWords && (lexHit || (!LEX.isEnglishWord(a.core) && !LEX.isEnglishWord(b.core))) && !wordNotName(a) && !wordNotName(b)) ok = true; // "Ananya Krishnamurthy - Benlysta monthly"
+      else if (lineStart && (/^\s*C\d{1,2}D\d{1,2}\b/i.test(text.slice(toks[j - 1].end)) || (nxt.word && nxt.cap && LEX.isClinical(nxt.core) && !LEX.isSurname(nxt.core))) && !plainWords && (lexHit || (!LEX.isEnglishWord(a.core) && !LEX.isEnglishWord(b.core))) && !wordNotName(a) && !wordNotName(b)) ok = true; // "Ifeoma Nwachukwu C6D1 FOLFOX"
       // "Pt Rasmus Lindqvist uploaded ...": after a patient label two capitalized non-clinical words followed by a lower-case
       // word are the patient's name whatever the verb ("Pt Arrived Ambulatory" excepted by the word endings)
       else if (ptLabel && nxt.word && !nxt.cap && !nxt.allcaps && (PERSON_VERB_I.test(nxt.core) || /(?:ed|ing|es|s)$/.test(nxt.core)) && !COMMON_LOWER.has(nxt.core.toLowerCase()) && !toks[j - 1].nlAfter && !plainWords && pNameOk(a) && pNameOk(b) && !toks.slice(i, j).some((t) => /(?:ed|ing|ly|ment)$/i.test(t.core) && !inLex(t))) ok = true;
@@ -1708,7 +1732,7 @@
       if (i >= 0 && !t.nlAfter && !/^(to|from|in|near|outside)$/i.test(t.core) && !(i + 2 < toks.length && /^\d{5}$/.test(toks[i + 2].raw || ''))) continue;
       if (LEX.isClinical(n.core) || (LEX.isEnglishWord(n.core) && !(LEX.isSurname(n.core) && !LEX.isFirstName(n.core))) || LEX.isAnchorName(n.core) || isRel(n) || isHon(n) || isCred(n) || LEX.ORG_SUFFIX_SET.has(n.core.toLowerCase()) || (allow && allow.has(n.core.toLowerCase()))) continue;
       const prev = i > 0 ? toks[i - 1] : null;
-      const movement = i >= 0 && /^(to|from|in|near|outside)$/i.test(t.core) && prev && prev.word && /^(moving|moved|relocating|relocated|relocate|lives|living|live|travel(?:l)?ing|drove|driving|drive|coming|flew|flying|commutes|commuting|resides|residing|staying|stays|wintering|summering|hospital|clinic|center|centre|office|practice|pharmacy|home)$/i.test(prev.core);
+      const movement = i >= 0 && /^(to|from|in|near|outside)$/i.test(t.core) && prev && prev.word && /^(moving|moved|relocating|relocated|relocate|lives|living|live|travel(?:l)?ing|drove|driving|drive|coming|flew|flying|commutes|commuting|commute|traffic|ride|rides|bus|train|flight|resides|residing|staying|stays|wintering|summering|hospital|clinic|center|centre|office|practice|pharmacy|home|plant|factory|works|working|job)$/i.test(prev.core);
       const nextIsZip = n.cap && !n.allcaps && i + 2 < toks.length && toks[i + 2].num && /^\d{5}$/.test(toks[i + 2].raw) && (i < 0 || t.nlAfter || !/^(mrn|#|id|acct|rm|room|ext|ndc|lot|ref|rx|order|claim|auth)$/i.test(t.core)) && !/^\d{5}-\d/.test(text.slice(toks[i + 2].start, toks[i + 2].start + 7));
       if (!movement && !nextIsZip) continue;
       let e = i + 2; if (nextIsZip) e = i + 3;
@@ -1731,15 +1755,6 @@
       addRun(j, e, 'NAME_OTHER', 'cue:lowercase', 0.55);
       i = e - 1;
     }
-    // Pass F7: a quoted nickname inside a name (Adebayo "Bayo" Ogunwale)
-    for (let i = 0; i + 4 < toks.length; i++) {
-      const a = toks[i], q1 = toks[i + 1], nick = toks[i + 2], q2 = toks[i + 3], b = toks[i + 4];
-      if (used[i] || used[i + 4] || !a.cap || !b.cap || !/^["“]$/.test(q1.raw) || !/^["”]$/.test(q2.raw) || !nick.word || !nick.cap) continue;
-      if (LEX.isClinical(a.core) || LEX.isClinical(b.core) || wordNotName(a) || wordNotName(b)) continue;
-      if (!(LEX.isFirstName(a.core) || LEX.isSurname(a.core) || LEX.isSurname(b.core) || LEX.isFirstName(b.core)) && (LEX.isEnglishWord(a.core) || LEX.isEnglishWord(b.core))) continue;
-      addRun(i, i + 5, 'NAME_OTHER', 'cue:nickname', 0.7);
-      i += 4;
-    }
     // Pass F8: two word-names at a sentence start followed by a person context ("Rose Bell in chair 4", "Will Hunt reports")
     for (let i = 0; i + 2 < toks.length; i++) {
       const a = toks[i], b = toks[i + 1], nx = toks[i + 2];
@@ -1752,6 +1767,23 @@
       if (b.word && i + 2 < toks.length && LEX.EPONYM_FOLLOW.has(nx.core.toLowerCase())) continue;
       addRun(i, i + 2, 'NAME_OTHER', 'cue:sentence-pair', 0.6);
       i += 1;
+    }
+    // Pass G1b: "in Saint-Jérôme", "from San Cristóbal", "to Port-au-Prince": a place-prefixed or hyphenated token after a preposition
+    for (let i = 0; i + 1 < toks.length; i++) {
+      const t = toks[i], n = toks[i + 1];
+      if (!t.word || !/^(in|from|to|near|at|outside)$/i.test(t.core) || used[i + 1] || !n.word || !(n.cap || n.allcaps)) continue;
+      const placey = /^(?:Saint|St|Ste|San|Santa|Santo|Port|Fort|Ft|Mont|Mount|Mt|Lake|Cape|Bay|East|West|North|South|New)[-\s]/i.test(text.slice(n.start, n.start + 7)) || /^\p{Lu}[\p{Ll}\p{M}]+-\p{Lu}[\p{Ll}\p{M}]+$/u.test(n.core) && /[\u00C0-\u024F]/.test(n.core);
+      if (!placey || LEX.isClinical(n.core) || LEX.isFirstName(n.core)) continue;
+      let e = i + 2; while (e < toks.length && toks[e].word && toks[e].cap && !LEX.isEnglishWord(toks[e].core) && e - i < 4) e++;
+      for (let q = i + 1; q < e; q++) used[q] = true;
+      spans.push({ start: n.start, end: toks[e - 1].end, type: 'LOCATION', source: 'cue:place', conf: 0.55, text: text.slice(n.start, toks[e - 1].end) });
+    }
+    // Pass E5: a first name right before a phone number ("niece Rosalba 555-0109" when OCR dropped the relation word)
+    for (let i = 0; i + 1 < toks.length; i++) {
+      const t = toks[i];
+      if (used[i] || !t.word || !t.cap || !LEX.isFirstName(t.core) || LEX.isAmbiguous(t.core) || LEX.isEnglishWord(t.core) || LEX.isClinical(t.core)) continue;
+      if (!/^\s*(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3,4}[-.\s]?\d{0,4}\b/.test(text.slice(t.end, t.end + 18))) continue;
+      addRun(i, i + 1, 'NAME_OTHER', 'cue:phone', 0.6);
     }
     // Pass G2: preposition + known city or state name  (lives in Rochester; moved to Florida)
     for (let i = 0; i < toks.length - 1; i++) {
@@ -1784,8 +1816,11 @@
     while ((m = re.exec(text))) {
       const hit = census.lookup.get(m[0].toLowerCase());
       if (!hit) continue;
-      if (hit.exactCase && !/^[A-Z]/.test(m[0])) continue;
       const own = rowPatientKey && hit.entities.includes(rowPatientKey);
+      // a word-name typed in lower case ("grace's husband", "spoke w/ winter") is the patient in their own row when a
+      // possessive follows or a contact cue precedes it
+      const lcOwn = own && !/^[A-Z]/.test(m[0]) && (/^['’]s\b/.test(text.slice(m.index + m[0].length)) || /(?:\bw\/|\bwith|\bspoke to|\bspoke w\/|\bcalled|\bcall|\bre:?|\bper|\btold|\basked|\bpt|\bpatient)\s*$/i.test(text.slice(Math.max(0, m.index - 12), m.index)));
+      if (hit.exactCase && !/^[A-Z]/.test(m[0]) && !lcOwn) continue;
       const ownExtra = !own && rowExtraKeys ? rowExtraKeys.find((k) => hit.entities.includes(k)) : null;
       if (hit.rowScoped && !own && !ownExtra) {
         // another patient's given name in this row ("same day as Tobias", "Barnaby asked for ..."): it is still a person's
@@ -2448,7 +2483,7 @@
   const LINE_LABEL_WORD = /^(?:dob|mrn|mr|med|rec|record|records|acct|account|csn|har|fin|id|member|subscriber|policy|group|plan|payer|payor|coverage|insurance|ins|ssn|phone|fax|cell|home|work|email|address|addr|age|sex|dx|diagnosis|allergies|allergy|regimen|cycle|day|date|time|appt|visit|status|room|chair|bay|pod|unit|bed|order|orders|ordered|referring|referral|attending|provider|pcp|note|notes|comment|comments|name|patient|pt|male|female)$/i;
   function parseTextDocument(text, opts) {
     const o = Object.assign({ carryForward: true, mrnPattern: null, sectionMarker: /^===/ }, opts || {});
-    const lines = cellToString(text).split(/\r?\n/).map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim());
+    const lines = cellToString(text).replace(/(\d{6,10}?)(?=\d{2}\/\d{2}\/\d{4}(?!\d)|\d{1,2}\/\d{1,2}\/\d{2,4}(?!\d))/g, '$1 ').split(/\r?\n/).map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim());
     // a value cut off by the line wrap: a label at the end of one line with its number on the next ("CSN:" / "88120456617"),
     // or a phone number broken after a hyphen ("413-555-" / "0129."). The value is moved up to its label.
     for (let i = 0; i + 1 < lines.length; i++) {
