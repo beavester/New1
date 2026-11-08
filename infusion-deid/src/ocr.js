@@ -13,6 +13,8 @@
   'use strict';
   const el = (id) => document.getElementById(id);
   let workerPromise = null, mainLoaded = false;
+  // progress callback of the call in flight; the worker logger is bound once, so it reads this variable
+  let currentProgress = null;
 
   function available() { return !!(el('ocr-core') && el('ocr-worker') && el('ocr-lang') && el('ocr-main')); }
   function simdSupported() {
@@ -40,14 +42,14 @@
     const blob = new Blob([core, '\n', shim, '\n', worker], { type: 'application/javascript' });
     return URL.createObjectURL(blob);
   }
-  function getWorker(onProgress) {
+  function getWorker() {
     if (workerPromise) return workerPromise;
     loadMain();
     workerPromise = (async () => {
       const workerPath = buildWorkerUrl();
       const worker = await root.Tesseract.createWorker('eng', 1, {
         workerPath, workerBlobURL: false, corePath: 'inline-core.js', langPath: 'inline', cacheMethod: 'none', gzip: true,
-        logger: (m) => { if (onProgress) onProgress(m); },
+        logger: (m) => { if (currentProgress) currentProgress(m); },
         errorHandler: (e) => { console.error('OCR worker error', e); },
       });
       // Table screenshots: assume a uniform block of text; keep inter-word spaces.
@@ -94,15 +96,20 @@
     const o = opts || {};
     if (!available()) throw new Error('This build has no OCR engine. Use infusion-deid-ocr.html.');
     if (!simdSupported()) throw new Error('This browser lacks WebAssembly SIMD, which the bundled OCR engine needs. Use Edge or Chrome 91+.');
-    const worker = await getWorker(o.onProgress);
-    const canvas = await toCanvas(source, o.scale);
-    const t0 = performance.now();
-    const res = await worker.recognize(canvas, {}, { text: true, blocks: true, lines: true, hocr: false, tsv: false });
-    const lines = linesFrom(res.data);
-    return { text: lines.map((l) => l.text).join('\n') || res.data.text, lines, confidence: res.data.confidence, ms: performance.now() - t0, width: canvas.width, height: canvas.height };
+    currentProgress = o.onProgress || null;
+    try {
+      const worker = await getWorker();
+      const canvas = await toCanvas(source, o.scale);
+      const t0 = performance.now();
+      const res = await worker.recognize(canvas, {}, { text: true, blocks: true, lines: true, hocr: false, tsv: false });
+      const lines = linesFrom(res.data);
+      return { text: lines.map((l) => l.text).join('\n') || res.data.text, lines, confidence: res.data.confidence, ms: performance.now() - t0, width: canvas.width, height: canvas.height };
+    } finally { currentProgress = null; }
   }
+  // Why recognize() would refuse, for callers that want plain-language copy: 'no-engine' | 'no-simd' | null.
+  function reason() { return !available() ? 'no-engine' : !simdSupported() ? 'no-simd' : null; }
 
   async function terminate() { if (workerPromise) { try { (await workerPromise).terminate(); } catch (e) {} workerPromise = null; } }
 
-  root.DeIDOCR = { available, simdSupported, recognize, terminate, toCanvas };
+  root.DeIDOCR = { available, simdSupported, reason, recognize, terminate, toCanvas };
 })(typeof self !== 'undefined' ? self : this);
