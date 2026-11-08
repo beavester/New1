@@ -271,9 +271,12 @@ test('registry links the same patient across inputs and keeps different people a
   reg = D.createRegistry();
   assert.ok(same(reg.resolve({ name: 'Garcia, Maria', dob: '3/4/1951' }), reg.resolve({ name: 'Maria Garcia', dob: new Date(1951, 2, 4) })), 'name + DOB, no MRN');
   reg = D.createRegistry();
-  assert.ok(same(reg.resolve({ name: 'Garcia, Maria', mrn: '00412345' }), reg.resolve({ name: 'Garcia, M' })), 'initial vs full first name');
+  // an initial alone is not enough to merge (Garcia, M could be Miguel); with a matching DOB it is
+  assert.ok(!same(reg.resolve({ name: 'Garcia, Maria', mrn: '00412345' }), reg.resolve({ name: 'Garcia, M' })), 'initial without DOB must not merge');
   reg = D.createRegistry();
-  assert.ok(same(reg.resolve({ name: 'Garcia, Maria' }), reg.resolve({ name: 'M. Garcia' })), 'M. Garcia');
+  assert.ok(same(reg.resolve({ name: 'Garcia, Maria', dob: '3/4/1951' }), reg.resolve({ name: 'Garcia, M', dob: '1951-03-04' })), 'initial vs full first name with DOB');
+  reg = D.createRegistry();
+  assert.ok(!same(reg.resolve({ name: 'Garcia, Maria' }), reg.resolve({ name: 'M. Garcia' })), 'M. Garcia without DOB must not merge');
   reg = D.createRegistry();
   assert.ok(same(reg.resolve({ name: 'Garcia-Lopez, Maria', dob: '3/4/1951' }), reg.resolve({ name: 'Garcia, Maria', dob: '3/4/1951' })), 'hyphenated vs first half, same DOB');
   reg = D.createRegistry();
@@ -555,4 +558,26 @@ test('nicknames given by cue are removed; audit column never carries the date of
 test('dates cut off by a line wrap are still removed', () => {
   const r = rules('Teresa 012710386 1970-02-\nStewart 09\nDOB 3/26/\n1976');
   assert.ok(r.includes('DATE=1970-02-'), r.join(',')); assert.ok(r.includes('DATE=3/26/'), r.join(','));
+});
+
+test('registry never merges different people on a loose name match', () => {
+  const reg = D.createRegistry();
+  const a = reg.resolve({ name: 'Johnson, Mark' });
+  assert.notEqual(reg.resolve({ name: 'Johnsen, Mark' }), a, 'one-letter surname difference without DOB merged');
+  assert.notEqual(reg.resolve({ name: 'Johnson, M' }), a, 'initial without DOB merged');
+  assert.notEqual(reg.resolve({ name: 'Johnson' }), a, 'surname alone merged');
+  assert.equal(reg.resolve({ name: 'JOHNSON, MARK' }), a, 'exact name in different case should link');
+  const b = reg.resolve({ name: 'Smith, John', dob: '3/4/1951' });
+  assert.equal(reg.resolve({ name: 'Srnith, J', dob: '1951-03-04' }), b, 'OCR typo + initial with matching DOB should link');
+  assert.notEqual(reg.resolve({ name: 'Smith, John', dob: '5/5/1960' }), b, 'same name, different DOB merged');
+  const c = reg.resolve({ name: 'Lee, Ann', mrn: '00412345' });
+  assert.notEqual(reg.resolve({ name: 'Lee, Ann', mrn: '00999999' }), c, 'same name, different MRN merged');
+  assert.equal(reg.resolve({ name: 'Somebody Else', mrn: '412345' }), c, 'MRN without leading zeros should link');
+});
+test('a name wrapped over two table lines is rebuilt, so a single screenshot can pass alone', () => {
+  const t = D.parseTextDocument('11/9/2026 08:00      Teresa           12710386 2/9/1970  R-CHOP\nStewart\n11/11/2026 07:15      Reynolds,       5749277 1/14/1952  Entyvio\nDeepa\n11/3/2026 11:00     Teresa          012710386 1970-02- R-CHOP\nStewart                         09');
+  assert.equal(t.rows[0][0], 'Teresa Stewart'); assert.equal(t.rows[2][0], 'Reynolds, Deepa');
+  const r = D.processTable({ headers: t.headers, rows: t.rows }, { columns: t.columns, seed: 2 });
+  const out = r.rows.map((x) => x[3]).join('\n');
+  for (const leak of ['Teresa', 'Stewart', 'Reynolds', 'Deepa', '1970-02', '12710386', '5749277']) assert.ok(!out.includes(leak), leak + ' leaked:\n' + out);
 });

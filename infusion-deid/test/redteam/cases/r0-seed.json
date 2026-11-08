@@ -1,0 +1,140 @@
+[
+ {
+  "id": "nickname-and-husband",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Okafor, Chinwe B",
+    "00731164",
+    "2/9/1948",
+    "CHINWE OKAFOR arrived 0815, husband Emeka at bedside cell 716 555 0199. Pt asks we call her Winnie."
+   ]
+  ],
+  "phi": [
+   "Chinwe",
+   "Okafor",
+   "Emeka",
+   "716 555 0199",
+   "Winnie",
+   "00731164"
+  ],
+  "keep": [
+   "arrived 0815",
+   "at bedside"
+  ]
+ },
+ {
+  "id": "age-town-relative-provider",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Delacroix, Pierre",
+    "731188",
+    "11/30/1933",
+    "92 y.o. gentleman from Lackawanna; son-in-law Terrence Boyd brings him. Dr Mbeki-Shah (Kaleida) wants CBC."
+   ]
+  ],
+  "phi": [
+   "Delacroix",
+   "Pierre",
+   "92 y.o",
+   "Lackawanna",
+   "Terrence",
+   "Boyd",
+   "Mbeki-Shah",
+   "Kaleida"
+  ],
+  "keep": [
+   "wants CBC",
+   "gentleman"
+  ]
+ },
+ {
+  "id": "address-town-zip-email",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Tran, Thi Hong",
+    "00731199",
+    "5/5/1961",
+    "Interpreter #4471 used. Ms. Tran states her sister Lan lives at 48 Abbott Rd Buffalo 14220. Email hongtran61@yahoo.com"
+   ]
+  ],
+  "phi": [
+   "Tran",
+   "Abbott",
+   "Buffalo",
+   "14220",
+   "hongtran61",
+   "Lan"
+  ],
+  "keep": [
+   "Interpreter #4471 used"
+  ]
+ },
+ {
+  "id": "eponym-vs-surname",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Bell, Grace",
+    "00731201",
+    "7/7/1955",
+    "Bell's palsy noted. Grace tolerated Keytruda. Daughter-in-law named Faith picks up. Insurance ID XGP883104221."
+   ]
+  ],
+  "phi": [
+   "Grace",
+   "Faith",
+   "XGP883104221"
+  ],
+  "keep": [
+   "Bell's palsy",
+   "Keytruda"
+  ]
+ },
+ {
+  "id": "wrapped-ocr-text",
+  "kind": "text",
+  "text": "11/9/2026 08:00      Teresa           12710386 2/9/1970  R-CHOP\nStewart\n11/11/2026 07:15      Reynolds,       5749277 1/14/1952  Entyvio\nDeepa\n11/3/2026 11:00     Teresa          012710386 1970-02- R-CHOP\nStewart                         09",
+  "phi": [
+   "Teresa",
+   "Stewart",
+   "Reynolds",
+   "Deepa",
+   "12710386",
+   "5749277",
+   "1970-02",
+   "2/9/1970",
+   "1/14/1952"
+  ],
+  "keep": [
+   "R-CHOP",
+   "Entyvio"
+  ]
+ }
+]

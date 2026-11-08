@@ -1514,7 +1514,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     (cfg.extraRegexes || []).forEach((r) => run(r, 'ID_OTHER'));
     run(RULES.PHONE_PLAIN, 'PHONE');
     // a date cut off by a line wrap ("1970-02-" then "09" on the next line, "3/26/" then "1976"): still a date
-    run(/(?<![\w\/\-])(?:(?:19|20)\d{2}-\d{1,2}-|\d{1,2}\/\d{1,2}\/)(?=[ \t]*(?:$|\n))/gm, 'DATE');
+    run(/(?<![\w\/\-])(?:(?:19|20)\d{2}-\d{1,2}-(?!\d)|\d{1,2}\/\d{1,2}\/(?!\d))/gm, 'DATE');
     // dates
     for (const p of DATE_PATTERNS) {
       p.re.lastIndex = 0; let m;
@@ -2386,17 +2386,24 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const last = alpha(pn.last), first = alpha(pn.first);
       if (!last) return false;
       const dobTie = !!dk && e.dobs.has(dk); // both carry the same DOB: a strong tie that permits looser name matching
+      // Merging two different people is worse than a duplicate: one person's clinical data would be filed under
+      // another's code. A spelling-tolerant match (OCR typo, initial for a first name) therefore needs the DOB to agree.
+      const strongTie = dobTie;
       const halves = (l) => l.split(/[-\s]+/).map(alpha).filter((h) => h.length >= 3);
       for (const q of e.parsed) {
         const ql = alpha(q.last), qf = alpha(q.first);
-        let lastOk = ql === last || (last.length >= 5 && ql.length >= 5 && levenshtein(last, ql) <= 1);
+        const lastExact = ql === last;
+        let lastOk = lastExact || (strongTie && last.length >= 5 && ql.length >= 5 && levenshtein(last, ql) <= 1);
         // hyphenated / married surname: "Garcia-Lopez" vs "Garcia" or "Lopez", only with a matching DOB
         if (!lastOk && dobTie) { const a = halves(pn.last), b = halves(q.last); if ((a.length > 1 || b.length > 1) && a.some((h) => b.includes(h))) lastOk = true; }
         if (!lastOk) continue;
         // two different, complete, known first names (Maria vs Mario) are two people, even if one letter apart
         const distinctKnown = first && qf && first !== qf && first.length >= 3 && qf.length >= 3 && LEX.isFirstName(first) && LEX.isFirstName(qf);
-        const firstOk = !first || !qf || first === qf || (first.length === 1 && qf.startsWith(first)) || (qf.length === 1 && first.startsWith(qf))
-          || (!distinctKnown && first.length >= 4 && qf.length >= 4 && levenshtein(first, qf) <= 1);
+        const firstExact = !!first && first === qf;
+        // exact surname + exact first name links on its own; a missing first name, an initial or a one-letter
+        // difference links only with a matching DOB
+        const firstOk = firstExact || (strongTie && (!first || !qf || (first.length === 1 && qf.startsWith(first)) || (qf.length === 1 && first.startsWith(qf))
+          || (!distinctKnown && first.length >= 4 && qf.length >= 4 && levenshtein(first, qf) <= 1)));
         if (firstOk) return true;
       }
       return false;
@@ -2481,7 +2488,23 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     const mrnRe = o.mrnPattern ? new RegExp(o.mrnPattern.replace(/^\\b|\\b$/g, ''), 'g') : null;
     const thisYear = new Date().getFullYear();
     const rows = []; let current = null; let found = 0, inherited = 0;
-    for (const line of lines) {
+    // A name cell that wrapped in a narrow table column: "08:00   Teresa   12710386 ..." then "Stewart   09" on the
+    // next line (or "Reynolds,   5749277 ..." then "Deepa"). Rebuild the name from the two fragments.
+    const WRAP_HEAD = /([A-Z][A-Za-z'’\-]+,?)(?:[ \t]([A-Z][A-Za-z'’\-]+,?))?[ \t]{2,}$/;
+    const WRAP_TAIL = /^[ \t]*([A-Z][A-Za-z'’\-]+(?:[ \t][A-Z][A-Za-z'’\-]+)?)(?=[ \t]{2,}|[ \t]*$|[ \t]+\d{1,4}[ \t]*$)/;
+    const NOT_NAME = /^(name|patient|pt|mrn|dob|date|time|appt|regimen|order|comments?|chair|cycle|day|dept|attending|provider)$/i;
+    const wrappedName = (line, idIndex, next) => {
+      const head = line.slice(0, idIndex).match(WRAP_HEAD);
+      if (!head || next == null) return '';
+      const frag1 = head[0].trim().replace(/\s{2,}.*$/, '');
+      if (frag1.split(/[ ,]+/).some((w) => w && (NOT_NAME.test(w) || monthIndex(w) || LEX.CREDENTIAL_SET.has(w.toLowerCase())))) return '';
+      if (/(?<![\w\/\-.:])[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w\/\-.:])/.test(next) || /\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/.test(next)) return '';
+      const tail = next.match(WRAP_TAIL);
+      if (!tail || tail[1].split(/\s+/).some((w) => NOT_NAME.test(w) || LEX.isClinical(w) || monthIndex(w))) return '';
+      return `${frag1} ${tail[1]}`.replace(/\s+/g, ' ').trim();
+    };
+    for (let li = 0; li < lines.length; li++) {
+      const line = lines[li];
       if (o.sectionMarker && o.sectionMarker.test(line)) { current = null; rows.push(['', '', '', line]); continue; }
       let name = '', mrn = '', dob = '';
       const hasIdOnLine = /\b(?:mrn|dob|acct|csn)\b/i.test(line) || /(?<![\w\/\-.:])[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w\/\-.:])/.test(line) || /\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/.test(line);
@@ -2512,6 +2535,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const phoneLike = (t) => /^\d{10}$/.test(t.norm) && /\d{3}[-.\s]\d{3}[-.\s]\d{4}|\(\d{3}\)/.test(line);
       const pick = ids.find((t) => !phoneLike(t) && !/^\d{4}-\d{2}-\d{2}$/.test(t.raw));
       if (pick && (name || pick.labeled || !o.requireNameForMrn)) mrn = pick.norm;
+      if (pick && !name) name = wrappedName(line, pick.index, lines[li + 1]);
       // DOB: labeled, else a full date whose year makes an adult-ish age
       const dateSpans = ruleSpans(line, { mrnRegex: null, accountRegex: null, extraRegexes: [] }).filter((sp) => (sp.type === 'DATE' || sp.type === 'DOB') && sp.date && sp.date.hasYear);
       const labeled = dateSpans.find((sp) => sp.type === 'DOB' || /dob|birth|born/i.test(line.slice(Math.max(0, sp.start - 12), sp.start)));
