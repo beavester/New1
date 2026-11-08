@@ -104,9 +104,9 @@
       ["Brightwater, Eustace", "1930-10-19", "96", "M", "IVIG 0.4 g/kg", "96yo, lives alone"],
       ["Pomeroy, Adelheid", "11/30/1936", "89", "F", "Denosumab 120 mg", "Will be 90 on 11/30 - family party"]
     ],
-    "phi": ["Featherstonehaugh, Clementine", "04/02/1934", "92 y.o.", "Brightwater, Eustace", "1930-10-19", "96", "96yo", "Pomeroy, Adelheid", "11/30/1936", "Will be 90", "11/30"],
-    "keep": ["Azacitidine 75 mg/m2 SC", "IVIG 0.4 g/kg", "Denosumab 120 mg"],
-    "note": "Ages over 89 as 'y.o.' form, bare number in Age column, 'yo' suffix glued, and 'Will be 90' future phrasing; birthday month/day in notes"
+    "phi": ["Featherstonehaugh, Clementine", "04/02/1934", "92 y.o.", "Brightwater, Eustace", "1930-10-19", "96", "96yo", "Pomeroy, Adelheid", "11/30/1936", "11/30"],
+    "keep": ["Azacitidine 75 mg/m2 SC", "IVIG 0.4 g/kg", "Denosumab 120 mg", "Will be 90+"],
+    "note": "Ages over 89 as 'y.o.' form, bare number in Age column, 'yo' suffix glued, and 'Will be 90' future phrasing; birthday month/day in notes [case correction: \"Will be 90\" was listed as PHI, but the output \"Will be 90+\" is the Safe Harbor 90-or-older aggregate used everywhere (same correction as r1 \"Age 90\" and r2 \"aged 90\"/\"turns 90\"); moved to keep as the aggregate]"
   },
   {
     "id": "tbl4-insurance-member-ids",

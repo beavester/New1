@@ -1365,6 +1365,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
   const MONTH_RE = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
   const MONTH_NC = MONTH_RE.replace('(', '(?:');
+  // the same alternation matching a capitalized or lower-case month without the i flag ("Jun", "jun")
+  const MONTH_NC_CAP = MONTH_NC.replace(/(?<=[(|:])([a-z])/g, (m, c) => `[${c.toUpperCase()}${c}]`);
   function monthIndex(tok) {
     const t = tok.toLowerCase().replace(/\.$/, '');
     for (let i = 0; i < 12; i++) if (MONTHS[i].startsWith(t) && t.length >= 3) return i + 1;
@@ -1382,6 +1384,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     const nowYY = new Date().getFullYear() % 100;
     return y <= nowYY + 5 ? 2000 + y : 1900 + y;
   }
+  const ORD_WORDS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth', 'fourteenth', 'fifteenth', 'sixteenth', 'seventeenth', 'eighteenth', 'nineteenth', 'twentieth',
+    'twenty-first', 'twenty-second', 'twenty-third', 'twenty-fourth', 'twenty-fifth', 'twenty-sixth', 'twenty-seventh', 'twenty-eighth', 'twenty-ninth', 'thirtieth', 'thirty-first'];
+  const ORD_WORD_RE = '(?:' + ORD_WORDS.slice().sort((a, b) => b.length - a.length).map((w) => w.replace('-', '[- ]?')).join('|') + ')';
+  const ordWordIndex = (w) => ORD_WORDS.indexOf(w.toLowerCase().replace(/[ ]+/, '-').replace(/^(twenty|thirty)(?=[a-z])(?!ieth)(?!th)/, '$1-')) + 1;
   // Date regexes, each with a 'kind' to drive re-rendering.
   const DATE_PATTERNS = [
     { kind: 'iso', re: new RegExp('(?<![\\d\\w.])(\\d{4})([-.\\/])(\\d{1,2})\\2(\\d{1,2})(?![\\d]|\\.\\d)', 'g') },
@@ -1397,6 +1403,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     { kind: 'my', re: new RegExp('(?<![\\d\\w/.-])(0?[1-9]|1[0-2])(\\/)((?:19|20)\\d{2})(?![\\d\\w/-]|\\.\\d)', 'g') },
     // a bare ordinal day after a time preposition ("out of town until the 23rd", "back on the 5th")
     { kind: 'ord', re: new RegExp('(?<=\\b(?:until|till|til|by|on|before|after|since|from|through|thru|starting|around|back|returns?|returning|due|except|not)[ \\t]+the[ \\t]+)(\\d{1,2})(st|nd|rd|th)\\b(?![ \\t]+(?:of[ \\t]+(?:the[ \\t]+)?)?(?:cycle|cycles|dose|doses|day|days|week|weeks|line|lines|infusion|infusions|treatment|treatments|round|rounds|time|times|visit|visits|floor|attempt|course|session|fraction|month|year|percentile|grade|place|one|of))', 'gi') },
+    // a day written as an ordinal word: "born March fourth 1931", "the twenty-first of June"
+    { kind: 'Mwy', re: new RegExp(`(?<![\\w])${MONTH_RE}\\.?[ \\t]+(${ORD_WORD_RE})(?:,?[ \\t]+((?:18|19|20)\\d{2}))?(?![\\w-])`, 'gi') },
+    { kind: 'wMy', re: new RegExp(`(?<![\\w-])(${ORD_WORD_RE})[ \\t]+of[ \\t]+${MONTH_RE}(?:,?[ \\t]+((?:18|19|20)\\d{2}))?(?![\\w])`, 'gi') },
     { kind: 'md', re: new RegExp('(?<![\\d\\w/.-])(\\d{1,2})([\\/\\-])(\\d{1,2})(?![\\d/-])(?!\\.\\d)(?![ \\t]*(?:mg|mcg|g|ml|tab|tabs|dose|x|units?|%|of|tablet|cap|caps|hr|hrs|h|min|cc|L|strength|NS|D5)\\b)', 'g') },
   ];
   const UNIT_AFTER = /^[ \t]*(mg|mcg|g|ml|mL|tab|tabs|dose|x|unit|units|%|of|tablet|cap|caps|hr|hrs|h|min|cc|L|strength|NS|D5W?|AM|PM)\b/;
@@ -1410,6 +1419,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     else if (kind === 'dMy') { d = +m[1]; monthTok = m[3]; mo = monthIndex(m[3]); if (m[4]) { yearDigits = m[4].length; y = expandYear(m[4]); } else { hasYear = false; y = new Date().getFullYear(); } }
     else if (kind === 'md') { mo = +m[1]; sep = m[2]; d = +m[3]; hasYear = false; y = new Date().getFullYear(); }
     else if (kind === 'Mdyh') { monthTok = m[1]; mo = monthIndex(m[1]); d = +m[2]; yearDigits = m[3].length; y = expandYear(m[3]); sep = '-'; }
+    else if (kind === 'Mwy') { monthTok = m[1]; mo = monthIndex(m[1]); d = ordWordIndex(m[2]); ordinal = m[2]; if (m[3]) y = +m[3]; else { hasYear = false; y = new Date().getFullYear(); } if (!/^[A-Z]/.test(m[1])) return null; }
+    else if (kind === 'wMy') { monthTok = m[2]; mo = monthIndex(m[2]); d = ordWordIndex(m[1]); ordinal = m[1]; if (m[3]) y = +m[3]; else { hasYear = false; y = new Date().getFullYear(); } if (!/^[A-Z]/.test(m[2])) return null; }
     else if (kind === 'My') { monthTok = m[1]; mo = monthIndex(m[1]); d = 15; y = +m[2]; }
     else if (kind === 'my') { mo = +m[1]; sep = m[2]; y = +m[3]; d = 15; }
     else if (kind === 'ord') { const now = new Date(); d = +m[1]; hasYear = false; y = now.getFullYear(); mo = now.getMonth() + 1; if (!validDMY(y, mo, d)) { mo = mo === 1 ? 12 : mo - 1; if (mo === 12) y--; } if (!validDMY(y, mo, d)) mo = 1; }
@@ -1419,7 +1430,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const raw = m[0].match(new RegExp(MONTH_RE + '\\.?', 'i'))[0];
       monthStyle = { abbrev: raw.replace('.', '').length <= 4, period: raw.endsWith('.'), upper: raw === raw.toUpperCase(), lower: raw === raw.toLowerCase() };
     }
-    return { y, m: mo, d, hasYear, yearDigits, sep, kind, monthStyle, text: m[0], dayFirst };
+    return { y, m: mo, d, hasYear, yearDigits, sep, kind, monthStyle, text: m[0], dayFirst, ordinalWord: ordinal };
   }
 
   function parseDateString(s) {
@@ -1445,6 +1456,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     };
     switch (pd.kind) {
       case 'compact': return `${pad2(mo)}${pad2(d)}${y}`;
+      case 'ymdc': return `${y}${pad2(mo)}${pad2(d)}`;
+      case 'Mwy': case 'wMy': { const w = ORD_WORDS[d - 1]; const ow = pd.ordinalWord && pd.ordinalWord[0] === pd.ordinalWord[0].toUpperCase() ? capFirst(w) : w; return pd.kind === 'Mwy' ? `${monthName()} ${ow}${pd.hasYear ? ' ' + y : ''}` : `${ow} of ${monthName()}${pd.hasYear ? ' ' + y : ''}`; }
       case 'iso': return `${y}${pd.sep || '-'}${pad2(mo)}${pd.sep || '-'}${pad2(d)}`;
       case 'mdy': { const padded = /(^|[\/\-.])0\d([\/\-.]|$)/.test(pd.text); const [a, b] = pd.dayFirst ? [d, mo] : [mo, d]; return padded ? `${pad2(a)}${pd.sep}${pad2(b)}${pd.sep}${yy}` : `${a}${pd.sep}${b}${pd.sep}${yy}`; }
       case 'dMyc': return `${/^\d{2}/.test(pd.text) ? pad2(d) : d}${monthName()}${yy}`;
@@ -1489,10 +1502,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     AGE_ORDINAL: /\b(9\d|1[0-2]\d)(?:st|nd|rd|th)\s+(?:bday|b-day|b'day|birthday|bdays|birthdays|year\s+of\s+life|year)\b/gi,
     // written-out ages: ninety-two year old, one hundred and one years old
     AGE_WORDS: /\b(?:ninety|one[-\s]hundred)(?:(?:[-\s]|\s+and\s+)(?:one|two|three|four|five|six|seven|eight|nine))?(?:[-\s]+(?:years?|yrs?)[-\s]+old|[-\s]+(?:y\/o|yo))(?![A-Za-z])/gi,
+    // a written-out age after an age label or a turning verb: "age ninety-five", "aged ninety two", "turned one hundred"
+    AGE_WORDS_LABEL: /\b(?:age[d]?\s*:?|turned|turning|turns|is now|will be)\s+(?:ninety|one[-\s]hundred)(?:(?:[-\s]|\s+and\s+)(?:one|two|three|four|five|six|seven|eight|nine))?(?![A-Za-z-])/gi,
     // bare number after a person-subject: "husband is 95", "pt turned 91"; vitals (HR is 95, BP 95/60, SpO2 95%) excluded
     AGE_SUBJECT: /\b(?:pt|patient|he|she|husband|wife|spouse|mother|father|mom|mum|dad|sister|brother|son|daughter|partner|grandmother|grandfather|grandma|grandpa|gma|gpa|granny|nana|nan|papa|mama|aunt|uncle|who)\s+(?:is|was|turned|turning|now|just turned|will be)\s+(9\d|1[01]\d)(?![\d\/%:-]|,\d)(?!\.\d)(?!\s*(?:mg|kg|lb|lbs|%|mmhg|bpm|k\b|ml|mL|cc|units?|yo|y\/o|year|yr|\/))/gi,
     // "Turned 90 last week", "Turning 91 in May", "is now 95" at the start of a sentence or note (no subject written)
-    AGE_TURNED: /(?:^|[.;!?\n]\s*|^\s*-\s*)((?:just\s+)?(?:turned|turning|turns|is now|now)\s+(9\d|1[01]\d))(?![\d\/%:-]|,\d)(?!\.\d)(?!\s*(?:mg|kg|lb|lbs|%|mmhg|bpm|k\b|ml|mL|cc|units?|\/))/gi,
+    AGE_TURNED: /(?:^|[.;!?\n]\s*|^\s*-\s*)((?:just\s+)?(?:turned|turning|turns|is now|now|will be|to be)\s+(9\d|1[01]\d))(?![\d\/%:-]|,\d)(?!\.\d)(?!\s*(?:mg|kg|lb|lbs|%|mmhg|bpm|k\b|ml|mL|cc|units?|\/))/gi,
     // a bare age in apposition after a name or before a sex marker: "Zofia, 95, hard of hearing", "97 F", "95 M"
     AGE_APPOS: /(?<=\b[A-Z][A-Za-z'’\-]+,\s)(9\d|1[01]\d)(?=\s*,)|(?<![\d\/.\-$#])(9\d|1[01]\d)\s*(?:F|M)\b(?![\/\d]|\.\d)/g,
     ADDRESS: /\b\d{1,6}\s+(?:[A-Z][A-Za-z]+\.?\s+){1,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Pkwy|Parkway|Hwy|Highway|Cir|Circle|Ter|Terrace|Trl|Trail|Pike|Bend|Loop|Row|Path|Crossing|Ridge|Sq|Square|Trace|Cove|Alley|Commons)\b\.?(?:,?\s*(?:Apt|Apartment|Unit|Suite|Ste|#)\.?\s*[\w-]+)?/g,
@@ -1524,7 +1539,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     ZIP_LABEL: /\bzip\s*(?:code)?\s*:?\s*\d{5}(?:-\d{4})?\b/gi,
     // Labelled identifiers (Safe Harbor classes 9-13, 18): member/subscriber/policy IDs, confirmation and
     // reference numbers, device serials, licence and plate numbers, study subject IDs, health cards, user names.
-    LABELED_ID: /\b(?:member|subscriber|policy|beneficiary|medicare|medicaid|mbi|hic|hicn|insurance|ins|conf|confirmation|ref|reference|claim|auth|authorization|prior auth|case|ticket|serial|sn|s\/n|lot|lic|license|licence|dl|driver'?s? license|plate|badge|subject|study|participant|enrollment|screening|health card|ohip|card|passport|visa|id|identifier|acct|account|invoice|order|rx|prescription|tracking|voucher|pin|employee|emp|payer|placard|permit|serial\s+number|implant|device|pump|tag)\s*(?:#|no\.?|num\.?|number|id|code)?(?:\s+(?:on\s+file|is|was|of|verified|provided|given|recorded))*\s*[:#]?\s*((?:[A-Z]{1,4}[-\s]?)?\d[A-Z0-9\-]*(?:[ ](?=[A-Z0-9]*\d)[A-Z0-9\-]+){0,3}|[A-Z]{1,3}[ -]?\d{3,4}(?![\w-]))/gi,
+    // (A drug lot number, "Lot 4G221A exp 03/2028", names a batch of medication, not a person, so "lot" is not a label here.)
+    LABELED_ID: /\b(?:member|subscriber|policy|beneficiary|medicare|medicaid|mbi|hic|hicn|insurance|ins|conf|confirmation|ref|reference|claim|auth|authorization|prior auth|case|ticket|serial|sn|s\/n|lic|license|licence|dl|driver'?s? license|plate|badge|subject|study|participant|enrollment|screening|health card|ohip|card|passport|visa|id|identifier|acct|account|invoice|order|rx|prescription|tracking|voucher|pin|employee|emp|payer|placard|permit|serial\s+number|implant|device|pump|tag)\s*(?:#|no\.?|num\.?|number|id|code)?(?:\s+(?:on\s+file|is|was|of|verified|provided|given|recorded))*\s*[:#]?\s*((?:[A-Z]{1,4}[-\s]?)?\d[A-Z0-9\-]*(?:[ ](?=[A-Z0-9]*\d)[A-Z0-9\-]+){0,3}|[A-Z]{1,3}[ -]?\d{3,4}(?![\w-]))/gi,
     // Medicare Beneficiary Identifier: 1EG4-TE5-MK72 (11 chars, fixed letter/digit positions, hyphens optional)
     MBI: /(?<![\w])[1-9][AC-HJKMNP-RT-Y][AC-HJKMNP-RT-Y0-9]\d-?[AC-HJKMNP-RT-Y][AC-HJKMNP-RT-Y0-9]\d-?[AC-HJKMNP-RT-Y]{2}\d{2}(?![\w])/g,
     // @handle / user name tokens (MyChart user names, chat mentions)
@@ -1575,10 +1591,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const from = ad.end;
       const tail = text.slice(from).match(/^,?[ \t]+((?:[A-Z][A-Za-z'’\-]+,?[ \t]+){0,3}?)(?:([A-Z]{2}),?[ \t]+)?(\d{5}(?:-\d{4})?)\b/);
       if (tail) { const lead = tail[0].match(/^,?[ \t]+/)[0].length; spans.push({ start: from + lead, end: from + tail[0].length, type: 'LOCATION', source: 'rule', text: tail[0].slice(lead) }); continue; }
-      const town = text.slice(from).match(/^,?[ \t]+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)?)(?=[ \t]*(?:[.,;:\n]|$))/);
+      let town = text.slice(from).match(/^,?[ \t]+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)?)(?=[ \t]*(?:[.,;:\n]|$))/);
+      // a named complex between the street and the town: "14 Pine Ridge Mobile Home Park, Gorham Falls", "2 Elm Ct Apartments, Tisbury"
+      if (!town) town = text.slice(from).match(/^(?:[ \t]+(?:Mobile|Home|Trailer|RV|Park|Estates?|Manor|Village|Villas?|Towers?|Apartments?|Apts|Condos?|Condominiums?|Court|Commons|Gardens|Place|Plaza|Terrace|Senior|Living|Community|Residences?)\b){1,4},[ \t]+([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)?)(?=[ \t]*(?:[.,;:\n]|$))/);
       if (town && !LEX.isClinical(town[1])) { const lead = town[0].length - town[1].length; spans.push({ start: from + lead, end: from + town[0].length, type: 'LOCATION', source: 'rule', text: town[1] }); }
     }
     run(RULES.AGE, 'AGE'); run(RULES.AGE_ORDINAL, 'AGE'); run(RULES.AGE_WORDS, 'AGE'); run(RULES.AGE_Y, 'AGE');
+    RULES.AGE_WORDS_LABEL.lastIndex = 0; let aw;
+    while ((aw = RULES.AGE_WORDS_LABEL.exec(text))) { const v = aw[0].match(/(?:ninety|one[-\s]hundred).*$/i)[0]; const start = aw.index + aw[0].length - v.length; if (!spans.some((x) => x.type === 'AGE' && x.start <= start && x.end >= start + v.length)) spans.push({ start, end: start + v.length, type: 'AGE', source: 'rule', text: v }); }
     run(RULES.AGE_SUBJECT, 'AGE', (m) => {
       // "HR is 95" / "K is 95" / "O2 sat is 95": a vital or lab name right before the subject word is not a person
       const before = text.slice(Math.max(0, m.index - 16), m.index);
@@ -1587,6 +1607,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // ages with no written subject, and in apposition: the span is the age phrase only
     RULES.AGE_TURNED.lastIndex = 0; let am;
     while ((am = RULES.AGE_TURNED.exec(text))) { const val = am[1]; const start = am.index + am[0].length - val.length; spans.push({ start, end: start + val.length, type: 'AGE', source: 'rule', text: val }); }
+    // "<person> is 95": a person as the subject (honorific + name, pronoun, pt, or a capitalised name that is not a
+    // lab/vital label) and a bare 90-119 with no unit after it. "Plt is 95", "HR is 95", "BP is 95/60" are left alone.
+    { const LABS = /^(plt|plts|platelets?|hgb|hb|hct|wbc|anc|alc|rbc|mcv|glu|glucose|na|k|cl|co2|bun|cr|creat|egfr|ca|mg|phos|alb|ast|alt|bili|ldh|inr|ptt|tsh|cea|psa|hr|bp|rr|sat|sats|spo2|o2|temp|t|weight|wt|ht|height|pulse|rate|score|count|level|ef|lvef|gfr|bmi|map|pain|ecog|kps|karnofsky|fev1|dose|volume|vol)$/i;
+      const re = /\b((?:(?:mr|mrs|ms|mx|dr)\.?\s+[A-Z][A-Za-z'’\-]+)|he|she|they|pt|patient|[A-Z][a-z'’\-]{2,})(?:\s+[A-Z][a-z'’\-]+)?\s+(?:is|was|'s|’s|now)\s+(9\d|1[01]\d)\b(?![\d\/%:.-]|,\d)(?!\s*(?:mg|kg|lb|lbs|%|mmhg|bpm|k\b|ml|cc|units?|percent|years?\s+(?:ago|since)|min|minutes|hours?))/g;
+      let pm;
+      while ((pm = re.exec(text))) {
+        const subj = pm[1].replace(/^(?:mr|mrs|ms|mx|dr)\.?\s+/i, '');
+        if (LABS.test(subj) || LEX.isClinical(subj) && !/^(he|she|they|pt|patient)$/i.test(subj)) continue;
+        const val = pm[2]; const start = pm.index + pm[0].length - val.length;
+        if (spans.some((sp) => sp.type === 'AGE' && sp.start <= start && sp.end >= start + val.length)) continue; // already caught
+        spans.push({ start, end: start + val.length, type: 'AGE', source: 'rule', text: val });
+      }
+    }
     run(RULES.AGE_APPOS, 'AGE', (m) => !/\b(?:hr|bp|spo2|o2|sat|sats|pulse|wt|weight|glucose|bg|temp|k|na|cr|plt|hgb|wbc|anc|rate|dose|level|count|score|mg|egfr|inr|ldh|auc|room|chair|bay|ext|x)\s*$/i.test(text.slice(Math.max(0, m.index - 10), m.index)));
     RULES.AGE_TURNS.lastIndex = 0; let at;
     while ((at = RULES.AGE_TURNS.exec(text))) { const val = at[1]; const start = at.index + at[0].length - val.length; if (!spans.some((x) => x.type === 'AGE' && x.start <= start && x.end >= start + val.length)) spans.push({ start, end: start + val.length, type: 'AGE', source: 'rule', text: val }); }
@@ -1709,6 +1742,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         if (p.kind === 'My' && !/^[A-Z]/.test(m[0])) continue; // "may 2026" in lower case is a verb more often than a month
         const after = text.slice(m.index + m[0].length);
         if (!pd.hasYear && UNIT_AFTER.test(after)) continue;
+        // "May second line", "March first dose": a spelled-out day with no year is a date only after a date word ("on March fourth")
+        if ((p.kind === 'Mwy' || p.kind === 'wMy') && !pd.hasYear && (!DATE_CTX_BEFORE.test(text.slice(Math.max(0, m.index - 20), m.index)) || /^\s*(?:line|lines|cycle|cycles|dose|doses|round|rounds|course|courses|time|times|visit|infusion|treatment|week|day)\b/i.test(after))) continue;
         if (p.kind === 'md') {
           // "C1D1"-style, "cycle 1/2", "days 1-3" are not dates
           const before = text.slice(Math.max(0, m.index - 10), m.index);
@@ -2043,7 +2078,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // "Mr. J. R. Okafor", "husband T.J. Brennan"), with the surname when one follows
     for (let i = 0; i + 1 < toks.length; i++) {
       const p = toks[i];
-      const label = isHon(p) || isRel(p) || (p.word && /^(pt|patient|name|re|caller|contact)$/i.test(p.core) && !/['’]s$/.test(p.raw)) || p.raw === ':';
+      const label = isHon(p) || isRel(p) || (p.word && /^(pt|patient|name|re|caller|contact)$/i.test(p.core) && !/['’]s$/.test(p.raw)) || p.raw === ':'
+        || (p.word && /^(?:is|was)$/i.test(p.core) && i > 0 && toks[i - 1].word && /^(?:pt|patient|name|caller)$/i.test(toks[i - 1].core)); // "Pt is A.K. VANDERMOLEN"
       if (!label) continue;
       let j = i + 1;
       while (j < toks.length && j - i <= 3 && toks[j].initial && toks[j].raw.endsWith('.') && !used[j] && !(j > i + 1 && toks[j - 1].nlAfter)) j++;
@@ -2113,7 +2149,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       let j = i + 1, hops = 0;
       while (j < toks.length && hops < 4 && !endsSentence(toks[j]) && /^(,|\(|-|–|—|is|the|her|his|their|pt's|patient's|a|an)$/i.test(toks[j].raw)) { j++; hops++; }
       // "Cordelia's daughter Imogen": a possessive name right before a relation word is the person the relative belongs to
-      const possessive = hops === 0 && /['’]s$/.test(toks[i].raw) && !COMMON_CAP.has(toks[i].core.toLowerCase()) && !COMMON_LOWER.has(toks[i].core.toLowerCase()) && !FIELD_WORD.test(toks[i].core) && toks[i].cap;
+      const possessive = hops === 0 && /['’]s$/.test(toks[i].raw) && !isRel(toks[i]) && !COMMON_CAP.has(toks[i].core.toLowerCase()) && !COMMON_LOWER.has(toks[i].core.toLowerCase()) && !FIELD_WORD.test(toks[i].core) && toks[i].cap;
       if ((hops > 0 || possessive) && j < toks.length && isRel(toks[j])) {
         // "Social Work, Dietitian, Chaplain consulted": a Title-Case relation word after a comma, with a name candidate that is
         // not in the name lexicon, is a department list rather than "Mark, her son"
@@ -2210,10 +2246,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       // "call her Winnie", "calls him Big Al", "we call them Sam", "prefers Kasia", "please call me Bea"
       else if (t.word && /^(call|calls|called|calling|address|addresses|addressed)$/i.test(t.core) && toks[i + 1].word && /^(her|him|them|me|pt|patient)$/i.test(toks[i + 1].core)) j = i + 2;
       else if (t.word && /^(prefers|preferred)$/i.test(t.core) && toks[i + 1].word && toks[i + 1].cap) j = i + 1;
+      // "prefers 'AK'", "goes by \"Peggy\"": a quoted alias
+      else if (t.word && /^(prefers|preferred|nickname|aka)$/i.test(t.core) && /^['"“‘]$/.test(toks[i + 1].raw)) j = i + 1;
       else if (t.word && /^(preferred|prefers|nickname|alias|aka)$/i.test(t.core) && toks[i + 1].raw === ':' && i + 2 < toks.length && toks[i + 2].word && toks[i + 2].cap) j = i + 2;
       else if (t.word && /^(name)$/i.test(t.core) && i > 0 && /^(preferred|nick|pet)$/i.test(toks[i - 1].core)) j = i + 1;
       if (j < 0 || j >= toks.length) continue;
-      if (toks[j].raw === ':' || toks[j].raw === '"' || toks[j].raw === "'" || toks[j].raw === '“') j++;
+      let quoted = false;
+      if (toks[j].raw === ':' || toks[j].raw === '"' || toks[j].raw === "'" || toks[j].raw === '“' || toks[j].raw === '‘') { quoted = toks[j].raw !== ':'; j++; }
+      // a quoted initials-alias ("prefers 'AK'"): two or three capitals inside the quotes
+      if (quoted && j < toks.length && !used[j] && toks[j].word && /^[A-Z]{2,3}['’"”]?$/.test(toks[j].raw.replace(/\.$/, '')) && !LEX.CREDENTIAL_SET.has(toks[j].core.replace(/['’]$/, '').toLowerCase())) {
+        const v = toks[j].core.replace(/['’]$/, ''); used[j] = true;
+        spans.push({ start: toks[j].start, end: toks[j].start + v.length, type: 'NAME_OTHER', source: 'cue:alias', conf: 0.7, text: v, initials: true });
+        continue;
+      }
       if (j >= toks.length || used[j] || !toks[j].word || !(toks[j].cap || toks[j].allcaps) || LEX.isClinical(toks[j].core) || isRel(toks[j]) || isHon(toks[j]) || (allow && allow.has(toks[j].core.toLowerCase()))) continue;
       // "goes by T.J.": dotted initials are one alias
       let ej = j + 1;
@@ -2267,7 +2312,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // a capitalized eponym or device name as the surname after a given name ("Lionel Hickman here for"): a person when a
     // person verb follows it, never when a clinical word does ("Hickman catheter", "Graves disease")
     const eponymSurname = (t, nx) => t && t.word && t.cap && t.core.length >= 4 && LEX.isClinical(t.core) && !LEX.isAmbiguous(t.core) && !COMMON_CAP.has(t.core.toLowerCase()) && !/['’]s$/i.test(t.raw) && !(nx && nx.word && (LEX.EPONYM_FOLLOW.has(nx.core.toLowerCase()) || LEX.isClinical(nx.core) || MED_SUFFIX.test(nx.core)));
-    for (let i = 0; i + 2 < toks.length; i++) {
+    for (let i = 0; i + 1 < toks.length; i++) {
       if (used[i] || used[i + 1]) continue;
       const a = toks[i], b = toks[i + 1];
       // a clinical eponym that is also a given name (Addison, Graves, Wilson) starts a name only after a patient label or
@@ -2296,7 +2341,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if (!nxt || toks[j - 1].nlAfter) {
         // "Patient: Cordelia Vantongeren" closing its line: a name after a person label with nothing else on the line
         const labelWord = (ptLabel || (colonLabel && i >= 2 && toks[i - 2].word && /^(?:patient|pt|name|proxy|caller|contact|visitor|sender|from|recipient|guardian|re|regarding|subject|member|subscriber|insured|guarantor|caregiver|companion|driver|escort)$/i.test(toks[i - 2].core)));
-        if (labelWord && pNameOk(a) && iNameOk(b, false) && !toks.slice(i, j).some((t) => NONNAME_END.test(t.core) && !inLex(t))) { addRun(i, j, 'NAME_OTHER', 'cue:sentence-name', 0.7); i = j - 1; }
+        // ("Pt Doing Fine", "Patient: Feeling Better" are a status, not a name)
+        const plainEnd = toks.slice(i, j).some((t) => !inLex(t) && (NONNAME_END.test(t.core) || /(?:ed|ing|ly|ment)$/i.test(t.core) || COMMON_LOWER.has(t.core.toLowerCase())));
+        if (labelWord && pNameOk(a) && iNameOk(b, false) && !plainEnd) { addRun(i, j, 'NAME_OTHER', 'cue:sentence-name', 0.7); i = j - 1; }
         continue;
       }
       const verbAfter = nxt.word && !nxt.cap && !nxt.allcaps && PERSON_VERB_I.test(nxt.core) && !toks[j - 1].nlAfter;
@@ -2491,9 +2538,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         }
         else if (/^(?:thanks|thx|ty|love|regards|cheers|best|sincerely)$/i.test(t.core) && toks[i + 1] && toks[i + 1].raw === ',') { j = i + 2; signoff = true; }
         else if (/^you$/i.test(t.core) && i > 0 && /^thank$/i.test(toks[i - 1].core) && toks[i + 1] && toks[i + 1].raw === ',') { j = i + 2; signoff = true; }
+        // "my oncologist dr. fennimore": an honorific before a lower-case word
+        else if (isHon(t) && !t.nlAfter && !/^(?:sister|brother|father|mother|nurse)$/i.test(t.core)) j = i + 1;
         if (j < 0 || j >= toks.length || used[j] || !lowerOk(toks[j]) || toks[j - 1].nlAfter && !signoff) continue;
         let e = j + 1;
         if (e < toks.length && !used[e] && !toks[j].nlAfter && lowerOk(toks[e]) && !signoff) e++;
+        // a surname built with particles: "mac giolla phadraig", "van der berg", "de la cruz"
+        for (let ext = 0; !signoff && e < toks.length && ext < 3 && !used[e] && !toks[e - 1].nlAfter && (NAME_PARTICLE.test(toks[e - 1].core) || /^(?:giolla|ui|nic|ni)$/i.test(toks[e - 1].core)) && (lowerOk(toks[e]) || (NAME_PARTICLE.test(toks[e].core) && lowerOk(toks[e + 1]))); ext++) e++;
         if (signoff && !(e >= toks.length || toks[e - 1].nlAfter || /^[.!]$/.test(toks[e].raw))) continue;
         addRun(j, e, 'NAME_OTHER', 'cue:lowercase', 0.6); i = e - 1;
       }
@@ -2669,6 +2720,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (cfg.layers.propagate && ctx.propagateRegex) {
       ctx.propagateRegex.lastIndex = 0; let m;
       while ((m = ctx.propagateRegex.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: 'propagate', conf: 0.65, text: m[0], fullText: text });
+      if (ctx.propagateRegex.places) {
+        const pl = ctx.propagateRegex.places; pl.lastIndex = 0;
+        while ((m = pl.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'LOCATION', source: 'propagate', conf: 0.6, text: m[0], fullText: text });
+      }
       if (ctx.propagateRegex.handleParts) {
         const hp = ctx.propagateRegex.handleParts; hp.lastIndex = 0;
         while ((m = hp.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: 'propagate', conf: 0.6, text: m[0], fullText: text });
@@ -2714,7 +2769,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
   // Collect tokens worth propagating from a set of spans (document-level).
   function collectPropagation(allSpans, cfg) {
-    const terms = new Set(), ambTerms = new Set(), handleParts = new Set();
+    const terms = new Set(), ambTerms = new Set(), handleParts = new Set(), placeTerms = new Set();
     const titleCase = (w) => w.toLowerCase().replace(/(^|[-'’])([a-z])/g, (m, a, b) => a + b.toUpperCase());
     for (const s of allSpans) {
       // the words of a user name or e-mail address ("rosie.delgado62", "lally.marchbanks@...") are the person's names, and
@@ -2722,6 +2777,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if ((s.type === 'EMAIL' || (s.type === 'ID_OTHER' && s.handle)) && s.text) {
         const local = s.text.split('@')[0].replace(/^@/, '');
         local.split(/[^A-Za-z]+/).forEach((w) => { if (w.length >= 4 && !COMMON_CAP.has(w.toLowerCase()) && !LEX.isClinical(w) && !LEX.isAmbiguous(w) && !LEX.ORG_SUFFIX_SET.has(w.toLowerCase()) && !LEX.ORG_NAMEWORD_SET.has(w.toLowerCase()) && !/^(?:user|admin|info|mail|noreply|reply|office|dept|nurse|clinic|health|care|team|help|support|contact|example|test|mychart|portal)$/i.test(w)) handleParts.add(w.toLowerCase()); });
+        continue;
+      }
+      // a town fixed by a street address, a ZIP or a state ("19 Tamarack Ln, Ashgrove 04120") is the same place when it is
+      // named again without them ("Disconnect at Ashgrove home")
+      if ((s.type === 'LOCATION' || s.type === 'ZIP') && s.source === 'rule' && s.text) {
+        const town = s.text.replace(/,?\s*(?:[A-Z]{2}\s+)?\d{5}(?:-\d{4})?\s*$/, '').replace(/,?\s+[A-Z]{2}$/, '').trim();
+        const ws = town.split(/\s+/);
+        if (town.length >= 4 && ws.length <= 3 && ws.every((w) => /^[A-Z][a-z'’\-]+$/.test(w)) && !(ws.length === 1 && (LEX.isClinical(town) || COMMON_CAP.has(town.toLowerCase()) || COMMON_LOWER.has(town.toLowerCase()) || LEX.isAmbiguous(town) || LEX.isFirstName(town) || PLACE_WORD.test(town) || LEX.ORG_SUFFIX_SET.has(town.toLowerCase()) || LEX.ORG_NAMEWORD_SET.has(town.toLowerCase()) || town.length < 5))) placeTerms.add(town);
         continue;
       }
       if (COARSE(s.type) !== 'NAME' || s.source === 'census' || s.source === 'propagate' || s.initials) continue;
@@ -2743,10 +2806,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         if (core === core.toUpperCase() && /[A-Z]{3}/.test(core)) terms.add(titleCase(core));
       }
     }
-    if (!terms.size && !ambTerms.size && !handleParts.size) return null;
+    if (!terms.size && !ambTerms.size && !handleParts.size && !placeTerms.size) return null;
     const mk = (set) => new RegExp(`(?<![\\w])(?:${[...set].sort((a, b) => b.length - a.length).map(escapeRe).join('|')})(?![\\w])`, 'g'); // case-sensitive on purpose
     const re = terms.size ? mk(terms) : /(?!)/g;
     re.ambiguous = ambTerms.size ? mk(ambTerms) : null;
+    re.places = placeTerms.size ? mk(placeTerms) : null;
     re.handleParts = handleParts.size ? new RegExp(`(?<![\\w])(?:${[...handleParts].sort((a, b) => b.length - a.length).map(escapeRe).join('|')})(?![\\w])`, 'gi') : null;
     return re;
   }
@@ -2756,9 +2820,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   function columnNameSpans(headers, rows, columns) {
     const out = [];
     columns.forEach((col) => {
-      if (col.role !== 'drop' || !PERSON_COLUMN.test(col.header || '')) return;
+      // a person column kept as free text (Visitor(s), Contact) holds short lists of people ("Yumi N. + grandson Kenta")
+      const textPerson = col.role === 'text' && PERSON_COLUMN.test(col.header || '') && !/\b(?:notes?|comments?|remarks?|log|history|instructions?)\b/i.test(col.header || '');
+      if ((col.role !== 'drop' && !textPerson) || !PERSON_COLUMN.test(col.header || '')) return;
       rows.forEach((row) => {
         const v = cellToString(row[col.index]).trim(); if (!v) return;
+        if (textPerson && (v.split(/\s+/).length > 8 || /[.!?]\s+\p{Lu}\p{Ll}/u.test(v))) return; // a sentence, not a list of people
         const m = v.match(/^([A-Z][A-Za-z'’\-]+(?:\s[A-Z][A-Za-z'’\-]+)?),\s*([A-Z][A-Za-z'’\-]+)/) || v.match(/^([A-Z][a-z][A-Za-z'’\-]+)\s+([A-Z][A-Za-z'’\-]+)(?=\s|$|\()/);
         const orgish = (w) => w.split(/[\s\-]+/).some((x) => { const l = x.toLowerCase(); return LEX.ORG_SUFFIX_SET.has(l) || LEX.ORG_NAMEWORD_SET.has(l) || LEX.ORG_PREFIX_SET.has(l) || COMMON_CAP.has(l); });
         if (m && [m[1], m[2]].some(orgish)) return; // "Home Health Aide", "Hospice of Buffalo": an agency, not a person
@@ -3196,13 +3263,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // ("... Oxaliplatin 85" / "Hartley, Rosalind |[MRN      mg/m2 over 2 hr"): the unit is moved up beside its number
     for (let i = 0; i + 1 < lines.length; i++) {
       if (!/[A-Za-z]{3,}\s+\d+(?:\.\d+)?$/.test(lines[i])) continue;
-      const um = lines[i + 1].match(/(^|\s{3,})((?:mg|mcg|g|mL|ml|units?|mEq|mmol)(?:\/(?:m2|m²|kg|day|hr|h|min))?)(?=\s|$)/);
+      // the unit may also follow the last cell of the next row when that cell is a date, not a number ("05/14/1946 mg/m2")
+      const um = lines[i + 1].match(/(^|\s{3,}|(?<=\d{1,2}\/\d{1,2}\/\d{2,4})\s+)((?:mg|mcg|g|mL|ml|units?|mEq|mmol)(?:\/(?:m2|m²|kg|day|hr|h|min))?)(?=\s|$)/);
       if (!um) continue;
       const at = um.index + um[1].length;
       lines[i] = lines[i] + ' ' + um[2];
       lines[i + 1] = (lines[i + 1].slice(0, at) + lines[i + 1].slice(at + um[2].length).replace(/^\s/, '')).replace(/\s+$/, '');
       if (!lines[i + 1].trim()) { lines.splice(i + 1, 1); }
     }
+    const tileHeads = new Set(); // line indices of tile labels ("Chair 9") after the board is cut into its tiles
     // Tiles of a board read row by row ("Bay 1   Bay 2   Bay 3" over "QUILLFEATHER,   MBEKI-HOLLOWAY,   ORTEGA-FALK, LUZMILA"
     // over "ROSALIND   DESMOND   E4472013 | 92 y F"): the screen reader runs across the tiles, so a name, the rest of the name
     // and the record number of one tile land on different lines between other tiles' text. Under a line of tile labels the
@@ -3210,6 +3279,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // one patient's lines.
     {
       const TILE_LABEL = /^(?:Bay|Chair|Room|Rm|Pod|Bed|Station|Slot|Recliner|Tile|Spot|Infusion\s+Chair)\s*#?\s*\d{1,3}[A-Z]?$/i;
+      tileHeads.clear();
       const segsOf = (line) => { const out = []; const re = /\S+(?:\s{1,2}\S+)*/g; let m; while ((m = re.exec(line))) out.push({ text: m[0], start: m.index }); return out; };
       const out = []; let i = 0;
       while (i < lines.length) {
@@ -3229,7 +3299,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           if (segs.length === k) segs.forEach((x, q) => cols[q].push(x.text));
           else segs.forEach((x) => { let best = 0; hs.forEach((h, q) => { if (Math.abs(h.start - x.start) < Math.abs(hs[best].start - x.start)) best = q; }); cols[best].push(x.text); });
         }
-        hs.forEach((h, q) => { out.push(h.text); cols[q].forEach((t) => out.push(t)); });
+        hs.forEach((h, q) => { tileHeads.add(out.length); out.push(h.text); cols[q].forEach((t) => out.push(t)); });
         i = n;
       }
       lines.length = 0; out.forEach((l) => lines.push(l));
@@ -3288,6 +3358,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         // "this is Bobby, Roberta Szymanski's grandson": the pair runs on into another name, so it is not "Last, First"
         if (/^\s+[A-Z][a-z][A-Za-z'’\-]*(?:['’]s\b|\s+[a-z])/.test(after) && !m[3]) continue;
         if (first.length < 2 && !m[3]) continue;
+        // a short all-caps label after the comma ("Pellegrino-Vasquez,   AC: Cyclophosphamide") is the next cell, not a given name
+        if (/^[A-Z]{1,3}$/.test(first) && !m[3] && /^\s*:/.test(after)) continue;
         // structural evidence: a column gap, pipe, identifier, DOB or label right beside the pair. It overrides the
         // word lists, so "Bell, Kevin  MRN 032767781" and "Hill, Rose  84445786" are captured.
         const structural = mIndex === 0 || /\b(?:from|message|msg|re|for|regarding)\b[^.]{0,40}\(\s*$/i.test(before) && /^\s*\)/.test(after) || /^\s{2,}|^\s*[|\t]|^\s*\(?\s*(?:MRN|DOB|Acct|CSN|ID|MR#)\b|^\s*#?\s*[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w])|^\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/i.test(after) || LINE_LABEL_BEFORE.test(before) || /(?:\s{2,}|[|\t]\s*)$/.test(before);
@@ -3319,8 +3391,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
     // A name that wrapped over two or three lines of a narrow first column: "0800 Kowalczyk-" / "Hartley, Rosalind |MRN" /
     // "Esperanza   40071823", or "1000 | Ibarrondo   01/05/1962" / "Etxeberria,   MRN" / "Teodoro   40115569".
-    const FRAG_TOK = "(?!(?:DOB|MRN|MR#|ID|Acct|CSN)\\b)[A-Z][A-Za-z'’]*(?:-[A-Z][A-Za-z'’]*)*-?,?";
-    const LEAD_RE = new RegExp(`^\\s*(?:(?:\\d{3,4}|\\d{1,2}:\\d{2})\\s*)?[|\\[\\]'!]*\\s*(${FRAG_TOK}(?:\\s${FRAG_TOK}){0,3})(?=\\s{2,}|\\s*[|\\[\\]'!]|\\s+\\d|\\s*$|\\s+(?:DOB|MRN|MR#)\\b)`);
+    const FRAG_TOK = `(?!(?:DOB|MRN|MR#|ID|Acct|CSN)\\b)(?!${MONTH_NC_CAP}\\.?\\s+\\d)[A-Z][A-Za-z'’]*(?:-[A-Z][A-Za-z'’]*)*-?,?`;
+    const LEAD_RE = new RegExp(`^\\s*(?:(?:\\d{3,4}|\\d{1,2}:\\d{2})\\s*)?[|\\[\\]'!.]*\\s*(${FRAG_TOK}(?:\\s${FRAG_TOK}){0,3})(?=\\s{2,}|\\s*[|\\[\\]'!]|\\s+\\d|\\s*$|\\s+(?:DOB|MRN|MR#)\\b|\\s+${MONTH_NC_CAP}\\.?\\s+\\d)`);
     const TIME_LED = /^\s*(?:\d{3,4}|\d{1,2}:\d{2})\s*[|\[\]'!]*\s*[A-Z]/;
     // the rest of a word broken by a narrow column ("Vanderhoe" / "k-", "Szczepano" / "wski,", "Bartholom" / "ew")
     const CONT_RE = /^\s*([a-z][a-z'’]{0,9}(?:-[A-Z][A-Za-z'’]*)*-?,?)(?=\s{2,}|\s+\d|\s*$)/;
@@ -3335,7 +3407,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if (li >= lines.length || !info[li]) return null;
       const m = lines[li].match(LEAD_RE); if (!m) return null;
       const words = m[1].split(/\s+/).map((w) => w.replace(/[-,]+$/, '')).flatMap((w) => w.split('-'));
-      if (words.some((w) => nameWordBad(w) || w.length < 2)) return null;
+      // a middle initial after the given name is part of it ("Cornelius T")
+      if (words.some((w, q) => nameWordBad(w) || (w.length < 2 && !(q > 0 && q === words.length - 1 && /^[A-Z]$/.test(w))))) return null;
       return { text: m[1], rest: lines[li].slice(m.index + m[0].length), start: m.index + m[0].length - m[1].length };
     };
     const override = new Map(); const fragments = {};
@@ -3344,10 +3417,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const L = lead(li); if (!L) continue;
       const midWord = (acc, n) => /[A-Za-z]$/.test(acc) && !acc.includes(',') && TIME_LED.test(lines[li]) && contLead(n);
       const N1 = lead(li + 1) || (midWord(L.text, li + 1) ? contLead(li + 1) : null); if (!N1) continue;
-      if (!(/[-,]$/.test(L.text) || (!L.text.includes(',') && /,$/.test(N1.text)) || N1.cont)) continue;
-      let acc = L.text; const chain = [li]; const pieces = [{ li, start: L.start, text: L.text, part: 'last' }];
+      // a surname whose comma the reader lost ("10:00 Featherstonehaugh Jun 11, 40902287" over "Dmitri   1957"): a single
+      // surname on a record line with its number, and a known given name alone under it
+      const commaLost = TIME_LED.test(lines[li]) && !/[-,\s]/.test(L.text) && info[li].ids.length > 0 && !N1.cont && /^[A-Z][a-z'’]+$/.test(N1.text) && LEX.isFirstName(N1.text) && info[li + 1] && !info[li + 1].ids.length && !info[li + 1].names.length;
+      if (!(/[-,]$/.test(L.text) || (!L.text.includes(',') && /,$/.test(N1.text)) || N1.cont || commaLost)) continue;
+      let acc = L.text + (commaLost ? ',' : ''); const chain = [li]; const pieces = [{ li, start: L.start, text: L.text, part: 'last' }];
+      // the surname may sit on the line above the record line it belongs to (".   Pellegrino-Vasquez," over "08:00 Annunziata  73310492")
+      const aboveRecord = !TIME_LED.test(lines[li]) && /,$/.test(L.text);
       for (let n = li + 1; n < lines.length && chain.length < 6; n++) {
-        if (TIME_LED.test(lines[n])) break; // the next record line of the grid
+        if (TIME_LED.test(lines[n]) && !(aboveRecord && n === li + 1)) break; // the next record line of the grid
         const N = lead(n) || ((/[A-Za-z]$/.test(acc) && TIME_LED.test(lines[li])) ? contLead(n) : null); if (!N) break;
         if (N.cont) acc += N.text; // a word broken mid-way
         else if (/-$/.test(acc)) acc += N.text;
@@ -3415,6 +3493,20 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         continue;
       }
       const ov = override.get(li);
+      // the name line of a tile, right under its label ("Chair 9" / "Solveig Lindgren-Mbeki" / "67 yo F | DOB 12/25/1958" /
+      // "MRN 73300176"), possibly wrapped after a hyphen ("Annunziata Pellegrino-" / "Vasquez"): that tile's patient
+      if (!ov && tileHeads.has(li - 1) && !info[li].names.length && !info[li].ids.length) {
+        let tn = line.trim(), extra = 0;
+        if (/-$/.test(tn) && lines[li + 1] && /^\s*\p{Lu}[\p{Ll}'’]+\s*$/u.test(lines[li + 1])) { tn += lines[li + 1].trim(); extra = 1; }
+        const tw = tn.split(/[ -]/);
+        const later = [1, 2, 3].some((d) => info[li + extra + d] && (info[li + extra + d].ids.length || info[li + extra + d].dates.length || /\b(?:MRN|DOB)\b/.test(lines[li + extra + d])) && !tileHeads.has(li + extra + d));
+        if (/^\p{Lu}[\p{L}'’]+(?:[ -]\p{Lu}[\p{L}'’]+){1,3}$/u.test(tn) && tw.length >= 2 && !tw.some((w) => nameWordBad(w) || w.length < 2) && later) {
+          current = { name: tn, mrn: '', dob: '', li: li + extra, rows: [li], tile: true }; found++;
+          rows.push([tn, '', '', line]);
+          if (extra) { li++; current.rows.push(li); rows.push([tn, '', '', lines[li]]); }
+          continue;
+        }
+      }
       const cand0 = info[li].names.find((x) => x.structural || x.hasIdOnLine || !current || !o.carryForward);
       // a mid-line pair with no identifier anywhere on the line, while a patient is being carried forward, is a
       // mention (a relative, a visitor), not a new census entry
@@ -3467,7 +3559,22 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   // Screen-reader misreads that turn clinical shorthand into nonsense: "g21 days" for q21 days, "stage Ill" for stage III.
   // Applied to OCR output only, before detection, so the protected text keeps the clinical meaning.
   function normalizeOcrText(text) {
-    return cellToString(text)
+    let t = cellToString(text);
+    // a narrow grid read with no gap between columns: a record number glued to the next cell ("40955108Zoledronic",
+    // "408712491VIG" where the 1 is the I of IVIG). The other record numbers of the same screen give the length.
+    const runLens = new Map();
+    (t.match(/(?<![\w\/\-.])\d{6,10}(?![\w\/\-]|\.\d)/g) || []).forEach((r) => runLens.set(r.length, (runLens.get(r.length) || 0) + 1));
+    const usual = [...runLens.entries()].sort((a, b) => b[1] - a[1])[0];
+    t = t.replace(/(?<![\w\/\-.])(\d{6,11})(?=[A-Z][A-Za-z]{1,})/g, (m, run, off, str) => {
+      const rest = str.slice(off + m.length).match(/^[A-Za-z]+/)[0];
+      if (usual && run.length === usual[0] + 1 && /[1l]$/.test(run) && /^[A-Z]{2,}$/.test(rest)) return run.slice(0, -1) + ' I';
+      return run + ' ';
+    });
+    // a surname glued to the month of the next cell: "Featherstonehaughjun 11, 1957" -> "Featherstonehaugh Jun 11, 1957"
+    t = t.replace(/(\b\p{Lu}\p{Ll}{4,}?)(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)(?=\s+\d{1,2},)/gu, (m, w, mo) => `${w} ${mo.charAt(0).toUpperCase()}${mo.slice(1)}`);
+    // a capital I read as a lower-case l at the start of a grid cell: "llesanmi," (an English word almost never starts "ll" + vowel)
+    t = t.replace(/(^|\n[ \t]*|[ \t]{2,})ll(?=[aeiou][a-z]{2,}\b)/g, '$1Il');
+    return t
       .replace(/(?<![A-Za-z\d])g(\d{1,2})(\s*)(h|hr|hrs|hours?|d|days?|wk|wks|weeks?|mo|months?)\b/g, 'q$1$2$3')
       .replace(/\b(stage|grade|class|type|phase|cycle)(\s+)(?:Ill|IIl|lIl|lll)\b/gi, '$1$2III')
       // a superscript 2 read as "?" or "*" in a dose unit: "mg/m?2", "mg/m?" for mg/m²
@@ -3606,7 +3713,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           }
           case 'date': {
             if (isDate(v)) out[ci] = cfg.surrogate.dateShift ? shiftDate(v, offset) : '';
-            else { const r = applySpans(sv, detectText(sv, ctx).filter((s) => COARSE(s.type) === 'DATE'), (s) => sur.replace(s, sv, pk)); out[ci] = r.text; }
+            else {
+              // a date column holds dates even when they are written as bare digits: "20261029" (YYYYMMDD), "10292026" (MMDDYYYY)
+              const cm = sv.match(/^(\s*)((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(\s*)$/) || null;
+              const cm2 = !cm ? sv.match(/^(\s*)(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])((?:19|20)\d{2})(\s*)$/) : null;
+              let spans = detectText(sv, ctx).filter((s) => COARSE(s.type) === 'DATE');
+              if (cm && validDMY(+cm[2], +cm[3], +cm[4])) spans = [{ start: cm[1].length, end: sv.length - cm[5].length, type: 'DATE', source: 'rule', text: sv.trim(), date: { y: +cm[2], m: +cm[3], d: +cm[4], hasYear: true, yearDigits: 4, sep: '', kind: 'ymdc', monthStyle: null, text: sv.trim() } }];
+              else if (cm2 && validDMY(+cm2[4], +cm2[2], +cm2[3])) spans = [{ start: cm2[1].length, end: sv.length - cm2[5].length, type: 'DATE', source: 'rule', text: sv.trim(), date: { y: +cm2[4], m: +cm2[2], d: +cm2[3], hasYear: true, yearDigits: 4, sep: '', kind: 'compact', monthStyle: null, text: sv.trim() } }];
+              const r = applySpans(sv, spans, (s) => sur.replace(s, sv, pk)); out[ci] = r.text;
+            }
             bump(stats.structured, 'DATE'); break;
           }
           case 'age': out[ci] = bandAge(v, cfg.surrogate.ages); bump(stats.structured, 'AGE'); break;

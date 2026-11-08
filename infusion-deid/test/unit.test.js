@@ -896,3 +896,73 @@ test('r3 negatives: month-year is never a birthdate, lower-case fakes restore, s
   assert.ok(ag.rows[0][3].includes('Home Health Aide visits') && ag.rows[0][3].includes('(Hospice)'), ag.rows[0][3]);
   ['deaf', 'pregnant', 'overseas', 'diabetic', 'retired'].forEach((w) => { const t = `pt doing ok today, husband ${w} at home, will call back later`; assert.equal(textOut(t), t); });
 });
+
+// ---- round 4 ----
+test('r4 names: a given name with a double-barrelled surname, a labelled name closing its line, a possessive before a relation word', () => {
+  noneOf(textOut('SW note: Met with Oluwaseun Adebayo-Okonkwo and her sister Chiamaka.'), ['Oluwaseun', 'Adebayo', 'Okonkwo', 'Chiamaka']);
+  noneOf(textOut('Pharmacy: Pt Rasmus Eklund-Moreau weight 72 kg.'), ['Rasmus', 'Eklund']);
+  noneOf(textOut('Chair 9\nSolveig Lindgren-Mbeki\n67 yo F'), ['Solveig', 'Lindgren']);
+  noneOf(textOut('Question about shot\nPatient: Cordelia Vantongeren\nHi, this is Cordelia\'s daughter Imogen.'), ['Cordelia', 'Vantongeren', 'Imogen']);
+  // eponym pairs and hyphenated clinical words stay
+  for (const t of ['Reed-Sternberg cells not seen', 'Hx Stevens-Johnson syndrome', 'Seen in Non-Hodgkin clinic', 'Pt Pre-Op today']) assert.equal(textOut(t), t);
+  assert.ok(textOut("Pt's daughter called").includes("Pt's daughter called"));
+  for (const t of ['Pt Doing Fine', 'Patient: Feeling Better', 'Patient: Doing Well', 'Pt Ambulating Independently', "Grandma's son will drive"]) assert.equal(textOut(t), t);
+});
+test('r4 names: a credential name closed by a phone, initials after "Pt is", a quoted initials alias, a lower-case honorific and particle surname', () => {
+  noneOf(textOut('Enrolled w/ hospice; hospice RN Dorrie Pratt 555-010-4403'), ['Dorrie', 'Pratt']);
+  const a = textOut("Pt is A.K. VANDERMOLEN, prefers 'AK'. Arrived 0900.");
+  noneOf(a, ['A.K.', 'VANDERMOLEN', "'AK'"]); assert.ok(/prefers '[A-Z]{2}'/.test(a), a);
+  noneOf(textOut('hi this is siobhan mac giolla phadraig, my oncologist dr. fennimore said my keytruda can wait'), ['siobhan', 'giolla', 'phadraig', 'fennimore']);
+  assert.ok(textOut('hi this is siobhan mac giolla phadraig, my oncologist dr. fennimore said my keytruda can wait').includes('keytruda can wait'));
+});
+test('r4 tables: people listed in a free-text visitor column, a town after a named park, a town re-named without its ZIP', () => {
+  const res = D.processTable({ headers: ['Patient', 'Visitor(s)', 'Notes 2'], rows: [['Nakagawa, Haruki', 'Yumi N. + grandson Kenta', 'Lot 14 Pine Ridge Mobile Home Park, Gorham Falls']] }, { seed: 5 });
+  noneOf(res.rows[0].join(' '), ['Yumi', 'Kenta', 'Gorham Falls']);
+  noneOf(textOut('Disconnect at Ashgrove home, 19 Tamarack Ln Apt 2, Ashgrove 04120.'), ['Ashgrove']);
+  // a person column holding a sentence is left to the normal detectors
+  const ok = D.processTable({ headers: ['Patient', 'Contact Notes'], rows: [['Nakagawa, Haruki', 'Left VM. Will call back Tuesday.']] }, { seed: 5 });
+  assert.equal(ok.rows[0][1], 'Left VM. Will call back Tuesday.');
+});
+test('r4 dates and ages: spelled-out ages and ordinal-word dates, "Will be 90", compact dates in a date column, drug lot numbers stay', () => {
+  const r = rules('born March fourth 1931, age ninety-five. Will be 90 on 11/30');
+  assert.ok(r.includes('DOB=March fourth 1931') && r.includes('AGE=ninety-five') && r.includes('AGE=Will be 90'), r.join(','));
+  assert.deepEqual(rules('In May second line therapy; age 45; dose will be 90 mg').filter((x) => /^(DATE|AGE)/.test(x)), []);
+  const t = D.processTable({ headers: ['Patient', 'Last Infusion', 'Notes'], rows: [['Ravensworth, Ignatius', '20261029', 'Lot 4G221A exp 03/2028 for daratumumab']] }, { seed: 5 });
+  assert.ok(/^20\d{6}$/.test(t.rows[0][1]) && t.rows[0][1] !== '20261029', t.rows[0][1]);
+  assert.ok(t.rows[0][2].includes('Lot 4G221A'), t.rows[0][2]);
+});
+test('r4 screenshots: record numbers glued to the next cell, a surname glued to a month, a lower-case l for I, a lost comma, a surname above its record line', () => {
+  assert.equal(D.normalizeOcrText('08:30 Ravensworth-  Dec 2, 40955108Zoledronic\n09:15 Ng-Abernathy,  Sep  408712491VIG 0.4\n10:00 Featherstonehaughjun 11, 40902287 Iron\nllesanmi,   1938'),
+    '08:30 Ravensworth-  Dec 2, 40955108 Zoledronic\n09:15 Ng-Abernathy,  Sep  40871249 IVIG 0.4\n10:00 Featherstonehaugh Jun 11, 40902287 Iron\nIlesanmi,   1938');
+  assert.equal(D.normalizeOcrText('Pt wants llama pillow; dose 1000IU'), 'Pt wants llama pillow; dose 1000IU');
+  const g = D.parseTextDocument('Time Patient   DOB   MRN   Visit\n08:30 Ravensworth-   Dec 2, 40955108 Zoledronic\nIlesanmi,   1938   acid 4\nCornelius T   mg IV\n10:00 Featherstonehaugh Jun 11, 40902287 Iron\nDmitri   1957   sucrose');
+  assert.ok(g.rows.some((r) => r[0] === 'Ravensworth-Ilesanmi, Cornelius T' && r[1] === '40955108'), JSON.stringify(g.rows.map((r) => r.slice(0, 2))));
+  assert.ok(g.rows.some((r) => r[0] === 'Featherstonehaugh, Dmitri' && r[1] === '40902287'), JSON.stringify(g.rows.map((r) => r.slice(0, 2))));
+  const a = D.parseTextDocument('Time Patient   MRN   DOB   Visit Type\n.    Pellegrino-Vasquez,                 AC: Cyclophosphamide 600\n08:00 Annunziata      73310492 05/14/1946 mg/m2\n08:45 Okafor, Chidubem E    73328815 10/09/1983 Infliximab');
+  assert.ok(a.rows.some((r) => r[0] === 'Pellegrino-Vasquez, Annunziata' && r[1] === '73310492'), JSON.stringify(a.rows.map((r) => r.slice(0, 2))));
+  assert.ok(a.rows.some((r) => /AC: Cyclophosphamide 600 mg\/m2/.test(r[3])), JSON.stringify(a.rows.map((r) => r[3])));
+  assert.ok(!a.rows.some((r) => /, AC$/.test(r[0])));
+});
+test('r4 screenshots: a tile name under its label is that tile\'s patient, so a later screenshot names a record number an earlier one could not read', () => {
+  const board = 'Chair 7                              Chair 9\nAnnunziata Pellegrino-        Solveig Lindgren-Mbeki\nVasquez                          67 yo F | DOB 12/25/1958\n80 yo F | DOB 5/14/1946             MRN 73300176\nMRN 73310492                      Doxorubicin';
+  const b = D.parseTextDocument(board);
+  assert.ok(b.rows.some((r) => r[0] === 'Solveig Lindgren-Mbeki' && r[1] === '73300176'), JSON.stringify(b.rows.map((r) => r.slice(0, 2))));
+  assert.ok(b.rows.some((r) => r[0] === 'Annunziata Pellegrino-Vasquez' && r[1] === '73310492'), JSON.stringify(b.rows.map((r) => r.slice(0, 2))));
+  const reg = D.createRegistry();
+  const s1 = D.parseTextDocument('08:00 ivi       73300176 12/25/1958 AC: Doxorubicin 60 mg/m2');
+  const r1 = D.processTable({ headers: s1.headers, rows: s1.rows }, { columns: s1.columns, seed: 5, registry: reg });
+  assert.equal(D.selfCheck(r1, { kind: 'image' }).unnamed.length, 1); // the name was not read: the check refuses
+  D.processTable({ headers: b.headers, rows: b.rows }, { columns: b.columns, seed: 5, registry: reg });
+  const again = D.processTable({ headers: s1.headers, rows: s1.rows }, { columns: s1.columns, seed: 5, registry: reg });
+  assert.equal(D.selfCheck(again, { kind: 'image' }).unnamed.length, 0); // re-checked once the session knows the name
+  assert.equal(reg.size, 2);
+  // a tile whose line under the label is not a name with a record below stays an ordinary line
+  assert.ok(!D.parseTextDocument('Chair 3          Chair 4\nPump Alarm       Open\nfrees at 1400    -').rows.some((r) => r[0]));
+});
+
+test('a person stated to be 90+ ("Mr. X is 95") is an age; lab and vital values are not', () => {
+  const ages = (t) => D.ruleSpans(t, cfg()).filter((s) => s.type === 'AGE').map((s) => s.text);
+  assert.ok(ages('Mr. Whitfield is 95, lives alone').length, 'honorific + name');
+  assert.ok(ages('she is 91 and frail').length, 'pronoun');
+  for (const t of ['Plt is 95 today', 'HR is 95', 'BP is 95/60', 'Hgb is 9.5', 'Score is 92']) assert.deepEqual(ages(t), [], t);
+});

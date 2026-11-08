@@ -1,0 +1,147 @@
+[
+ {
+  "id": "nephew-town-extension",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Scheduling Comments"
+  ],
+  "rows": [
+   [
+    "Albescu, Ioana",
+    "00845511",
+    "1/2/1950",
+    "Ioana prefers afternoons; her nephew Radu Albescu drives from Olean. Call 585-555-0177 x204."
+   ]
+  ],
+  "phi": [
+   "Ioana",
+   "Radu",
+   "Albescu",
+   "Olean",
+   "585-555-0177"
+  ],
+  "keep": [
+   "prefers afternoons"
+  ],
+  "note": "hand-written blind check, final review"
+ },
+ {
+  "id": "person-is-95-address-neighbor",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Scheduling Comments"
+  ],
+  "rows": [
+   [
+    "Whitfield, Harold J",
+    "845522",
+    "9/9/1931",
+    "Mr. Whitfield is 95, lives alone at 12 Cottage Lane, Wellsville NY 14895. Neighbor Dot checks on him."
+   ]
+  ],
+  "phi": [
+   "Whitfield",
+   "is 95",
+   "Cottage",
+   "Wellsville",
+   "14895",
+   "Dot"
+  ],
+  "keep": [
+   "lives alone"
+  ],
+  "note": "hand-written blind check, final review"
+ },
+ {
+  "id": "caps-mychart-user-wife",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Scheduling Comments"
+  ],
+  "rows": [
+   [
+    "Nakamura, Kenji",
+    "00845533",
+    "4/4/1968",
+    "KENJI NAKAMURA - MyChart user knakamura68. Wife Emiko cell 716.555.0134. Folfox C3D1, Neulasta on day 2."
+   ]
+  ],
+  "phi": [
+   "KENJI",
+   "NAKAMURA",
+   "knakamura68",
+   "Emiko",
+   "716.555.0134"
+  ],
+  "keep": [
+   "Folfox C3D1",
+   "Neulasta on day 2"
+  ],
+  "note": "hand-written blind check, final review"
+ },
+ {
+  "id": "two-word-given-mother-facility",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Scheduling Comments"
+  ],
+  "rows": [
+   [
+    "Ortiz Delgado, Ana Lucia",
+    "00845544",
+    "6/6/1977",
+    "Ana Lucia asked to reschedule after her mother Rosa Delgado's surgery at Mercy on 12/2."
+   ]
+  ],
+  "phi": [
+   "Ana Lucia",
+   "Rosa",
+   "Delgado",
+   "Mercy",
+   "12/2"
+  ],
+  "keep": [
+   "asked to reschedule"
+  ],
+  "note": "hand-written blind check, final review"
+ },
+ {
+  "id": "virtue-name-hyphen-provider",
+  "kind": "table",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Scheduling Comments"
+  ],
+  "rows": [
+   [
+    "Bishop, Faith",
+    "00845555",
+    "3/3/1949",
+    "Faith reports neuropathy grade 1; Dr. Abernathy-Cole OK to continue Taxol 80 mg/m2."
+   ]
+  ],
+  "phi": [
+   "Faith reports",
+   "Abernathy-Cole"
+  ],
+  "keep": [
+   "neuropathy grade 1",
+   "Taxol 80 mg/m2"
+  ],
+  "note": "hand-written blind check, final review"
+ }
+]
