@@ -1,0 +1,193 @@
+[
+{"id":"m5-t01","kind":"table","category":"routine","note":"Standard chair schedule export; same patient on two rows; relative first name in comment.",
+"headers":["Appt Date","Patient Name","MRN","DOB","Age","Regimen","Chair","Comments"],
+"rows":[
+["11/02/2026","Hollister, Wendell","E2290417","03/14/1958","68","FOLFOX C3D1","Chair 4","Tolerated well. Wife Marjorie drove him home."],
+["11/02/2026","Pradhan, Leena","E3318802","07/22/1971","55","Herceptin q3w","Chair 7","Port flushed, good blood return. Next ECHO due Dec."],
+["11/03/2026","Hollister, Wendell","E2290417","03/14/1958","68","5-FU pump d/c","Chair 2","Pump disconnected 46h. No mouth sores."],
+["11/04/2026","Szabo, Annika","E4471093","12/01/1983","42","Rituximab","Chair 1","Mild rigors at 100 mg/hr, slowed rate, resolved with meperidine."]],
+"phi":["11/02/2026","11/03/2026","11/04/2026","Hollister, Wendell","E2290417","03/14/1958","Pradhan, Leena","E3318802","07/22/1971","Szabo, Annika","E4471093","12/01/1983","Marjorie"],
+"keep":["Tolerated well","Port flushed, good blood return","slowed rate, resolved with meperidine"]},
+
+{"id":"m5-t02","kind":"table","category":"routine","note":"Visit export with account numbers; daughter and outside neurologist in comments.",
+"headers":["Visit Date","Pt Name","Med Rec #","Acct #","Dept","Treatment","Nurse Notes"],
+"rows":[
+["10/27/2026","Castellanos, Ruben","88301245","A90012773","HEM ONC","Zoledronic acid","Creatinine 1.1, ok to give. Daughter Isabel at bedside."],
+["10/27/2026","Whitlock, Bernadette","88305519","A90013108","NEURO","IVIG 2 g/kg","Premedicated with APAP/diphenhydramine. Infused over 4 hrs, no reaction."],
+["10/28/2026","Whitlock, Bernadette","88305519","A90013152","NEURO","IVIG day 2","Headache after infusion, pt to call Dr. Abernathy (outside neuro) if worse."],
+["10/29/2026","Castellanos, Ruben","88301245","A90012901","HEM ONC","Iron sucrose 200 mg","Dose 2 of 5. BP 128/76."]],
+"phi":["10/27/2026","10/28/2026","10/29/2026","Castellanos, Ruben","88301245","A90012773","A90012901","Whitlock, Bernadette","88305519","A90013108","A90013152","Isabel","Abernathy"],
+"keep":["Creatinine 1.1, ok to give","Infused over 4 hrs, no reaction","Dose 2 of 5"]},
+
+{"id":"m5-t03","kind":"table","category":"routine","note":"Appointment time column with date+time; phone column; outside dentist fax in comment.",
+"headers":["Appt Time","Patient","MRN","Phone","Protocol","Comments"],
+"rows":[
+["11/05/2026 08:30","Nguyen, Thao","E5520184","(555) 555-0142","Carboplatin/Paclitaxel","Neuropathy grade 1 fingertips, continue full dose."],
+["11/05/2026 09:15","Bauer, Gregor","E5521377","(555) 555-0167","Pembrolizumab 200 mg","TSH pending. Pt reports mild fatigue."],
+["11/05/2026 10:00","Nguyen, Thao","E5520184","(555) 555-0142","Hydration 1L NS","Added on for nausea, ondansetron 8 mg IV given."],
+["11/05/2026 13:45","Ferreira, Lucinda","E5524409","(555) 555-0119","Denosumab","Calcium 9.2. Husband Tomas asked about dental clearance; letter faxed to Dr. Kimura's office 555-0188."]],
+"phi":["11/05/2026","Nguyen, Thao","E5520184","(555) 555-0142","Bauer, Gregor","E5521377","(555) 555-0167","Ferreira, Lucinda","E5524409","(555) 555-0119","Tomas","Kimura","555-0188"],
+"keep":["Neuropathy grade 1 fingertips, continue full dose","ondansetron 8 mg IV given","Calcium 9.2"]},
+
+{"id":"m5-t04","kind":"table","category":"routine","note":"Biologics infusion log; reschedule date in comment; outside GI doctor.",
+"headers":["Date of Service","Patient Name","DOB","MRN","Dx","Drug","Infusion Comments"],
+"rows":[
+["10/30/2026","Delacroix, Simone","05/19/1966","MR0049213","Crohn's","Infliximab 5 mg/kg","Week 6 loading dose. TB screen on file."],
+["10/30/2026","Albright, Corey","11/30/1990","MR0049377","MS","Ocrelizumab 600 mg","Second half-dose. Mother Janice stayed in waiting room."],
+["11/06/2026","Delacroix, Simone","05/19/1966","MR0049213","Crohn's","Infliximab 5 mg/kg","Maintenance. Rash on forearms, sent photo to Dr. Prescott at GI clinic."],
+["11/06/2026","Rahimi, Navid","02/08/1975","MR0050126","RA","Tocilizumab","ANC 2.1, ok to treat. LFTs wnl."],
+["11/06/2026","Albright, Corey","11/30/1990","MR0049377","MS","Ocrelizumab","Pt rescheduled to 11/20/2026 per neuro."]],
+"phi":["10/30/2026","11/06/2026","11/20/2026","Delacroix, Simone","05/19/1966","MR0049213","Albright, Corey","11/30/1990","MR0049377","Rahimi, Navid","02/08/1975","MR0050126","Janice","Prescott"],
+"keep":["TB screen on file","ANC 2.1, ok to treat","Rash on forearms"]},
+
+{"id":"m5-t05","kind":"table","category":"routine","note":"Cycle/day export with age and sex; son's phone in comment.",
+"headers":["Appt Date","Patient Name","MRN","Age","Sex","Regimen","Cycle/Day","Comments"],
+"rows":[
+["11/09/2026","Kowalczyk, Henryk","E6610028","74","M","Gem/Cis","C2D8","Plt 98, hold cis per protocol, gem given."],
+["11/09/2026","Abernethy-Lowe, Priya","E6610391","49","F","AC","C4D1","Last AC. Neulasta onpro applied L arm."],
+["11/09/2026","Kowalczyk, Henryk","E6610028","74","M","Gem/Cis","C2D8","Son Marek will pick up at 3 pm, call 555-0131 when done."],
+["11/10/2026","Tran, Minh","E6611540","61","M","Daratumumab SC","C1D15","No IRR. Acyclovir ppx confirmed."]],
+"phi":["11/09/2026","11/10/2026","Kowalczyk, Henryk","E6610028","Abernethy-Lowe, Priya","E6610391","Tran, Minh","E6611540","Marek","555-0131"],
+"keep":["hold cis per protocol, gem given","Neulasta onpro applied L arm","Acyclovir ppx confirmed"]},
+
+{"id":"m5-t06","kind":"table","category":"routine","note":"Financial-clearance style export with insurance member IDs and account numbers.",
+"headers":["Sched Date","Name","MRN","Acct No","Insurance","Member ID","Comments"],
+"rows":[
+["11/12/2026","Lindqvist, Astrid","E7701145","400228716","Blue Shield PPO","XKB884201933","Prior auth approved through end of Feb for Entyvio."],
+["11/12/2026","Oyelaran, Femi","E7701822","400229054","Medicare","1EG4-TE5-MK72","Venofer 200 mg #3. Pt brought wife Adaeze."],
+["11/13/2026","Lindqvist, Astrid","E7701145","400228716","Blue Shield PPO","XKB884201933","Entyvio 300 mg given, obs 30 min not required after dose 3."]],
+"phi":["11/12/2026","11/13/2026","Lindqvist, Astrid","E7701145","400228716","XKB884201933","Oyelaran, Femi","E7701822","400229054","1EG4-TE5-MK72","Adaeze"],
+"keep":["Prior auth approved","Venofer 200 mg #3","obs 30 min not required after dose 3"]},
+
+{"id":"m5-t07","kind":"table","category":"routine","note":"Header labels name format; prior injection date (MM/DD) in comment; sister named.",
+"headers":["Appointment","Patient Name (Last, First)","MRN","Phone","Treatment Plan","RN Comment"],
+"rows":[
+["11/16/2026 0800","Moreau, Celestine","E8830271","555-555-0103","Pemetrexed/Carbo","B12 given 10/12. Folic acid compliance confirmed."],
+["11/16/2026 0930","Haddad, Samir","E8830644","555-555-0174","Bortezomib SC","Injection site abdomen LLQ. Shingles ppx ok."],
+["11/16/2026 1100","Moreau, Celestine","E8830271","555-555-0103","Pemetrexed/Carbo","Sister Odile asking for FMLA paperwork, gave form."],
+["11/17/2026 0800","Haddad, Samir","E8830644","555-555-0174","Labs only","CBC/CMP drawn from port."]],
+"phi":["11/16/2026","11/17/2026","Moreau, Celestine","E8830271","555-555-0103","10/12","Haddad, Samir","E8830644","555-555-0174","Odile"],
+"keep":["Folic acid compliance confirmed","Injection site abdomen LLQ","CBC/CMP drawn from port"]},
+
+{"id":"m5-t08","kind":"table","category":"routine","note":"Relative with full name in comment; outside dermatologist.",
+"headers":["Date","Patient","MRN","DOB","Med","Dose","Comments"],
+"rows":[
+["11/18/2026","Fitzgerald, Noreen","E9012356","09/03/1949","Pamidronate","90 mg","Over 2 hrs. Daughter-in-law Kathleen Fitzgerald is the contact."],
+["11/18/2026","Achebe, Kwame","E9013472","04/27/1962","Cetuximab","250 mg/m2","Acneiform rash grade 2, doxycycline started by Dr. Brandt (outside derm)."],
+["11/19/2026","Fitzgerald, Noreen","E9012356","09/03/1949","NS bolus","500 mL","Orthostatic at check-in, bolus given, recheck ok."]],
+"phi":["11/18/2026","11/19/2026","Fitzgerald, Noreen","E9012356","09/03/1949","Kathleen Fitzgerald","Achebe, Kwame","E9013472","04/27/1962","Brandt"],
+"keep":["Acneiform rash grade 2","Orthostatic at check-in, bolus given","Pamidronate"]},
+
+{"id":"m5-t09","kind":"table","category":"routine","note":"Bay numbers (not PHI); future CT date and partner first name in comments.",
+"headers":["Appt Dt","Pt Name","MRN","Regimen","Location","Comments"],
+"rows":[
+["12/01/2026","Ostrowski, Dale","E1100345","Nivolumab 480 mg","Bay 3","q4w. Pt c/o loose stools x2/day, grade 1, imodium prn."],
+["12/01/2026","Benedetti, Carla","E1100982","Trastuzumab deruxtecan","Bay 5","No cough or SOB. Next CT 12/15/2026."],
+["12/01/2026","Ostrowski, Dale","E1100345","Nivolumab 480 mg","Bay 3","Partner Jim waiting in lobby."],
+["12/02/2026","Yamada, Keiko","E1101267","Iron dextran test dose","Bay 1","Test dose 25 mg tolerated, proceed with full dose."]],
+"phi":["12/01/2026","12/02/2026","12/15/2026","Ostrowski, Dale","E1100345","Benedetti, Carla","E1100982","Yamada, Keiko","E1101267","Jim"],
+"keep":["grade 1, imodium prn","No cough or SOB","Test dose 25 mg tolerated"]},
+
+{"id":"m5-t10","kind":"table","category":"routine","note":"Next Appt column; neighbor named by title and surname.",
+"headers":["Appt Date","Patient Name","MRN","Age","Diagnosis","Comments","Next Appt"],
+"rows":[
+["12/03/2026","Grantham, Opal","E1203318","81","Myelodysplasia","Azacitidine d3/7. Neighbor Mrs. Pettibone drives her.","12/04/2026"],
+["12/03/2026","Valdivia, Hector","E1203455","58","CLL","Obinutuzumab C1D2, split dose, no IRR today.","12/10/2026"],
+["12/04/2026","Grantham, Opal","E1203318","81","Myelodysplasia","Azacitidine d4/7, injection site erythema mild.","12/05/2026"]],
+"phi":["12/03/2026","12/04/2026","12/05/2026","12/10/2026","Grantham, Opal","E1203318","Valdivia, Hector","E1203455","Pettibone"],
+"keep":["split dose, no IRR today","injection site erythema mild","Myelodysplasia"]},
+
+{"id":"m5-t11","kind":"table","category":"routine","note":"Address column with street, city and ZIP.",
+"headers":["Visit Date","Patient Name","MRN","Phone","Address","Comments"],
+"rows":[
+["12/07/2026","Sorensen, Malin","E1307721","555-0126","418 Larchmont Ct, Pinehaven, OR 97399","Home infusion referral sent. Pt prefers mornings."],
+["12/07/2026","Mbeki, Thandiwe","E1307904","555-0158","92 Quarry Rd Apt 4B, Millbrook, OR 97398","Pegfilgrastim given. Bone pain controlled with loratadine."],
+["12/08/2026","Sorensen, Malin","E1307721","555-0126","418 Larchmont Ct, Pinehaven, OR 97399","Hgb 8.1, 1 unit PRBC transfused without reaction."]],
+"phi":["12/07/2026","12/08/2026","Sorensen, Malin","E1307721","555-0126","418 Larchmont Ct","Pinehaven","97399","Mbeki, Thandiwe","E1307904","555-0158","92 Quarry Rd Apt 4B","Millbrook","97398"],
+"keep":["Home infusion referral sent","Bone pain controlled with loratadine","1 unit PRBC transfused without reaction"]},
+
+{"id":"m5-t12","kind":"table","category":"routine","note":"Split Last/First name columns and encounter CSN; outside hematologist and fiance.",
+"headers":["Date","Last Name","First Name","MRN","CSN","Treatment","Comment"],
+"rows":[
+["12/09/2026","Pellegrino","Vito","E1409913","7120044581","Leuprolide 22.5 mg","q3mo. Next due early March."],
+["12/09/2026","Ashworth","Imogen","E1410276","7120044603","Romiplostim","Plt 42, dose increased to 3 mcg/kg per Dr. Ostrander at University Hematology."],
+["12/09/2026","Pellegrino","Vito","E1409913","7120044617","Labs","PSA drawn."],
+["12/10/2026","Ashworth","Imogen","E1410276","7120045002","Romiplostim","Plt 55. Fiance Declan here."]],
+"phi":["12/09/2026","12/10/2026","Pellegrino","Vito","E1409913","7120044581","7120044617","Ashworth","Imogen","E1410276","7120044603","7120045002","Ostrander","Declan"],
+"keep":["Leuprolide 22.5 mg","dose increased to 3 mcg/kg","PSA drawn"]},
+
+{"id":"m5-t13","kind":"table","category":"routine","note":"Weekly taxane log with return date in comment and wife's name.",
+"headers":["Appt Date","Patient Name","MRN","DOB","Regimen","Pre-meds","Comments"],
+"rows":[
+["12/14/2026","Thibodeaux, Earl","E1511082","06/11/1955","Docetaxel 75","Dexamethasone 8 mg","Fluid retention 1+ ankles. Wife Lorraine reports good appetite."],
+["12/14/2026","Chandrasekar, Meera","E1511460","10/02/1979","Paclitaxel weekly","Famotidine/Benadryl","Wk 9/12. Nail changes, frozen gloves used."],
+["12/21/2026","Thibodeaux, Earl","E1511082","06/11/1955","Docetaxel 75","Dexamethasone 8 mg","Held - ANC 0.9. Return 12/28/2026."],
+["12/21/2026","Chandrasekar, Meera","E1511460","10/02/1979","Paclitaxel weekly","Famotidine/Benadryl","Wk 10/12. Tolerated."]],
+"phi":["12/14/2026","12/21/2026","12/28/2026","Thibodeaux, Earl","E1511082","06/11/1955","Chandrasekar, Meera","E1511460","10/02/1979","Lorraine"],
+"keep":["Fluid retention 1+ ankles","frozen gloves used","ANC 0.9"]},
+
+{"id":"m5-t14","kind":"table","category":"routine","note":"Interpreter use; son translating; per-visit account numbers.",
+"headers":["Appt Date","Patient","MRN","Acct #","Attending Dept","Regimen","Comments"],
+"rows":[
+["01/05/2027","Quintero, Alma","E1612239","A77310428","HEM/ONC","Bendamustine/Rituximab","C3D1. Interpreter (Spanish) used. Son Emilio translating for discharge instructions."],
+["01/05/2027","Hargreave, Simon","E1612590","A77310533","RHEUM","Abatacept 750 mg","Monthly. No infections reported."],
+["01/06/2027","Quintero, Alma","E1612239","A77310611","HEM/ONC","Bendamustine","C3D2. Nausea controlled with olanzapine 5 mg."]],
+"phi":["01/05/2027","01/06/2027","Quintero, Alma","E1612239","A77310428","A77310611","Hargreave, Simon","E1612590","A77310533","Emilio"],
+"keep":["Interpreter (Spanish) used","No infections reported","Nausea controlled with olanzapine 5 mg"]},
+
+{"id":"m5-t15","kind":"table","category":"hard","note":"Patient/relative first names that are ordinary words (Hope, Will, Faith, Grace, Rose); lowercase 'rose' and 'will' are clinical/English and must survive.",
+"headers":["Appt Date","Patient Name","MRN","Regimen","Comments"],
+"rows":[
+["01/11/2027","Rivers, Hope","E1700112","Pembrolizumab","Hope reports mild pruritus, no rash."],
+["01/11/2027","Mills, Will","E1700245","FOLFIRI","Will declined port access today; PIV placed. Wife Faith brought snacks."],
+["01/11/2027","Rivers, Hope","E1700112","Pembrolizumab","Sister Grace Rivers will accompany next visit."],
+["01/12/2027","Banks, Rose","E1700398","Carfilzomib","Rose tolerated, BP rose to 150/90 post infusion, recheck 138/84."]],
+"phi":["01/11/2027","01/12/2027","Rivers, Hope","E1700112","Hope","Mills, Will","E1700245","Will","Faith","Grace Rivers","Banks, Rose","E1700398","Rose"],
+"keep":["mild pruritus, no rash","PIV placed","BP rose to 150/90"]},
+
+{"id":"m5-t16","kind":"table","category":"hard","note":"Ages over 89 in Age column and in comments; DOB restated as 'Aug 17'; lowercase relative name.",
+"headers":["Appt Date","Patient Name","MRN","Age","DOB","Regimen","Comments"],
+"rows":[
+["01/13/2027","Whitcombe, Edith","E1801157","93","08/17/1933","Ferric carboxymaltose","93 yo, hard of hearing. Grandson Toby Whitcombe at 555-0177 is primary contact."],
+["01/13/2027","Lam, Bao","E1801402","90","02/02/1936","Darbepoetin","Hgb 9.4. Lives with daughter mai, who manages meds."],
+["01/20/2027","Whitcombe, Edith","E1801157","93","08/17/1933","Ferric carboxymaltose dose 2","Phosphorus 2.3, recheck. Pt states birthday is Aug 17 and she will be 94."]],
+"phi":["01/13/2027","01/20/2027","Whitcombe, Edith","E1801157","93","08/17/1933","Toby Whitcombe","555-0177","Lam, Bao","E1801402","90","02/02/1936","mai","Aug 17","94"],
+"keep":["hard of hearing","Hgb 9.4","Phosphorus 2.3, recheck"]},
+
+{"id":"m5-t17","kind":"table","category":"hard","note":"Unlabeled second MRN, email, phone with extension and work phone buried in comments.",
+"headers":["Date","Patient Name","MRN","Phone","Regimen","Comments"],
+"rows":[
+["01/25/2027","Kearney, Dermot","E1902283","555-0145","Vedolizumab","Duplicate chart E1902299 merged by HIM. Pt email dkearney77@examplemail.com for portal reset."],
+["01/25/2027","Osei, Abena","E1902516","555-0109","Ustekinumab IV induction","Wt 64 kg, dose 390 mg. Callback from Dr. Lindgren's nurse at 555-0192 x214."],
+["01/26/2027","Kearney, Dermot","E1902283","555-0145","Vedolizumab","Pt ok'd leaving VM; wk ph 555-0163."]],
+"phi":["01/25/2027","01/26/2027","Kearney, Dermot","E1902283","555-0145","E1902299","dkearney77@examplemail.com","Osei, Abena","E1902516","555-0109","Lindgren","555-0192","555-0163"],
+"keep":["merged by HIM","Wt 64 kg, dose 390 mg","Vedolizumab"]},
+
+{"id":"m5-t18","kind":"table","category":"hard","note":"Patient surnames that are also disease eponyms (Addison, Graves); nicknames Ruthie/Tom; outside audiologist.",
+"headers":["Appt Date","Patient Name","MRN","Regimen","Comments"],
+"rows":[
+["02/01/2027","Addison, Ruth","E2003318","Rituximab 375","Hx Addison disease, stress-dose hydrocortisone given pre-infusion. Ruthie prefers her nickname."],
+["02/01/2027","Graves, Thomas","E2003502","Teprotumumab","Graves ophthalmopathy, infusion 4/8. Tom reports hearing change, referral to Dr. Ellison Park (audiology)."],
+["02/22/2027","Addison, Ruth","E2003318","Rituximab 375","Husband Frank Addison asked to speak with charge RN."],
+["02/22/2027","Graves, Thomas","E2003502","Teprotumumab","Infusion 5/8. Glucose 212, notified team."]],
+"phi":["02/01/2027","02/22/2027","Addison, Ruth","E2003318","Ruthie","Graves, Thomas","E2003502","Tom","Ellison Park","Frank Addison"],
+"keep":["Addison disease","Graves ophthalmopathy","Glucose 212, notified team"]},
+
+{"id":"m5-t19","kind":"table","category":"hard","note":"Collapsed export: all-caps name with MRN in same cell, short dates (M/D/YY and M/D) and lowercase spouse name.",
+"headers":["Appt","Patient","Comments"],
+"rows":[
+["Mon 2/8/27 0900","OKAFOR, CHIDI (MRN 2104477)","Daratumumab C3D1. Wife ngozi called 555-0136 re: ride."],
+["Mon 2/8/27 1030","DUBOIS, MARIE-CLAIRE (MRN 2104590)","Zoledronic acid. Dental clearance from Dr. Hwang rec'd 2/1."],
+["Tue 2/9/27 0800","OKAFOR, CHIDI (MRN 2104477)","Labs only. Pt says next appt 2/22 conflicts with work shift."]],
+"phi":["2/8/27","2/9/27","OKAFOR, CHIDI","2104477","ngozi","555-0136","DUBOIS, MARIE-CLAIRE","2104590","Hwang","2/1","2/22"],
+"keep":["Daratumumab C3D1","Dental clearance","Labs only"]},
+
+{"id":"m5-t20","kind":"table","category":"hard","note":"Device serial of home pump, licence plate, SSN last-4; first name June that is also a month.",
+"headers":["Appt Date","Patient Name","MRN","DOB","Regimen","Comments"],
+"rows":[
+["02/15/2027","Varga, Zoltan","E2205561","01/09/1952","FOLFOX + 5-FU CADD pump","CADD pump SN 4417-88210 sent home. Valet: silver sedan plate 7KDW442."],
+["02/15/2027","Holloway, June","E2205890","06/30/1968","Bevacizumab","June's BP 146/88, ok per parameters. UPCR 0.4."],
+["02/17/2027","Varga, Zoltan","E2205561","01/09/1952","Pump disconnect","Pump returned SN 4417-88210. Pt gave last 4 SSN 0193 for billing verification."]],
+"phi":["02/15/2027","02/17/2027","Varga, Zoltan","E2205561","01/09/1952","4417-88210","7KDW442","Holloway, June","E2205890","06/30/1968","June","0193"],
+"keep":["BP 146/88, ok per parameters","UPCR 0.4","sent home"]}
+]
