@@ -4,9 +4,9 @@
  * Works in browser (window.DeIDLexicon) and Node (module.exports).
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.DeIDLexicon = factory();
-})(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./biglex.js'));
+  else root.DeIDLexicon = factory(root.DeIDBigLex || null);
+})(typeof self !== 'undefined' ? self : this, function (BIG) {
   'use strict';
 
   const words = (s) => s.trim().split(/\s+/);
@@ -233,6 +233,9 @@
     SNF LTC ALF DME IV IM SC SQ PO PRN BID TID QID QD NPO LVM VM VMS TC HC
     NS RL D5 D5W KCL MGSO4 TPN PCA PICC CVC CVAD IVF ABX ABG VS BP HR RR TPA
     Cathflo Alteplase Activase Onpro Huber Beacon Hyperspace MyChart Haiku
+    Calvert Cockcroft Gault Mosteller Jelliffe Chatelut Haycock Egorin Kelman
+    HOH NKDA NKA NKFA DNR DNI MOLST POLST PMH PSH FHx SHx ROS HPI SOB CHF COPD CAD HTN CKD ESRD GERD OSA AFib CVA TIA DVT BPH SLE
+    HLD DM2 T2DM IDDM NIDDM PNA AKI ARF UTI URI BM GI GU HEENT MSK CNS PNS PVD PAD AAA CABG PCI PTCA ICD PPM LVAD
     EGFR ALK ROS1 KRAS NRAS BRAF MET RET NTRK FGFR IDH FLT3 NPM1 TP53 BCR ABL
     JAK STAT PIK3CA PTEN RB1 CDK CDKN2A MYC BCL2 BCL6 CD19 CD20 CD30 CD33 CD38
     BCMA GPRC5D FcRH5 CTLA PD1 PD-L1 VEGF PDGF TKI PARP ADC CAR-T BiTE IO
@@ -283,6 +286,7 @@
   `));
   // After one of these words an eponym that is also a surname stays clinical (Grey Turner sign, Cullen sign, Babinski reflex).
   const EPONYM_FOLLOW = setOf(words(`sign signs syndrome disease test reflex palsy lymphoma tumor tumour sarcoma phenomenon maneuver manoeuvre
+    voice therapy program programme method technique protocol procedure approach regimen scale score index formula equation classification
     triad node nodes fracture point criteria score scale classification staging stage curve period turner arbor garden geranium lodge`));
   // Well-known regional employers, facilities and chains that identify a patient's workplace or residence when named.
   const LOCAL_ORGS = words(`Moog GEICO Elderwood Sumitomo Praxair Linde Delaware|North Rich|Products Tops Wegmans Kaleida Catholic|Health
@@ -524,7 +528,29 @@
   const STATE_ABBR_SET = new Set([...Object.keys(US_STATES), ...Object.keys(CA_PROVINCES)]);
   const STATE_NAME_SET = setOf([...Object.values(US_STATES), ...Object.values(CA_PROVINCES)]);
 
+  // Large lexicon (src/biglex.js, built from Census/SSA/public lists). Tiers: strong names may stand alone;
+  // weak names need a second name token or a cue; a name that is also an English word needs a cue unless the
+  // curated lists already treat it as a clear name (Smith, Aaron).
+  const B = BIG || { S2: new Set(), S1: new Set(), F2: new Set(), F1: new Set(), EN: new Set() };
+  const curatedClear = (k) => (FIRST_SET.has(k) || LAST_SET.has(k)) && !AMBIGUOUS.has(k);
+  const anyTier = (k) => B.S2.has(k) || B.S1.has(k) || B.F2.has(k) || B.F1.has(k);
+  const strongTier = (k) => B.S2.has(k) || B.F2.has(k);
+  const keyOf = (w) => { const k = String(w).toLowerCase(); return (LAST_SET.has(k) || FIRST_SET.has(k) || anyTier(k)) ? k : fold(w); };
+  const isEnglishWord = (w) => B.EN.has(fold(w));
+  // strong: curated clear names, Census surnames with 1000+ bearers, SSA top-1000 first names (unless curated as word-names)
+  const strongName = (k) => curatedClear(k) || (strongTier(k) && !AMBIGUOUS.has(k));
+  // ambiguous: curated word-names, or a weak-tier name that is also an ordinary English word
+  const ambiguousName = (k) => AMBIGUOUS.has(k) || (!strongName(k) && anyTier(k) && B.EN.has(k));
   return {
+    BIG: B, isEnglishWord,
+    // strong: safe to tag on its own (curated lists, Census >= 1000 bearers, SSA top-1000 names)
+    isStrongName: (w) => strongName(keyOf(w)),
+    isCuratedName: (w) => { const k = String(w).toLowerCase(); return FIRST_SET.has(k) || LAST_SET.has(k) || FIRST_SET.has(fold(w)) || LAST_SET.has(fold(w)); },
+    // anchor: a name that can carry a run on its own. Curated clear names (Smith) or strong names that are not
+    // ordinary English words (Halvorsen). "Garden", "Lodge", "Strong" are strong surnames but never anchors.
+    isAnchorName: (w) => { const k = keyOf(w); return curatedClear(k) || (strongTier(k) && !AMBIGUOUS.has(k) && !B.EN.has(k)); },
+    // weak: only with a second name token or a cue (rare surnames, list-only first names, word-names)
+    isWeakName: (w) => { const k = keyOf(w); return (anyTier(k) || FIRST_SET.has(k) || LAST_SET.has(k)) && !strongName(k); },
     FIRST_NAMES, SURNAMES, AMBIGUOUS, CLINICAL_ALLOWLIST, RELATION_CUES, HONORIFICS,
     CREDENTIALS, ORG_SUFFIXES, US_STATES, US_CITIES, HOLDOUT_FIRST, HOLDOUT_LAST,
     FAKE_FIRST, FAKE_LAST, FAKE_ORGS, FAKE_CITIES,
@@ -533,10 +559,12 @@
     GEO_SUFFIXES, GEO_SUFFIX_SET, PLACE_PREFIXES, PLACE_PREFIX_SET, ONES_WORDS, ORG_PREFIXES, ORG_PREFIX_SET,
     NICKNAMES, EPONYM_FOLLOW, LOCAL_ORGS, LOCAL_ORG_SET,
     nicknamesOf: (w) => NICKNAMES[w.toLowerCase()] || [],
-    isFirstName: (w) => FIRST_SET.has(w.toLowerCase()) || FIRST_SET.has(fold(w)),
-    isSurname: (w) => LAST_SET.has(w.toLowerCase()) || LAST_SET.has(fold(w)),
+    isFirstName: (w) => FIRST_SET.has(w.toLowerCase()) || FIRST_SET.has(fold(w)) || B.F2.has(keyOf(w)) || B.F1.has(keyOf(w)),
+    isSurname: (w) => LAST_SET.has(w.toLowerCase()) || LAST_SET.has(fold(w)) || B.S2.has(keyOf(w)) || B.S1.has(keyOf(w)),
     fold,
-    isAmbiguous: (w) => AMBIGUOUS.has(w.toLowerCase()),
+    // ambiguous: curated word-names, plus any big-lexicon name that is also an English word and not curated as clear
+    isAmbiguous: (w) => ambiguousName(keyOf(w)),
+    isCuratedAmbiguous: (w) => AMBIGUOUS.has(String(w).toLowerCase()),
     isClinical: (w) => CLINICAL_ALLOWLIST.has(w.toLowerCase().replace(/[’']s$/, '')) || CLINICAL_ALLOWLIST.has(w.toLowerCase()),
   };
 });

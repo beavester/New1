@@ -265,7 +265,7 @@
       add(`${l} ${f[0]}.`); add(`${l}, ${f[0]}.`); add(`${l}, ${f[0]}`);
       // diminutives: Benjamin → Ben, Katarzyna → Kasia, Salvatore → Sal
       // a diminutive that is also an ordinary word or a month (Will, Bill, Pat, Jan, May) is only taken with the surname
-      LEX.nicknamesOf(f).forEach((nick) => { if (nick.length < 3) return; if (!LEX.isAmbiguous(nick) && !LEX.isClinical(nick)) add(nick); add(`${nick} ${l}`); add(`${l}, ${nick}`); add(`${nick} ${l[0]}.`); });
+      LEX.nicknamesOf(f).forEach((nick) => { if (nick.length < 3) return; if (!LEX.isCuratedAmbiguous(nick) && !LEX.isClinical(nick)) add(nick); add(`${nick} ${l}`); add(`${l}, ${nick}`); add(`${nick} ${l[0]}.`); });
     }
     // hyphenated and two-word surnames (Delacroix-Ames, Ibarrondo Etxeberria, Ruiz Cabrera): each part on its own
     if (/[-\s]/.test(l)) l.split(/[-\s]+/).forEach((h) => { if (h.length >= 3 && !NAME_PARTICLE.test(h)) add(h); });
@@ -279,7 +279,7 @@
     for (const pn of parsedList) {
       if (!pn) continue;
       [pn.first, pn.last, ...(pn.middle ? pn.middle.split(/\s+/) : [])].forEach((t) => { if (!t) return; const c = t.toLowerCase().replace(/\.$/, ''); if (c) set.add(c); c.split(/[-\s]+/).forEach((h) => { if (h) set.add(h); }); });
-      if (pn.first) LEX.nicknamesOf(pn.first).forEach((n) => { if (!LEX.isAmbiguous(n) && !LEX.isClinical(n)) set.add(n.toLowerCase()); });
+      if (pn.first) LEX.nicknamesOf(pn.first).forEach((n) => { if (!LEX.isCuratedAmbiguous(n) && !LEX.isClinical(n)) set.add(n.toLowerCase()); });
     }
     return set;
   }
@@ -389,7 +389,7 @@
       [p.parsed, ...[...p.names].map(parseName)].forEach((pn) => {
         const f = pn && pn.first; if (!f || f.length < 7 || !/^[A-Za-z]+$/.test(f)) return;
         const cut = f.slice(0, 4); const lc = cut.toLowerCase();
-        if (COMMON_LOWER.has(lc) || COMMON_CAP.has(lc) || LEX.isAmbiguous(cut) || LEX.isClinical(cut) || monthIndex(cut) || LEX.RELATION_SET.has(lc)) return;
+        if (COMMON_LOWER.has(lc) || COMMON_CAP.has(lc) || LEX.isCuratedAmbiguous(cut) || (LEX.isEnglishWord(cut) && !LEX.isFirstName(cut)) || LEX.isClinical(cut) || monthIndex(cut) || LEX.RELATION_SET.has(lc)) return;
         prefixForms.add(cut[0].toUpperCase() + cut.slice(1).toLowerCase());
       });
       prefixForms.forEach((v) => { if (!allVariants.has(v) && !lookup.has(v.toLowerCase())) { addVariant(v, 'NAME_PATIENT', p.key, true, true); prefixKeys.add(v.toLowerCase()); } });
@@ -626,7 +626,7 @@
     DATE_OCR: /(?<![\w\/])(?=[\dOIl\/\-.]*[OIl])(?:[\dOIl]{1,2}([\/\-.])[\dOIl]{1,2}\1[\dOIl]{2,4}|[\dOIl]{4}-[\dOIl]{1,2}-[\dOIl]{1,2})(?![\w\/])/g,
   };
   // When an m-d or small-fraction token is a date only if the surroundings say so.
-  const DATE_CTX_BEFORE = /(?:\bdob|\bborn|\bbirth(?:day|date)?|\bon|\bappt|\bappointment|\bseen|\bdue|\bnext|\blabs?|\bscan|\bvisit|\brtc|f\/u|\bfu|\bstart(?:s|ed|ing)?|\bthrough|\bthru|\bfrom|\buntil|\bby|\bdate|\bdos|\btx|\btreatment|\binfusion|\breturn(?:s|ed|ing)?|\brecheck|\bsched(?:uled)?|\bresched(?:uled)?|r\/s|\bmoved|\bcancel(?:l?ed)?|\bbooked|\bconfirmed|\bsigned|\bdated|\bsince|\bcall(?:ed)?\s+back|\bbegin(?:s|ning)?|\bending|\bends?|\bto|\band|\bor)\s*$/i;
+  const DATE_CTX_BEFORE = /(?:\bdob|\bborn|\bbirth(?:day|date)?|\bon|\bappt|\bappointment|\bseen|\bdue|\bnext|\blabs?|\bscan|\bvisit|\brtc|f\/u|\bfu|\bstart(?:s|ed|ing)?|\bthrough|\bthru|\bfrom|\buntil|\bby|\bdate|\bdos|\btx|\btreatment|\binfusion|\breturn(?:s|ed|ing)?|\brecheck|\bsched(?:uled)?|\bresched(?:uled)?|r\/s|\bmoved|\bcancel(?:l?ed)?|\bbooked|\bconfirmed|\bsigned|\bdated|\brec'?d|\breceived|\brcvd|\bsent|\bfaxed|\bgiven|\bdrawn|\bdone|\bcompleted|\blast|\bsince|\bcall(?:ed)?\s+back|\bbegin(?:s|ning)?|\bending|\bends?|\bto|\band|\bor)\s*$/i;
   const DATE_CTX_AFTER = /^\s*(?:@|at\s+)?\d{1,2}:\d{2}|^\s*(?:@|at)\s*\d{3,4}\b|^\s*(?:appt|appointment|visit|labs?|scan|infusion|tx|c\d+d\d+|cycle|for|with|w\/|and|or|-|–|thru|through|to)\b/i;
   const RANGE_BEFORE = /(?:\b(?:cycles?|days?|doses?|weeks?|wks?|months?|mos?|yrs?|years?|(?<!\/)c\d*d?|dose|ratio|grade|range|levels?|pages?|items?|q|x|times|courses?|fractions?|fx|sessions?|pain|fatigue|nausea|distress|anxiety|depression|dyspnea|score|scores?|rated?|rating|scale|severity|intensity|vas|nrs|esas)|#)\s*$/i;
 
@@ -795,6 +795,7 @@
       if (/^\d{5}(-\d{4})?$/.test(m[0]) && (/\b[A-Z]{2}\s+$/.test(before) || /zip\s*(code)?\s*:?\s*$/i.test(before))) return false; // ZIP code
       return true;
     };
+    run(/(?<=(?:#|\bno\.?|\bid|\bnum(?:ber)?)\s?)[A-Z]{0,2}\d{6,10}\b/gi, 'ID_OTHER', notPhoneExt);
     if (cfg.mrnRegex) run(cfg.mrnRegex, 'MRN', notPhoneExt);
     if (cfg.accountRegex) run(cfg.accountRegex, 'ACCOUNT', notPhoneExt);
     // Fallback for pasted/OCR text with no learned MRN pattern: a standalone 6-9 digit integer in clinical free text is
@@ -939,6 +940,10 @@
   const endsSentence = (t) => !!t && (t.nlAfter || (t.raw.endsWith('.') && !isHon(t) && !t.initial && !isCred(t) && !/^(vs|etc|approx|re|appt|pt|pts|hx|dx|tx|w|c|s|p|q|b|d|e|g|i|mg|mcg|ml|no|dr|mr|mrs|ms|st|jr|sr|inc|ltd)$/i.test(t.core)));
   const relWord = (w) => { const l = w.toLowerCase(); if (LEX.RELATION_SET.has(l)) return true; const b = l.replace(/^(?:(?:great|grand|step|half|ex)-?)+(?=[a-z])/, '').replace(/-in-law$/, ''); return b !== l && b.length >= 2 && LEX.RELATION_SET.has(b); };
   const isRel = (t) => t && t.word && relWord(t.core);
+  // an ordinary English word that is not a name of any tier (Doing, Needs, Wheelchair); Grace, Bishop and Rose are names
+  // (rare Census surnames such as "Doing" or "Fine" do not rescue an ordinary word; curated and strong-tier names do)
+  const wordNotName = (t) => !!t && LEX.isEnglishWord(t.core) && !LEX.isStrongName(t.core) && !LEX.isCuratedName(t.core);
+  const SERVICE_VERB = /^(consulted|consult|notified|paged|contacted|involved|aware|following|ordered|placed|referral|referred|team|dept|department|service|services|called|to|on|at|for|and|or)$/i;
   const isNameish = (t, allow) => t && (t.cap || t.allcaps || t.initial) && !LEX.isClinical(t.core) && !(allow && allow.has(t.core.toLowerCase()));
   const inLex = (t) => t && (LEX.isFirstName(t.core) || LEX.isSurname(t.core));
 
@@ -1098,7 +1103,7 @@
         && ((i + 2 < toks.length && toks[i + 2].num && /^\d{5}$/.test(toks[i + 2].raw)) || (LEX.CITY_SET.has(t.core.toLowerCase()) && !/^(OK|IN|OR|ME|HI|DE|PA|MD|ID|MA|MO|OH|AL|AR|GA|LA|MS|MT|NE|VA|WA|CO|CT)$/.test(toks[i + 1].core)))) si = i + 1;
       else continue;
       const st = toks[si].core;
-      if ((st === 'PA' || st === 'MD') && (inLex(t) || LEX.isClinical(t.core))) continue; // "Smith, PA" is a credential
+      if ((st === 'PA' || st === 'MD') && ((inLex(t) && !LEX.CITY_SET.has(t.core.toLowerCase())) || (LEX.isClinical(t.core) && !LEX.CITY_SET.has(t.core.toLowerCase())))) continue; // "Smith, PA" is a credential
       if (LEX.isClinical(t.core) && !LEX.CITY_SET.has(t.core.toLowerCase())) continue;
       if (si === i + 2 && /^[A-Z]{2,4}$/.test(t.core) && !LEX.CITY_SET.has(t.core.toLowerCase()) && (i === 0 || !toks[i - 1].word || !/^(in|from|to|at|near|of|via|into|outside)$/i.test(toks[i - 1].core))) continue; // "Honda CRV, NY" is not a place
       let k = i;
@@ -1204,13 +1209,24 @@
     // Pass C: relation word then name  (pt's son Mark; daughter, Grace Bell; wife (Mary))
     for (let i = 0; i < toks.length - 1; i++) {
       if (!isRel(toks[i]) || endsSentence(toks[i])) continue;
+      if (toks[i].cap && i + 1 < toks.length && toks[i + 1].word && SERVICE_VERB.test(toks[i + 1].core)) continue; // "Chaplain consulted"
       let j = i + 1, hops = 0;
       while (j < toks.length && hops < 5 && !endsSentence(toks[j]) && (/^(named|is|was|,|:|\(|and|or|the|her|his|their|pt's|patient's|'s|'s|id|#|no|number|ext|x|also)$/i.test(toks[j].raw) || (hops === 0 && /^(for|of)$/i.test(toks[j].raw) && /^(proxy|poa|hcp|dpoa|mpoa|guardian|caregiver|caretaker|agent|surrogate|representative|rep)$/i.test(toks[i].core)) || /^(’s|'s)$/.test(toks[j].raw) || (toks[j].num && /^\d{1,6}$/.test(toks[j].raw) && hops > 0) || (toks[j].raw === ')' && hops > 0))) { j++; hops++; }
       if (j >= toks.length) continue;
       const relaxedFirst = (toks[j].cap || toks[j].allcaps) && inLex(toks[j]) && !(allow && allow.has(toks[j].core.toLowerCase()));
-      if ((isNameish(toks[j], allow) || relaxedFirst) && !isCred(toks[j]) && !isRel(toks[j]) && !isHon(toks[j])) {
+      const wordNotName = LEX.isEnglishWord(toks[j].core) && !inLex(toks[j]); // "WIFE AWARE", "and Nutrition"
+      if ((isNameish(toks[j], allow) || relaxedFirst) && !wordNotName && !isCred(toks[j]) && !isRel(toks[j]) && !isHon(toks[j])) {
         const e = nameRun(j, 3, true);
         if (e > j) addRun(j, e, 'NAME_OTHER', 'cue:relation', 0.85);
+        continue;
+      }
+      // a name typed in lower case straight after the relation word, as in messages and OCR'd text:
+      // a word of 3+ letters that is a known first name or is not an ordinary English word at all
+      const lc = toks[j];
+      const nx = toks[j + 1];
+      const personCtx = nx && ((nx.word && /^(called|calls|calling|phoned|states|stated|says|said|reports|requests|asked|asks|will|is|was|at|aware|here|arrived|drives|driving|picks|picking|brings|brought|lives|stays|manages|helps|visiting|visited)$/i.test(nx.core)) || /^[,(@]$/.test(nx.raw) || /^\(?\d{3}/.test(text.slice(nx.start, nx.start + 4)));
+      if (hops === 0 && lc.word && /^[a-z][a-z'’\-]{2,}$/.test(lc.core) && !used[j] && !LEX.isClinical(lc.core) && !isRel(lc) && !isCred(lc) && !(allow && allow.has(lc.core.toLowerCase())) && (LEX.isFirstName(lc.core) || (!LEX.isEnglishWord(lc.core) && personCtx)) && !/^(says|said|states|called|calls|will|would|can|cannot|also|here|there|was|were|has|had|who|that|this|with|from|and|but|not|per|via|aka|dob|mrn|pt|pts|vomited|vomiting|fell|falls|coughing|complains|denies|reports|requests)$/i.test(lc.core)) {
+        addRun(j, j + 1, 'NAME_OTHER', 'cue:relation', 0.6);
       }
     }
     // Pass D: name then relation  (Mark (son); Mark, her son; Grace - daughter)
@@ -1224,7 +1240,8 @@
       if ((hops > 0 || possessive) && j < toks.length && isRel(toks[j])) {
         // "Social Work, Dietitian, Chaplain consulted": a Title-Case relation word after a comma, with a name candidate that is
         // not in the name lexicon, is a department list rather than "Mark, her son"
-        if (toks[j].cap && toks[j - 1].raw === ',' && !inLex(toks[i])) continue;
+        if (toks[j].cap && toks[j - 1].raw === ',' && !LEX.isAnchorName(toks[i].core)) continue;
+        if (toks[j].cap && j + 1 < toks.length && toks[j + 1].word && SERVICE_VERB.test(toks[j + 1].core) && !LEX.isAnchorName(toks[i].core)) continue; // "Social Work, Chaplain consulted"
         // walk back to include preceding name-ish tokens (First Last) or "Last, First"
         const nameishRelaxed = (t) => isNameish(t, allow) || ((t.cap || t.allcaps) && inLex(t) && !(allow && allow.has(t.core.toLowerCase())));
         let k = i; while (k > 0 && nameishRelaxed(toks[k - 1]) && !used[k - 1] && !endsSentence(toks[k - 1]) && i - k < 2) k--;
@@ -1400,6 +1417,7 @@
       }
       const epoB = !iNameOk(b, true) && pNameOk(a) && eponymSurname(b, toks[i + 2]) && toks[i + 2] && toks[i + 2].word && !toks[i + 2].cap && PERSON_VERB_I.test(toks[i + 2].core);
       if (!iNameOk(b, true) && !epoB) continue;
+      if (wordNotName(a) || wordNotName(b)) continue; // "Pt Doing Fine", "Patient: Feeling Better"; "Grace Bishop" stays a name
       j = i + 2;
       if (j < toks.length && !used[j] && toks[j].cap && pNameOk(toks[j]) && !endsSentence(toks[j - 1]) && !toks[j - 1].nlAfter && !iNameOk(b, false)) continue; // eponym in the middle of a longer run
       if (j < toks.length && !used[j] && toks[j].cap && pNameOk(toks[j]) && !endsSentence(toks[j - 1]) && !toks[j - 1].nlAfter) j++; // middle name
@@ -1508,15 +1526,47 @@
       const amb = LEX.isAmbiguous(t.core) || (t.allcaps && t.core.length <= 4);
       // find run of adjacent lexicon/name-ish tokens
       let j = i + 1;
-      while (j < toks.length && j - i < 3 && !used[j] && isNameish(toks[j], allow) && !LEX.ORG_SUFFIX_SET.has(toks[j].core.toLowerCase()) && !endsSentence(toks[j - 1]) && (inLex(toks[j]) || toks[j].initial || (toks[j].cap && !LEX.isAmbiguous(toks[j].core) && (j === i + 1 || (j === i + 2 && toks[j - 1].initial)) && !t.allcaps))) j++;
+      while (j < toks.length && j - i < 3 && !used[j] && isNameish(toks[j], allow) && !LEX.ORG_SUFFIX_SET.has(toks[j].core.toLowerCase()) && !endsSentence(toks[j - 1]) && !(toks[j].allcaps && toks[j].core.length <= 4 && !LEX.isStrongName(toks[j].core)) && (inLex(toks[j]) || toks[j].initial || (toks[j].cap && !LEX.isAmbiguous(toks[j].core) && (j === i + 1 || (j === i + 2 && toks[j - 1].initial)) && !t.allcaps))) j++;
       // a first name followed by a surname that is also a clinical eponym ("Rosalind Graves (MRN ...)", "Simone Addison, hx"),
       // when nothing clinical follows the eponym (Graves disease, Addison's)
-      if (j === i + 1 && LEX.isFirstName(t.core) && !LEX.isAmbiguous(t.core) && !endsSentence(t) && !t.nlAfter && j < toks.length && !used[j] && toks[j].cap && LEX.isClinical(toks[j].core) && (LEX.isSurname(toks[j].core) || LEX.isFirstName(toks[j].core)) && !LEX.isAmbiguous(toks[j].core) && !/['’]s?$/.test(toks[j].raw) && !(j + 1 < toks.length && toks[j + 1].word && (LEX.EPONYM_FOLLOW.has(toks[j + 1].core.toLowerCase()) || LEX.isClinical(toks[j + 1].core)))) j++;
+      if (j === i + 1 && (LEX.isFirstName(t.core) || LEX.isAnchorName(t.core)) && !LEX.isAmbiguous(t.core) && !endsSentence(t) && !t.nlAfter && j < toks.length && !used[j] && toks[j].cap && LEX.isClinical(toks[j].core) && (LEX.isSurname(toks[j].core) || LEX.isFirstName(toks[j].core)) && !LEX.isAmbiguous(toks[j].core) && !/['’]s?$/.test(toks[j].raw) && !(j + 1 < toks.length && toks[j + 1].word && (LEX.EPONYM_FOLLOW.has(toks[j + 1].core.toLowerCase()) || LEX.isClinical(toks[j + 1].core)))) j++;
       const run = toks.slice(i, j);
       const unambiguousCount = run.filter((x) => inLex(x) && !LEX.isAmbiguous(x.core)).length;
-      if (!amb) { addRun(i, j, 'NAME_OTHER', 'lexicon', 0.7); i = j - 1; continue; }
-      // ambiguous: need a second token in the run that is in the lexicon and unambiguous
-      if (run.length >= 2 && unambiguousCount >= 1) { addRun(i, j, 'NAME_OTHER', 'lexicon', 0.6); i = j - 1; }
+      const anchorCount = run.filter((x) => LEX.isAnchorName(x.core)).length;
+      const lexNonWord = run.filter((x) => inLex(x) && !LEX.isEnglishWord(x.core) && !LEX.isAmbiguous(x.core)).length;
+      // "Lee Silverman voice treatment", "Glasgow Coma scale": a name-like run followed by a program/eponym word is clinical
+      if (j < toks.length && toks[j].word && LEX.EPONYM_FOLLOW.has(toks[j].core.toLowerCase())) continue;
+      // a single token stands alone only if it is an anchor (curated clear, or Census/SSA-strong and not an English word);
+      // a rare surname or list-only first name needs company: another name token, or a cue (passes C, E2-E4)
+      if (run.length === 1) { if (!amb && LEX.isAnchorName(t.core)) { addRun(i, j, 'NAME_OTHER', 'lexicon', 0.7); } continue; }
+      // a run of two or more: needs an anchor, or two lexicon tokens that are not ordinary words ("Sabine Oduya" is handled by cues)
+      if (!amb && (anchorCount >= 1 || lexNonWord >= 2)) { addRun(i, j, 'NAME_OTHER', 'lexicon', 0.7); i = j - 1; continue; }
+      // ambiguous first token ("Rose", "Will"): the second token must be an anchor ("Rose Nakamura", not "Rose Garden")
+      if (amb && run.slice(1).some((x) => LEX.isAnchorName(x.core))) { addRun(i, j, 'NAME_OTHER', 'lexicon', 0.6); i = j - 1; }
+    }
+    // Pass E4: a capitalised pair right after a person cue ("Pt Sabine Oduya", "order for Barnaby Quist",
+    // "met w/ Fergus Mallory", "teach completed with Lucian Draper"). At least one token must be a known name
+    // of any tier, or neither may be an ordinary English word.
+    for (let i = 0; i < toks.length - 2; i++) {
+      const t = toks[i];
+      const cueWord = t.word && /^(pt|pts|patient|for|with|w|re|regarding|to|by|from|see|saw|seen|met|teach|call|called|notify|notified|order|orders|auth|about|contact|visit|visited|admit|admitted|discharge|discharged|transport|escort)$/i.test(t.core);
+      const cueSlash = t.raw === '/' && i >= 1 && /^w$/i.test(toks[i - 1].core);
+      if (!cueWord && !cueSlash) continue;
+      let j = i + 1;
+      if (j < toks.length && toks[j].raw === ':') j++;
+      if (j >= toks.length - 1 || used[j] || used[j + 1]) continue;
+      const a = toks[j], b = toks[j + 1];
+      const nameTok = (x) => x.word && x.cap && !x.initial && x.core.length >= 2 && !LEX.isClinical(x.core) && !LEX.ORG_SUFFIX_SET.has(x.core.toLowerCase()) && !LEX.ORG_NAMEWORD_SET.has(x.core.toLowerCase()) && !isRel(x) && !isHon(x) && !isCred(x) && !LEX.STATE_NAME_SET.has(x.core.toLowerCase()) && !LEX.CITY_SET.has(x.core.toLowerCase()) && !(allow && allow.has(x.core.toLowerCase())) && !/^(Dr|Mr|Mrs|Ms|Pt|Patient|Appt|Appointment|Order|Orders|Infusion|Chemo|Lab|Labs|Rx|Dx|Tx|Hx|Plan|Note|Notes|Ok|OK)$/i.test(x.core);
+      const eponymB = b.word && b.cap && LEX.isClinical(b.core) && LEX.isSurname(b.core) && !LEX.isAmbiguous(b.core) && !/['’]s?$/.test(b.raw) && !(j + 2 < toks.length && toks[j + 2].word && (LEX.EPONYM_FOLLOW.has(toks[j + 2].core.toLowerCase()) || LEX.isClinical(toks[j + 2].core)));
+      if (!nameTok(a) || !(nameTok(b) || eponymB) || a.nlAfter || endsSentence(a)) continue;
+      if (i > 0 && (isHon(toks[i - 1]) || toks[i - 1].cap)) continue; // mid-title ("Infusion For Cancer Care") is not a cue
+      const strongA = LEX.isAnchorName(a.core), strongB = LEX.isAnchorName(b.core);
+      if (wordNotName(a) || wordNotName(b)) continue; // "Pt Needs Wheelchair", "for Social Work"
+      if (!(strongA || strongB) && LEX.isEnglishWord(a.core) && LEX.isEnglishWord(b.core)) continue; // "for Will Power"-style word pairs
+      if (b.word && j + 2 < toks.length && toks[j + 2].word && LEX.EPONYM_FOLLOW.has(toks[j + 2].core.toLowerCase())) continue;
+      let e = j + 2;
+      if (e < toks.length && !used[e] && toks[e].cap && !toks[e].nlAfter && !endsSentence(b) && (inLex(toks[e]) || toks[e].initial) && !LEX.isClinical(toks[e].core) && !isCred(toks[e])) e++;
+      addRun(j, e, 'NAME_OTHER', 'cue:person', 0.65);
     }
     // Pass E2: ambiguous lexicon names with a contact-verb cue before and a contact context after
     for (let i = 1; i < toks.length - 1; i++) {
@@ -2403,6 +2453,12 @@
       if (words.length < 2 || words.length > 4 || words.some(bad) || words.some((w) => w.length < 2)) return '';
       const before = line.slice(0, m.index + m[1].indexOf(words[0]));
       if (LINE_PROVIDER_BEFORE.test(before)) return '';
+      // "Allergies: Penicillins, Iodinated Contrast  MRN 40019387": a field label before the words, or ordinary words that
+      // are not names of any tier, is a field value, not the patient
+      if (/\b(allerg(?:y|ies)|meds?|medications?|dx|diagnos[ie]s|problems?|code|regimen|orders?|labs?|results?|vitals?|history|hx|status|type|note|notes|comment|comments)\s*:?\s*$/i.test(before)) return '';
+      if (words.some((w) => LEX.isEnglishWord(w) && !LEX.isStrongName(w) && !LEX.isCuratedName(w))) return '';
+      const nameLike = words.some((w) => LEX.isFirstName(w) || LEX.isSurname(w));
+      if (!nameLike && words.some((w) => /(ated|ized|ised|ins|ine|ol|ide|ate|mab|nib|ium|ase|ex|oid)$/i.test(w))) return '';
       return words.join(' ');
     };
     const nameWordBad = (w) => !w || LINE_LABEL_WORD.test(w) || NOT_NAME.test(w) || LEX.isClinical(w) || !!monthIndex(w) || COMMON_CAP.has(w.toLowerCase()) || LEX.CREDENTIAL_SET.has(w.toLowerCase()) || LEX.HONORIFIC_SET.has(w.toLowerCase()) || LEX.ORG_SUFFIX_SET.has(w.toLowerCase()) || LEX.STATE_ABBR_SET.has(w);
@@ -2424,6 +2480,12 @@
         // a clinician ("per Bruno, Georgiana MD", "Dr. Lee, Karen") is not a new patient
         if (LINE_CRED_AFTER.test(after) || LINE_PROVIDER_BEFORE.test(before)) continue;
         if (LEX.STATE_ABBR_SET.has(first) || LEX.CREDENTIAL_SET.has(first.toLowerCase()) || LEX.HONORIFIC_SET.has(last.toLowerCase())) continue;
+        // "Allergies: Penicillins, Iodinated Contrast", "Dx: Lymphoma, Diffuse": a field label before the pair, or a
+        // given-name slot that looks like a drug/chemistry word and is not a name of any tier, is not a patient
+        if (/\b(allerg(?:y|ies)|meds?|medications?|dx|diagnos[ie]s|problems?|code|regimen|orders?|labs?|results?|vitals?|history|hx|status|type)\s*:?\s*$/i.test(before)) continue;
+        const drugLike = (w) => /(ated|ized|ised|ins|ine|ol|ide|ate|mab|nib|ium|ase|ex|oid)$/i.test(w) && !LEX.isFirstName(w) && !LEX.isSurname(w);
+        const knownSurname = (w) => w.split(/[-\s]+/).some((h) => LEX.isSurname(h));
+        if (drugLike(first) && !knownSurname(last)) continue; // "Penicillins, Iodinated" but not "Kowalczyk-Brennan, Ottoline"
         // a label or form word is not half of a name ("Health Plan, Member ID ...", "Van Minh, DOB 03041951")
         if ([last, first].some((w) => LINE_LABEL_WORD.test(w) || LEX.ORG_SUFFIX_SET.has(w.toLowerCase()) || /^(?:thanks|thank|thx|regards|sincerely|cheers|hi|hello|hey|dear|yes|no|ok|okay|please|sorry|also|then|today|tomorrow|yesterday|tonight)$/i.test(w))) continue;
         // "this is Bobby, Roberta Szymanski's grandson": the pair runs on into another name, so it is not "Last, First"
@@ -2951,7 +3013,7 @@
       const parsedAll = [...[...p.names].map(parseName), p.parsed].filter(Boolean);
       for (const pn of parsedAll) {
         [pn.first, pn.last, ...(pn.middle ? pn.middle.split(/\s+/) : [])].forEach((t) => { if (!t) return; const c = t.replace(/\.$/, ''); if (c.length >= 3 && !/\s/.test(c)) toks.add(c); c.split(/[-\s]+/).forEach((h) => { if (h.length >= 3) toks.add(h); }); });
-        if (pn.first) LEX.nicknamesOf(pn.first).forEach((n) => { if (n.length >= 3 && !LEX.isAmbiguous(n) && !LEX.isClinical(n)) toks.add(n); });
+        if (pn.first) LEX.nicknamesOf(pn.first).forEach((n) => { if (n.length >= 3 && !LEX.isCuratedAmbiguous(n) && !LEX.isClinical(n)) toks.add(n); });
         if (pn.first && pn.last) {
           nameTokens.push({ re: new RegExp(`(?<![\\w])${escapeRe(pn.first[0])}\\.\\s?${escapeRe(pn.last[0])}\\.(?![\\w])`), entity: p.key, exactCase: true, text: `${pn.first[0]}.${pn.last[0]}.` });
           const stem = pn.first.length >= 4 ? pn.first.slice(0, 3) : pn.first;

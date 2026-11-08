@@ -966,3 +966,33 @@ test('a person stated to be 90+ ("Mr. X is 95") is an age; lab and vital values 
   assert.ok(ages('she is 91 and frail').length, 'pronoun');
   for (const t of ['Plt is 95 today', 'HR is 95', 'BP is 95/60', 'Hgb is 9.5', 'Score is 92']) assert.deepEqual(ages(t), [], t);
 });
+
+test('large lexicon: strong names stand alone, weak names need company or a cue, word-names need a cue', () => {
+  const L = require('../src/lexicon.js');
+  assert.ok(L.isAnchorName('Halvorsen') && L.isAnchorName('Penrose') && L.isAnchorName('Smith'), 'strong surnames');
+  assert.ok(L.isStrongName('Prudence') && L.isStrongName('Clifford'), 'SSA first names are strong');
+  assert.ok(!L.isAnchorName('Garden') && !L.isAnchorName('Lodge') && !L.isAnchorName('Fine'), 'English-word surnames never anchor');
+  assert.ok(L.isWeakName('Nyambura') === false && L.isWeakName('Oduya') === false, 'unknown names are neither tier');
+  const names = (t) => D.lexiconSpans(t, cfg()).filter((s) => D.COARSE(s.type) === 'NAME').map((s) => s.text);
+  assert.deepEqual(names('Verified order for Prudence Halvorsen, MRN 80345521: bortezomib 1.3 mg/m2.'), ['Prudence Halvorsen']);
+  assert.deepEqual(names('CBC drawn for Archibald Penrose. Plt 142.'), ['Archibald Penrose']);
+  assert.deepEqual(names('Rose Garden entrance; No Hope Lodge needed; Lee Silverman voice tx referral; Glasgow Coma scale 15'), []);
+  assert.deepEqual(names('Crystal clear instructions given. Port flushed. Will call back.'), []);
+});
+test('person cue + capitalised pair catches out-of-lexicon names; plain-word pairs stay', () => {
+  const names = (t) => D.lexiconSpans(t, cfg()).filter((s) => D.COARSE(s.type) === 'NAME').map((s) => s.text);
+  assert.deepEqual(names('Financial counselor met w/ Sabine Oduya. BCBS deductible met.'), ['Sabine Oduya']);
+  assert.deepEqual(names('Pt Clifford Nyambura no show 10/03.'), ['Clifford Nyambura']);
+  assert.deepEqual(names('Chemo teach completed with pt Fergus Mallory and wife Chilcombe.').sort(), ['Chilcombe', 'Fergus Mallory']);
+  for (const t of ['Pt Needs Wheelchair today', 'referred to Social Work, Chaplain consulted', 'for Infusion Suite B', 'Patient: Feeling Better']) assert.deepEqual(names(t), [], t);
+});
+test('lower-case names after a relation word; clinical verbs are not names', () => {
+  const names = (t) => D.lexiconSpans(t, cfg()).filter((s) => D.COARSE(s.type) === 'NAME').map((s) => s.text);
+  assert.deepEqual(names('Wife ngozi called 555-0136 re: ride. Lives with daughter mai, who manages meds.'), ['ngozi', 'mai']);
+  assert.deepEqual(names('Daughter states mother vomited x3 since yesterday; son will drive; WIFE AWARE'), []);
+});
+test('#-prefixed identifiers and received-dates', () => {
+  const r = rules("Desiree (#71120045) re: missed Benlysta. Dental clearance rec'd 2/1. Prior auth #PA-88120.");
+  assert.ok(r.some((x) => /=71120045$/.test(x)), r.join(','));
+  assert.ok(r.includes('DATE=2/1'), r.join(','));
+});
