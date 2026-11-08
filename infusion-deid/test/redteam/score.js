@@ -27,17 +27,26 @@ const load = (d) => fs.existsSync(dir(d)) ? fs.readdirSync(dir(d)).filter((f) =>
 
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function lev(a, b) { if (a === b) return 0; let p = Array.from({ length: b.length + 1 }, (_, i) => i); for (let i = 1; i <= a.length; i++) { const c = [i]; for (let j = 1; j <= b.length; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; } return p[b.length]; }
-function present(out, needle) {
+function present(out, needle, inputText) {
   const o = out.toLowerCase(), n = String(needle).toLowerCase().trim();
   if (!n) return false;
   const digits = n.replace(/\D/g, '');
   if (/^[\d\s\-().+]+$/.test(n) && digits.length >= 6) return out.replace(/\D/g, '').includes(digits); // numbers: ignore formatting
-  if (new RegExp(`(?<![a-z0-9])${esc(n)}(?![a-z0-9])`, 'i').test(o)) return true;
-  if (/^[a-z'’\-]{5,}$/.test(n)) { const toks = o.match(/[a-z'’\-]{4,}/g) || []; return toks.some((t) => Math.abs(t.length - n.length) <= 1 && lev(t, n) <= 1); }
+  // exact match; an age written as "... 90" followed by "+" is the Safe Harbor 90-or-older group, not a leak
+  const tail = /(?:9\d|1[01]\d)$/.test(n) ? '(?![a-z0-9+])' : '(?![a-z0-9])';
+  if (new RegExp(`(?<![a-z0-9])${esc(n)}${tail}`, 'i').test(o)) return true;
+  // one-edit match catches OCR misreads of a name; a word that is already in the case's own input (e.g. "grade"
+  // near "Grace") is not a misread and does not count
+  if (/^[a-z'’\-]{5,}$/.test(n)) {
+    const inputToks = new Set((String(inputText || '').toLowerCase().match(/[a-z'’\-]{4,}/g) || []));
+    const toks = o.match(/[a-z'’\-]{4,}/g) || [];
+    return toks.some((t) => !inputToks.has(t) && Math.abs(t.length - n.length) <= 1 && lev(t, n) <= 1);
+  }
   return false;
 }
+const inputOf = (c) => c.text || (c.rows ? JSON.stringify(c.rows) : '') || (c.htmls ? c.htmls.join(' ').replace(/<[^>]+>/g, ' ') : '');
 function judge(c, out) {
-  const leaks = (c.phi || []).filter((p) => present(out, p));
+  const leaks = (c.phi || []).filter((p) => present(out, p, inputOf(c)));
   const lost = (c.keep || []).filter((k) => !out.toLowerCase().includes(String(k).toLowerCase()));
   return { leaks, lost };
 }

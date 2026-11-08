@@ -1,204 +1,969 @@
 [
-  {
-    "id": "tbl-daily-chair-schedule",
-    "kind": "table",
-    "headers": ["Appt Date", "Appt Time", "Pt Name", "MR#", "Birth Date", "Age", "Chair", "Regimen", "Appt Notes"],
-    "rows": [
-      ["11/12/2026", "08:00", "Quillfeather, Odessa M", "MR40021873", "03/14/1958", "68", "Chair 4", "FOLFOX", "C3D1, hold if ANC < 1500"],
-      ["11/12/2026", "08:30", "Brannigan-Toll, Weston", "MR40021901", "07/22/1949", "77", "Chair 6", "R-CHOP", "Premed diphenhydramine 25 mg IV"],
-      ["11/12/2026", "09:15", "Okonkwo-Lisle, Pernell", "MR40022015", "01/05/1935", "91", "Chair 2", "Zoledronic acid 4 mg", "Check creatinine prior"],
-      ["11/12/2026", "10:00", "Szymborek, Halina", "MR40022377", "09/30/1971", "55", "Chair 1", "Pembrolizumab 200 mg", "TSH with labs q6wk"]
-    ],
-    "phi": ["11/12/2026", "Quillfeather, Odessa M", "MR40021873", "03/14/1958", "Brannigan-Toll, Weston", "MR40021901", "07/22/1949", "Okonkwo-Lisle, Pernell", "MR40022015", "01/05/1935", "91", "Szymborek, Halina", "MR40022377", "09/30/1971"],
-    "keep": ["FOLFOX", "hold if ANC < 1500", "Premed diphenhydramine 25 mg IV", "Pembrolizumab 200 mg"],
-    "note": "Baseline multi-row schedule with Pt Name / MR# / Birth Date headers and an age over 89 (91) in the Age column."
-  },
-  {
-    "id": "tbl-same-patient-name-variants",
-    "kind": "table",
-    "headers": ["Appt Date", "Patient", "Med Rec #", "Visit Type", "Scheduling Comments"],
-    "rows": [
-      ["2026-11-02", "Delacroix-Ames, Thaddeus", "7712048", "Infusion 4 hr", "Gemcitabine 1000 mg/m2 D1"],
-      ["2026-11-09", "DELACROIX-AMES, THADDEUS R", "7712048", "Infusion 4 hr", "D8, pt goes by Tad Delacroix-Ames"],
-      ["2026-11-16", "Delacroix Ames, T.", "0007712048", "Lab only", "Reg merged chart; CBC w/ diff"],
-      ["2026-11-23", "Thaddeus Delacroix-Ames", "7712048", "Infusion 4 hr", "Thaddeus requests afternoon slot; nab-paclitaxel 125 mg/m2"]
-    ],
-    "phi": ["2026-11-02", "Delacroix-Ames, Thaddeus", "7712048", "2026-11-09", "DELACROIX-AMES, THADDEUS R", "Tad Delacroix-Ames", "2026-11-16", "Delacroix Ames, T.", "0007712048", "2026-11-23", "Thaddeus Delacroix-Ames", "Thaddeus"],
-    "keep": ["Gemcitabine 1000 mg/m2 D1", "CBC w/ diff", "nab-paclitaxel 125 mg/m2"],
-    "note": "One patient on four rows written four ways (case, hyphen dropped, initial, First Last, nickname), MRN with and without leading zeros, first name alone in a comment."
-  },
-  {
-    "id": "tbl-other-patient-in-comment",
-    "kind": "table",
-    "headers": ["Date", "Name (Last, First)", "MRN", "Regimen", "Appt Notes"],
-    "rows": [
-      ["Nov 4, 2026", "Harrowgate, Philippa", "MRN 5530914", "Carboplatin AUC 5", "Swap chair w/ Mr. Vantongeren (MRN 5531288) per charge RN"],
-      ["Nov 4, 2026", "Vantongeren, Ezekiel", "MRN 5531288", "Daratumumab SC 1800 mg", "Arrived with Philippa Harrowgate's paperwork by mistake - returned"],
-      ["Nov 4, 2026", "Ilunga, Corisande", "MRN 5532006", "Iron sucrose 200 mg", "Same ride as Harrowgate; leave together"]
-    ],
-    "phi": ["Nov 4, 2026", "Harrowgate, Philippa", "5530914", "Vantongeren", "5531288", "Vantongeren, Ezekiel", "Philippa Harrowgate", "Ilunga, Corisande", "5532006", "Harrowgate"],
-    "keep": ["Carboplatin AUC 5", "Daratumumab SC 1800 mg", "Iron sucrose 200 mg"],
-    "note": "Patients referenced inside OTHER patients' comment cells, by surname with title, possessive full name, and bare surname."
-  },
-  {
-    "id": "tbl-relative-shares-surname",
-    "kind": "table",
-    "headers": ["Appt Date", "Pt Name", "MRN", "DOB", "Emergency Contact", "Appt Notes"],
-    "rows": [
-      ["11/05/26", "Fenwick, Albrecht", "300118842", "02/11/1944", "Fenwick, Lorna (daughter) 555-0143", "Daughter Lorna Fenwick to call back re: ride; rituximab 375 mg/m2"],
-      ["11/05/26", "Pallister, Grete", "300120017", "06/19/1962", "Pallister, Henrik (spouse) (555) 010-0188", "Henrik waits in lobby. Ondansetron 8 mg PO premed"],
-      ["11/06/26", "Fenwick, Albrecht", "300118842", "02/11/1944", "Fenwick, Lorna (daughter) 555-0143", "Mrs. Fenwick (daughter) brought med list"]
-    ],
-    "phi": ["11/05/26", "Fenwick, Albrecht", "300118842", "02/11/1944", "Fenwick, Lorna", "555-0143", "Lorna Fenwick", "Pallister, Grete", "300120017", "06/19/1962", "Pallister, Henrik", "(555) 010-0188", "Henrik", "11/06/26", "Mrs. Fenwick"],
-    "keep": ["rituximab 375 mg/m2", "Ondansetron 8 mg PO premed", "daughter"],
-    "note": "Emergency contacts sharing the patient's surname, given by first name only in comments, and as Mrs. + surname."
-  },
-  {
-    "id": "tbl-generic-headers-hide-identifiers",
-    "kind": "table",
-    "headers": ["Patient", "ID", "Contact", "Notes", "Notes 2", "Ref"],
-    "rows": [
-      ["Marchetti-Oduya, Benedetta", "E4471902", "555-0119", "Cetuximab 250 mg/m2 weekly", "2208 Thornapple Ln Apt 3B", "bmarchetti.oduya@example.com"],
-      ["Rasmussen, Torvald", "E4472210", "555.0162", "Check Mg before infusion", "17 Kettleby Rd", "torvald.r1960@example.net"],
-      ["Achterberg, Wilhelmina", "E4473355", "c 555 0131", "Bevacizumab 15 mg/kg q3w", "PO Box 4482", "https://mychart.example.org/pt/achterberg-w"]
-    ],
-    "phi": ["Marchetti-Oduya, Benedetta", "E4471902", "555-0119", "2208 Thornapple Ln Apt 3B", "bmarchetti.oduya@example.com", "Rasmussen, Torvald", "E4472210", "555.0162", "17 Kettleby Rd", "torvald.r1960@example.net", "Achterberg, Wilhelmina", "E4473355", "555 0131", "PO Box 4482", "https://mychart.example.org/pt/achterberg-w"],
-    "keep": ["Cetuximab 250 mg/m2 weekly", "Check Mg before infusion", "Bevacizumab 15 mg/kg q3w"],
-    "note": "Headers that do not announce PHI: Contact holds phones in varied punctuation, Notes 2 holds street addresses/PO box, Ref holds emails and a personal URL, ID holds MRN."
-  },
-  {
-    "id": "tbl-csn-har-guarantor",
-    "kind": "table",
-    "headers": ["CSN", "HAR", "Patient", "Guarantor", "Guarantor Phone", "Payor", "Member ID", "Pharmacy Comments"],
-    "rows": [
-      ["880014773201", "41002299", "Ostrowicz, Danuta", "Ostrowicz, Feliks", "555-0172", "Medicare A/B", "1EG4-TE5-MK73", "Pegfilgrastim 6 mg on-body injector"],
-      ["880014773488", "41002317", "Lindqvist, Saga", "SELF", "555-0125", "Aetna PPO", "W281447390", "Prior auth #PA-77310 approved thru 1/31/27"],
-      ["880014773560", "41002342", "Mbeki-Rowe, Tobias", "Mbeki-Rowe, Ayanda", "555-0109", "BCBS", "XKP902114458", "Denosumab 120 mg SC, calcium/vit D"]
-    ],
-    "phi": ["880014773201", "41002299", "Ostrowicz, Danuta", "Ostrowicz, Feliks", "555-0172", "1EG4-TE5-MK73", "880014773488", "41002317", "Lindqvist, Saga", "555-0125", "W281447390", "880014773560", "41002342", "Mbeki-Rowe, Tobias", "Mbeki-Rowe, Ayanda", "555-0109", "XKP902114458", "PA-77310"],
-    "keep": ["Pegfilgrastim 6 mg on-body injector", "Denosumab 120 mg SC", "Medicare A/B"],
-    "note": "Billing-style export: CSN and HAR encounter/account numbers, guarantor relatives, insurance member IDs (incl. MBI format), prior-auth number."
-  },
-  {
-    "id": "tbl-date-format-zoo",
-    "kind": "table",
-    "headers": ["Appt", "Patient Name", "MRN", "DOB", "Cycle", "Comments"],
-    "rows": [
-      ["3-Nov-2026", "Garroway, Imelda", "61204488", "4/9/1952", "C2D1", "Next: 11/24"],
-      ["Tue 11/03", "Pemberton-Shah, Arjun", "61204519", "19560812", "C1D8", "Seen 10/27/2026 in clinic"],
-      ["2026.11.03", "Kowalczuk, Renia", "61204602", "12-Dec-1966", "C4D1", "Last dose 13 Oct 2026, delayed 1 wk for plt 62"],
-      ["November 3rd, 2026", "Yarbrough, Delphine", "61204677", "Feb 29 1960", "C6D1", "Restage CT after this cycle"]
-    ],
-    "phi": ["3-Nov-2026", "Garroway, Imelda", "61204488", "4/9/1952", "11/24", "Tue 11/03", "Pemberton-Shah, Arjun", "61204519", "19560812", "10/27/2026", "2026.11.03", "Kowalczuk, Renia", "61204602", "12-Dec-1966", "13 Oct 2026", "November 3rd, 2026", "Yarbrough, Delphine", "61204677", "Feb 29 1960"],
-    "keep": ["C2D1", "C1D8", "plt 62", "Restage CT after this cycle"],
-    "note": "Appointment, DOB and visit dates in many formats (d-Mon-yyyy, weekday mm/dd, yyyymmdd, dotted ISO, ordinal, month-day without year) beside cycle codes that must survive."
-  },
-  {
-    "id": "tbl-referring-provider-outside",
-    "kind": "table",
-    "headers": ["Patient", "MR#", "Referring Provider", "Ref Fax", "Pharmacy Comments"],
-    "rows": [
-      ["Abernathy, Clementine", "MR880331", "Kestrel Moonsworth, MD", "555-0177", "Calvert formula, GFR capped at 125 mL/min"],
-      ["Thibodeaux, Lucien", "MR880412", "Dr. Ophelia Grantham-Reyes (Lakemoor Oncology)", "(555) 010-0154", "Dr. Grantham-Reyes wants dose reduced 20%; docetaxel 60 mg/m2"],
-      ["Nakashima-Vale, Emi", "MR880455", "Prudence Okafor-Lind, NP", "555-0190", "Okafor-Lind NP called 11/1 re: rash, hold cetuximab"]
-    ],
-    "phi": ["Abernathy, Clementine", "MR880331", "Kestrel Moonsworth", "555-0177", "Thibodeaux, Lucien", "MR880412", "Ophelia Grantham-Reyes", "(555) 010-0154", "Grantham-Reyes", "Nakashima-Vale, Emi", "MR880455", "Prudence Okafor-Lind", "555-0190", "Okafor-Lind", "11/1"],
-    "keep": ["Calvert formula", "GFR capped at 125 mL/min", "docetaxel 60 mg/m2", "hold cetuximab"],
-    "note": "Outside referring providers in a column and again by surname in pharmacy comments, fax numbers, eponymous Calvert formula must survive."
-  },
-  {
-    "id": "tbl-visitors-and-transport",
-    "kind": "table",
-    "headers": ["Appt Date", "Pt", "MRN", "Home Phone", "Transport", "Scheduling Comments"],
-    "rows": [
-      ["11/10/2026", "Crowhurst, Ambrose", "2049915", "555-0137", "Son-in-law Beauregard Nimmons", "Parks in garage, plate 7KQM552; long infusion - obinutuzumab 1000 mg"],
-      ["11/10/2026", "Vellacott, Imogen", "2050182", "555-0164", "Medicaid cab", "Neighbor Rosalind Tuckerby may pick up; needs wheelchair"],
-      ["11/10/2026", "Esterhazy, Bartholomew", "2050240", "555-0115", "Self", "Visitor: Ingrid Esterhazy (sister). Bortezomib 1.3 mg/m2 SC"]
-    ],
-    "phi": ["11/10/2026", "Crowhurst, Ambrose", "2049915", "555-0137", "Beauregard Nimmons", "7KQM552", "Vellacott, Imogen", "2050182", "555-0164", "Rosalind Tuckerby", "Esterhazy, Bartholomew", "2050240", "555-0115", "Ingrid Esterhazy"],
-    "keep": ["obinutuzumab 1000 mg", "needs wheelchair", "Bortezomib 1.3 mg/m2 SC"],
-    "note": "Visitor, neighbor and family names in transport/comment columns, a licence plate, Home Phone column."
-  },
-  {
-    "id": "tbl-address-city-zip-columns",
-    "kind": "table",
-    "headers": ["Name", "MRN", "Address", "City", "ST", "ZIP", "Regimen"],
-    "rows": [
-      ["Quintanilla, Rosario", "M-000483192", "4417 Wrenfield Ct", "Harlow Springs", "OH", "43999", "FOLFIRINOX"],
-      ["Brightwater, Silas", "M-000483240", "88 Old Mill Pike, Unit 12", "Cedarbrook Falls", "OH", "43998-0112", "Nivolumab 480 mg q4w"],
-      ["Duchesne, Margaux", "M-000483301", "RR 2 Box 71", "Pickett Hollow", "OH", "43997", "AC-T"]
-    ],
-    "phi": ["Quintanilla, Rosario", "M-000483192", "4417 Wrenfield Ct", "Harlow Springs", "43999", "Brightwater, Silas", "M-000483240", "88 Old Mill Pike, Unit 12", "Cedarbrook Falls", "43998-0112", "Duchesne, Margaux", "M-000483301", "RR 2 Box 71", "Pickett Hollow", "43997"],
-    "keep": ["FOLFIRINOX", "Nivolumab 480 mg q4w", "AC-T"],
-    "note": "Address split across Address/City/ZIP columns with invented towns, ZIP+4 and rural-route forms."
-  },
-  {
-    "id": "tbl-very-old-and-deceased",
-    "kind": "table",
-    "headers": ["Patient", "MRN", "Age", "Status", "Comments"],
-    "rows": [
-      ["Fairweather, Eudora", "90021455", "93", "Active", "93 y/o, IVIG 0.4 g/kg x5 days"],
-      ["Lindgren-Abbot, Cyrus", "90021470", "101 yrs", "Active", "Centenarian - slow rate, epoetin alfa 40,000 units"],
-      ["Mossberg, Theodora", "90021502", "84", "Deceased", "Expired 10/30/2026 at home; cancel remaining azacitidine 75 mg/m2"],
-      ["Penhaligon, Rufus", "90021519", "90", "Active", "Age 90, B12 1000 mcg IM monthly"]
-    ],
-    "phi": ["Fairweather, Eudora", "90021455", "93", "Lindgren-Abbot, Cyrus", "90021470", "101 yrs", "Mossberg, Theodora", "90021502", "10/30/2026", "Penhaligon, Rufus", "90021519"],
-    "keep": ["IVIG 0.4 g/kg x5 days", "epoetin alfa 40,000 units", "azacitidine 75 mg/m2", "B12 1000 mcg IM monthly", "Age 90+"],
-    "note": "Ages over 89 in Age column and repeated in comments (93 y/o, 101 yrs, Age 90), date of death; age 84 is fine to keep."
-  },
-  {
-    "id": "tbl-names-that-are-words",
-    "kind": "table",
-    "headers": ["Name (Last, First)", "MRN", "DOB", "Drug", "Appt Notes"],
-    "rows": [
-      ["Baker, Will", "11873002", "08/08/1970", "Ondansetron 8 mg", "will start after hydration"],
-      ["Hope, Grant", "11873019", "03/03/1958", "Trastuzumab 6 mg/kg", "Echo due before next dose"],
-      ["Rose, Lily", "11873044", "11/21/1981", "Iron dextran test dose", "Watch for anaphylaxis 1 hr"],
-      ["Mann, Iris", "11873050", "05/16/1966", "Leucovorin 400 mg/m2", "Rose and Mann both in pod B"]
-    ],
-    "phi": ["Baker, Will", "11873002", "08/08/1970", "Hope, Grant", "11873019", "03/03/1958", "Rose, Lily", "11873044", "11/21/1981", "Mann, Iris", "11873050", "05/16/1966", "Rose and Mann"],
-    "keep": ["Ondansetron 8 mg", "will start after hydration", "Trastuzumab 6 mg/kg", "Watch for anaphylaxis 1 hr"],
-    "note": "Patient names that are common English words (Will, Hope, Grant, Rose, Lily, Iris, Mann); lowercase 'will' in instructions must survive while surnames referenced in another row's comment are removed."
-  },
-  {
-    "id": "tbl-eponym-diagnoses-with-names",
-    "kind": "table",
-    "headers": ["Appt Date", "Patient", "MR#", "Dx", "Regimen", "Attending Notes"],
-    "rows": [
-      ["11/13/2026", "Strindberg, Leopold", "4410982", "Hodgkin lymphoma", "ABVD", "Bleomycin PFTs ok"],
-      ["11/13/2026", "Corvallis, Annunziata", "4411037", "Waldenstrom macroglobulinemia", "BR", "Bendamustine 90 mg/m2 D1-2"],
-      ["11/13/2026", "Ashdown-Price, Marcus", "4411120", "Crohn's disease", "Infliximab 5 mg/kg", "Seen by Dr. Hollis Verrinder at Northgate GI 10/29/2026"],
-      ["11/13/2026", "Ferreira-Kahn, Lucia", "4411166", "Non-Hodgkin lymphoma, DLBCL", "Pola-R-CHP", "Neuropathy grade 1"]
-    ],
-    "phi": ["11/13/2026", "Strindberg, Leopold", "4410982", "Corvallis, Annunziata", "4411037", "Ashdown-Price, Marcus", "4411120", "Hollis Verrinder", "10/29/2026", "Ferreira-Kahn, Lucia", "4411166"],
-    "keep": ["Hodgkin lymphoma", "Waldenstrom macroglobulinemia", "Crohn's disease", "Pola-R-CHP"],
-    "note": "Eponymous diagnoses (Hodgkin, Waldenstrom, Crohn) and regimen codes beside real patient names and an outside GI provider."
-  },
-  {
-    "id": "tbl-device-serials-ssn-license",
-    "kind": "table",
-    "headers": ["Pt Name", "MRN", "SSN", "Device", "Device Serial", "Comments"],
-    "rows": [
-      ["Galloway-Penn, Ottoline", "73300418", "900-55-0123", "Port-a-cath", "SN PWR8841-22ZQ", "Flush with heparin 500 units after access"],
-      ["Rutherford, Casimir", "73300466", "900-55-0147", "CADD pump", "CADD-7X44-0912", "Home 5-FU 2400 mg/m2 over 46 hr; pump returned 11/7/26"],
-      ["Oyelaran, Femi", "73300501", "xxx-xx-0168", "PICC", "Lot BRD-2219-K", "Driver lic OH TQ448812 on file for sharps disposal pickup"]
-    ],
-    "phi": ["Galloway-Penn, Ottoline", "73300418", "900-55-0123", "PWR8841-22ZQ", "Rutherford, Casimir", "73300466", "900-55-0147", "CADD-7X44-0912", "11/7/26", "Oyelaran, Femi", "73300501", "TQ448812"],
-    "keep": ["heparin 500 units", "5-FU 2400 mg/m2 over 46 hr", "Port-a-cath"],
-    "note": "SSN column, device serial numbers for port and ambulatory pump, driver licence number in a comment; masked SSN last-4 and lot number left out of phi."
-  },
-  {
-    "id": "tbl-pharmacy-queue-cross-refs",
-    "kind": "table",
-    "headers": ["Order Date", "Patient", "Med Rec #", "Drug", "Dose", "Pharmacy Comments"],
-    "rows": [
-      ["11/08/2026 07:42", "Castellane, Wendeline", "8839201", "Oxaliplatin", "85 mg/m2", "Pt prefers email: wcastellane77@example.net for schedule"],
-      ["11/08/2026 07:55", "Vionnet, Rodrigue", "8839255", "Cyclophosphamide", "600 mg/m2", "Mix with Castellane W.'s bag - same diluent D5W"],
-      ["11/08/2026 08:10", "Haverbrook, Juniper", "8839318", "Pemetrexed", "500 mg/m2", "Folic acid/B12 confirmed; per Vionnet R. order set copied incorrectly - fixed"],
-      ["11/08/2026 08:21", "Castellane, Wendeline", "8839201", "Leucovorin", "400 mg/m2", "Husband Augustin Castellane called 555-0158 re: copay"]
-    ],
-    "phi": ["11/08/2026 07:42", "Castellane, Wendeline", "8839201", "wcastellane77@example.net", "11/08/2026 07:55", "Vionnet, Rodrigue", "8839255", "Castellane W.", "11/08/2026 08:10", "Haverbrook, Juniper", "8839318", "Vionnet R.", "11/08/2026 08:21", "Augustin Castellane", "555-0158"],
-    "keep": ["Oxaliplatin", "same diluent D5W", "Folic acid/B12 confirmed", "Pemetrexed"],
-    "note": "Pharmacy verification queue: datetime stamps, email, other patients referenced as 'Surname F.' in comments, husband sharing surname with phone."
-  }
+ {
+  "id": "tbl-daily-chair-schedule",
+  "kind": "table",
+  "headers": [
+   "Appt Date",
+   "Appt Time",
+   "Pt Name",
+   "MR#",
+   "Birth Date",
+   "Age",
+   "Chair",
+   "Regimen",
+   "Appt Notes"
+  ],
+  "rows": [
+   [
+    "11/12/2026",
+    "08:00",
+    "Quillfeather, Odessa M",
+    "MR40021873",
+    "03/14/1958",
+    "68",
+    "Chair 4",
+    "FOLFOX",
+    "C3D1, hold if ANC < 1500"
+   ],
+   [
+    "11/12/2026",
+    "08:30",
+    "Brannigan-Toll, Weston",
+    "MR40021901",
+    "07/22/1949",
+    "77",
+    "Chair 6",
+    "R-CHOP",
+    "Premed diphenhydramine 25 mg IV"
+   ],
+   [
+    "11/12/2026",
+    "09:15",
+    "Okonkwo-Lisle, Pernell",
+    "MR40022015",
+    "01/05/1935",
+    "91",
+    "Chair 2",
+    "Zoledronic acid 4 mg",
+    "Check creatinine prior"
+   ],
+   [
+    "11/12/2026",
+    "10:00",
+    "Szymborek, Halina",
+    "MR40022377",
+    "09/30/1971",
+    "55",
+    "Chair 1",
+    "Pembrolizumab 200 mg",
+    "TSH with labs q6wk"
+   ]
+  ],
+  "phi": [
+   "11/12/2026",
+   "Quillfeather, Odessa M",
+   "MR40021873",
+   "03/14/1958",
+   "Brannigan-Toll, Weston",
+   "MR40021901",
+   "07/22/1949",
+   "Okonkwo-Lisle, Pernell",
+   "MR40022015",
+   "01/05/1935",
+   "91",
+   "Szymborek, Halina",
+   "MR40022377",
+   "09/30/1971"
+  ],
+  "keep": [
+   "FOLFOX",
+   "hold if ANC < 1500",
+   "Premed diphenhydramine 25 mg IV",
+   "Pembrolizumab 200 mg"
+  ],
+  "note": "Baseline multi-row schedule with Pt Name / MR# / Birth Date headers and an age over 89 (91) in the Age column."
+ },
+ {
+  "id": "tbl-same-patient-name-variants",
+  "kind": "table",
+  "headers": [
+   "Appt Date",
+   "Patient",
+   "Med Rec #",
+   "Visit Type",
+   "Scheduling Comments"
+  ],
+  "rows": [
+   [
+    "2026-11-02",
+    "Delacroix-Ames, Thaddeus",
+    "7712048",
+    "Infusion 4 hr",
+    "Gemcitabine 1000 mg/m2 D1"
+   ],
+   [
+    "2026-11-09",
+    "DELACROIX-AMES, THADDEUS R",
+    "7712048",
+    "Infusion 4 hr",
+    "D8, pt goes by Tad Delacroix-Ames"
+   ],
+   [
+    "2026-11-16",
+    "Delacroix Ames, T.",
+    "0007712048",
+    "Lab only",
+    "Reg merged chart; CBC w/ diff"
+   ],
+   [
+    "2026-11-23",
+    "Thaddeus Delacroix-Ames",
+    "7712048",
+    "Infusion 4 hr",
+    "Thaddeus requests afternoon slot; nab-paclitaxel 125 mg/m2"
+   ]
+  ],
+  "phi": [
+   "2026-11-02",
+   "Delacroix-Ames, Thaddeus",
+   "7712048",
+   "2026-11-09",
+   "DELACROIX-AMES, THADDEUS R",
+   "Tad Delacroix-Ames",
+   "2026-11-16",
+   "Delacroix Ames, T.",
+   "0007712048",
+   "2026-11-23",
+   "Thaddeus Delacroix-Ames",
+   "Thaddeus"
+  ],
+  "keep": [
+   "Gemcitabine 1000 mg/m2 D1",
+   "CBC w/ diff",
+   "nab-paclitaxel 125 mg/m2"
+  ],
+  "note": "One patient on four rows written four ways (case, hyphen dropped, initial, First Last, nickname), MRN with and without leading zeros, first name alone in a comment."
+ },
+ {
+  "id": "tbl-other-patient-in-comment",
+  "kind": "table",
+  "headers": [
+   "Date",
+   "Name (Last, First)",
+   "MRN",
+   "Regimen",
+   "Appt Notes"
+  ],
+  "rows": [
+   [
+    "Nov 4, 2026",
+    "Harrowgate, Philippa",
+    "MRN 5530914",
+    "Carboplatin AUC 5",
+    "Swap chair w/ Mr. Vantongeren (MRN 5531288) per charge RN"
+   ],
+   [
+    "Nov 4, 2026",
+    "Vantongeren, Ezekiel",
+    "MRN 5531288",
+    "Daratumumab SC 1800 mg",
+    "Arrived with Philippa Harrowgate's paperwork by mistake - returned"
+   ],
+   [
+    "Nov 4, 2026",
+    "Ilunga, Corisande",
+    "MRN 5532006",
+    "Iron sucrose 200 mg",
+    "Same ride as Harrowgate; leave together"
+   ]
+  ],
+  "phi": [
+   "Nov 4, 2026",
+   "Harrowgate, Philippa",
+   "5530914",
+   "Vantongeren",
+   "5531288",
+   "Vantongeren, Ezekiel",
+   "Philippa Harrowgate",
+   "Ilunga, Corisande",
+   "5532006",
+   "Harrowgate"
+  ],
+  "keep": [
+   "Carboplatin AUC 5",
+   "Daratumumab SC 1800 mg",
+   "Iron sucrose 200 mg"
+  ],
+  "note": "Patients referenced inside OTHER patients' comment cells, by surname with title, possessive full name, and bare surname."
+ },
+ {
+  "id": "tbl-relative-shares-surname",
+  "kind": "table",
+  "headers": [
+   "Appt Date",
+   "Pt Name",
+   "MRN",
+   "DOB",
+   "Emergency Contact",
+   "Appt Notes"
+  ],
+  "rows": [
+   [
+    "11/05/26",
+    "Fenwick, Albrecht",
+    "300118842",
+    "02/11/1944",
+    "Fenwick, Lorna (daughter) 555-0143",
+    "Daughter Lorna Fenwick to call back re: ride; rituximab 375 mg/m2"
+   ],
+   [
+    "11/05/26",
+    "Pallister, Grete",
+    "300120017",
+    "06/19/1962",
+    "Pallister, Henrik (spouse) (555) 010-0188",
+    "Henrik waits in lobby. Ondansetron 8 mg PO premed"
+   ],
+   [
+    "11/06/26",
+    "Fenwick, Albrecht",
+    "300118842",
+    "02/11/1944",
+    "Fenwick, Lorna (daughter) 555-0143",
+    "Mrs. Fenwick (daughter) brought med list"
+   ]
+  ],
+  "phi": [
+   "11/05/26",
+   "Fenwick, Albrecht",
+   "300118842",
+   "02/11/1944",
+   "Fenwick, Lorna",
+   "555-0143",
+   "Lorna Fenwick",
+   "Pallister, Grete",
+   "300120017",
+   "06/19/1962",
+   "Pallister, Henrik",
+   "(555) 010-0188",
+   "Henrik",
+   "11/06/26",
+   "Mrs. Fenwick"
+  ],
+  "keep": [
+   "rituximab 375 mg/m2",
+   "Ondansetron 8 mg PO premed",
+   "daughter"
+  ],
+  "note": "Emergency contacts sharing the patient's surname, given by first name only in comments, and as Mrs. + surname."
+ },
+ {
+  "id": "tbl-generic-headers-hide-identifiers",
+  "kind": "table",
+  "headers": [
+   "Patient",
+   "ID",
+   "Contact",
+   "Notes",
+   "Notes 2",
+   "Ref"
+  ],
+  "rows": [
+   [
+    "Marchetti-Oduya, Benedetta",
+    "E4471902",
+    "555-0119",
+    "Cetuximab 250 mg/m2 weekly",
+    "2208 Thornapple Ln Apt 3B",
+    "bmarchetti.oduya@example.com"
+   ],
+   [
+    "Rasmussen, Torvald",
+    "E4472210",
+    "555.0162",
+    "Check Mg before infusion",
+    "17 Kettleby Rd",
+    "torvald.r1960@example.net"
+   ],
+   [
+    "Achterberg, Wilhelmina",
+    "E4473355",
+    "c 555 0131",
+    "Bevacizumab 15 mg/kg q3w",
+    "PO Box 4482",
+    "https://mychart.example.org/pt/achterberg-w"
+   ]
+  ],
+  "phi": [
+   "Marchetti-Oduya, Benedetta",
+   "E4471902",
+   "555-0119",
+   "2208 Thornapple Ln Apt 3B",
+   "bmarchetti.oduya@example.com",
+   "Rasmussen, Torvald",
+   "E4472210",
+   "555.0162",
+   "17 Kettleby Rd",
+   "torvald.r1960@example.net",
+   "Achterberg, Wilhelmina",
+   "E4473355",
+   "555 0131",
+   "PO Box 4482",
+   "https://mychart.example.org/pt/achterberg-w"
+  ],
+  "keep": [
+   "Cetuximab 250 mg/m2 weekly",
+   "Check Mg before infusion",
+   "Bevacizumab 15 mg/kg q3w"
+  ],
+  "note": "Headers that do not announce PHI: Contact holds phones in varied punctuation, Notes 2 holds street addresses/PO box, Ref holds emails and a personal URL, ID holds MRN."
+ },
+ {
+  "id": "tbl-csn-har-guarantor",
+  "kind": "table",
+  "headers": [
+   "CSN",
+   "HAR",
+   "Patient",
+   "Guarantor",
+   "Guarantor Phone",
+   "Payor",
+   "Member ID",
+   "Pharmacy Comments"
+  ],
+  "rows": [
+   [
+    "880014773201",
+    "41002299",
+    "Ostrowicz, Danuta",
+    "Ostrowicz, Feliks",
+    "555-0172",
+    "Medicare A/B",
+    "1EG4-TE5-MK73",
+    "Pegfilgrastim 6 mg on-body injector"
+   ],
+   [
+    "880014773488",
+    "41002317",
+    "Lindqvist, Saga",
+    "SELF",
+    "555-0125",
+    "Aetna PPO",
+    "W281447390",
+    "Prior auth #PA-77310 approved thru 1/31/27"
+   ],
+   [
+    "880014773560",
+    "41002342",
+    "Mbeki-Rowe, Tobias",
+    "Mbeki-Rowe, Ayanda",
+    "555-0109",
+    "BCBS",
+    "XKP902114458",
+    "Denosumab 120 mg SC, calcium/vit D"
+   ]
+  ],
+  "phi": [
+   "880014773201",
+   "41002299",
+   "Ostrowicz, Danuta",
+   "Ostrowicz, Feliks",
+   "555-0172",
+   "1EG4-TE5-MK73",
+   "880014773488",
+   "41002317",
+   "Lindqvist, Saga",
+   "555-0125",
+   "W281447390",
+   "880014773560",
+   "41002342",
+   "Mbeki-Rowe, Tobias",
+   "Mbeki-Rowe, Ayanda",
+   "555-0109",
+   "XKP902114458",
+   "PA-77310"
+  ],
+  "keep": [
+   "Pegfilgrastim 6 mg on-body injector",
+   "Denosumab 120 mg SC",
+   "Medicare A/B"
+  ],
+  "note": "Billing-style export: CSN and HAR encounter/account numbers, guarantor relatives, insurance member IDs (incl. MBI format), prior-auth number."
+ },
+ {
+  "id": "tbl-date-format-zoo",
+  "kind": "table",
+  "headers": [
+   "Appt",
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Cycle",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "3-Nov-2026",
+    "Garroway, Imelda",
+    "61204488",
+    "4/9/1952",
+    "C2D1",
+    "Next: 11/24"
+   ],
+   [
+    "Tue 11/03",
+    "Pemberton-Shah, Arjun",
+    "61204519",
+    "19560812",
+    "C1D8",
+    "Seen 10/27/2026 in clinic"
+   ],
+   [
+    "2026.11.03",
+    "Kowalczuk, Renia",
+    "61204602",
+    "12-Dec-1966",
+    "C4D1",
+    "Last dose 13 Oct 2026, delayed 1 wk for plt 62"
+   ],
+   [
+    "November 3rd, 2026",
+    "Yarbrough, Delphine",
+    "61204677",
+    "Feb 29 1960",
+    "C6D1",
+    "Restage CT after this cycle"
+   ]
+  ],
+  "phi": [
+   "3-Nov-2026",
+   "Garroway, Imelda",
+   "61204488",
+   "4/9/1952",
+   "11/24",
+   "Tue 11/03",
+   "Pemberton-Shah, Arjun",
+   "61204519",
+   "19560812",
+   "10/27/2026",
+   "2026.11.03",
+   "Kowalczuk, Renia",
+   "61204602",
+   "12-Dec-1966",
+   "13 Oct 2026",
+   "November 3rd, 2026",
+   "Yarbrough, Delphine",
+   "61204677",
+   "Feb 29 1960"
+  ],
+  "keep": [
+   "C2D1",
+   "C1D8",
+   "plt 62",
+   "Restage CT after this cycle"
+  ],
+  "note": "Appointment, DOB and visit dates in many formats (d-Mon-yyyy, weekday mm/dd, yyyymmdd, dotted ISO, ordinal, month-day without year) beside cycle codes that must survive."
+ },
+ {
+  "id": "tbl-referring-provider-outside",
+  "kind": "table",
+  "headers": [
+   "Patient",
+   "MR#",
+   "Referring Provider",
+   "Ref Fax",
+   "Pharmacy Comments"
+  ],
+  "rows": [
+   [
+    "Abernathy, Clementine",
+    "MR880331",
+    "Kestrel Moonsworth, MD",
+    "555-0177",
+    "Calvert formula, GFR capped at 125 mL/min"
+   ],
+   [
+    "Thibodeaux, Lucien",
+    "MR880412",
+    "Dr. Ophelia Grantham-Reyes (Lakemoor Oncology)",
+    "(555) 010-0154",
+    "Dr. Grantham-Reyes wants dose reduced 20%; docetaxel 60 mg/m2"
+   ],
+   [
+    "Nakashima-Vale, Emi",
+    "MR880455",
+    "Prudence Okafor-Lind, NP",
+    "555-0190",
+    "Okafor-Lind NP called 11/1 re: rash, hold cetuximab"
+   ]
+  ],
+  "phi": [
+   "Abernathy, Clementine",
+   "MR880331",
+   "Kestrel Moonsworth",
+   "555-0177",
+   "Thibodeaux, Lucien",
+   "MR880412",
+   "Ophelia Grantham-Reyes",
+   "(555) 010-0154",
+   "Grantham-Reyes",
+   "Nakashima-Vale, Emi",
+   "MR880455",
+   "Prudence Okafor-Lind",
+   "555-0190",
+   "Okafor-Lind",
+   "11/1"
+  ],
+  "keep": [
+   "Calvert formula",
+   "GFR capped at 125 mL/min",
+   "docetaxel 60 mg/m2",
+   "hold cetuximab"
+  ],
+  "note": "Outside referring providers in a column and again by surname in pharmacy comments, fax numbers, eponymous Calvert formula must survive."
+ },
+ {
+  "id": "tbl-visitors-and-transport",
+  "kind": "table",
+  "headers": [
+   "Appt Date",
+   "Pt",
+   "MRN",
+   "Home Phone",
+   "Transport",
+   "Scheduling Comments"
+  ],
+  "rows": [
+   [
+    "11/10/2026",
+    "Crowhurst, Ambrose",
+    "2049915",
+    "555-0137",
+    "Son-in-law Beauregard Nimmons",
+    "Parks in garage, plate 7KQM552; long infusion - obinutuzumab 1000 mg"
+   ],
+   [
+    "11/10/2026",
+    "Vellacott, Imogen",
+    "2050182",
+    "555-0164",
+    "Medicaid cab",
+    "Neighbor Rosalind Tuckerby may pick up; needs wheelchair"
+   ],
+   [
+    "11/10/2026",
+    "Esterhazy, Bartholomew",
+    "2050240",
+    "555-0115",
+    "Self",
+    "Visitor: Ingrid Esterhazy (sister). Bortezomib 1.3 mg/m2 SC"
+   ]
+  ],
+  "phi": [
+   "11/10/2026",
+   "Crowhurst, Ambrose",
+   "2049915",
+   "555-0137",
+   "Beauregard Nimmons",
+   "7KQM552",
+   "Vellacott, Imogen",
+   "2050182",
+   "555-0164",
+   "Rosalind Tuckerby",
+   "Esterhazy, Bartholomew",
+   "2050240",
+   "555-0115",
+   "Ingrid Esterhazy"
+  ],
+  "keep": [
+   "obinutuzumab 1000 mg",
+   "needs wheelchair",
+   "Bortezomib 1.3 mg/m2 SC"
+  ],
+  "note": "Visitor, neighbor and family names in transport/comment columns, a licence plate, Home Phone column."
+ },
+ {
+  "id": "tbl-address-city-zip-columns",
+  "kind": "table",
+  "headers": [
+   "Name",
+   "MRN",
+   "Address",
+   "City",
+   "ST",
+   "ZIP",
+   "Regimen"
+  ],
+  "rows": [
+   [
+    "Quintanilla, Rosario",
+    "M-000483192",
+    "4417 Wrenfield Ct",
+    "Harlow Springs",
+    "OH",
+    "43999",
+    "FOLFIRINOX"
+   ],
+   [
+    "Brightwater, Silas",
+    "M-000483240",
+    "88 Old Mill Pike, Unit 12",
+    "Cedarbrook Falls",
+    "OH",
+    "43998-0112",
+    "Nivolumab 480 mg q4w"
+   ],
+   [
+    "Duchesne, Margaux",
+    "M-000483301",
+    "RR 2 Box 71",
+    "Pickett Hollow",
+    "OH",
+    "43997",
+    "AC-T"
+   ]
+  ],
+  "phi": [
+   "Quintanilla, Rosario",
+   "M-000483192",
+   "4417 Wrenfield Ct",
+   "Harlow Springs",
+   "43999",
+   "Brightwater, Silas",
+   "M-000483240",
+   "88 Old Mill Pike, Unit 12",
+   "Cedarbrook Falls",
+   "43998-0112",
+   "Duchesne, Margaux",
+   "M-000483301",
+   "RR 2 Box 71",
+   "Pickett Hollow",
+   "43997"
+  ],
+  "keep": [
+   "FOLFIRINOX",
+   "Nivolumab 480 mg q4w",
+   "AC-T"
+  ],
+  "note": "Address split across Address/City/ZIP columns with invented towns, ZIP+4 and rural-route forms."
+ },
+ {
+  "id": "tbl-very-old-and-deceased",
+  "kind": "table",
+  "headers": [
+   "Patient",
+   "MRN",
+   "Age",
+   "Status",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Fairweather, Eudora",
+    "90021455",
+    "93",
+    "Active",
+    "93 y/o, IVIG 0.4 g/kg x5 days"
+   ],
+   [
+    "Lindgren-Abbot, Cyrus",
+    "90021470",
+    "101 yrs",
+    "Active",
+    "Centenarian - slow rate, epoetin alfa 40,000 units"
+   ],
+   [
+    "Mossberg, Theodora",
+    "90021502",
+    "84",
+    "Deceased",
+    "Expired 10/30/2026 at home; cancel remaining azacitidine 75 mg/m2"
+   ],
+   [
+    "Penhaligon, Rufus",
+    "90021519",
+    "90",
+    "Active",
+    "Age 90, B12 1000 mcg IM monthly"
+   ]
+  ],
+  "phi": [
+   "Fairweather, Eudora",
+   "90021455",
+   "93",
+   "Lindgren-Abbot, Cyrus",
+   "90021470",
+   "101 yrs",
+   "Mossberg, Theodora",
+   "90021502",
+   "10/30/2026",
+   "Penhaligon, Rufus",
+   "90021519",
+   "Age 90"
+  ],
+  "keep": [
+   "IVIG 0.4 g/kg x5 days",
+   "epoetin alfa 40,000 units",
+   "azacitidine 75 mg/m2",
+   "B12 1000 mcg IM monthly"
+  ],
+  "note": "Ages over 89 in Age column and repeated in comments (93 y/o, 101 yrs, Age 90), date of death; age 84 is fine to keep."
+ },
+ {
+  "id": "tbl-names-that-are-words",
+  "kind": "table",
+  "headers": [
+   "Name (Last, First)",
+   "MRN",
+   "DOB",
+   "Drug",
+   "Appt Notes"
+  ],
+  "rows": [
+   [
+    "Baker, Will",
+    "11873002",
+    "08/08/1970",
+    "Ondansetron 8 mg",
+    "will start after hydration"
+   ],
+   [
+    "Hope, Grant",
+    "11873019",
+    "03/03/1958",
+    "Trastuzumab 6 mg/kg",
+    "Echo due before next dose"
+   ],
+   [
+    "Rose, Lily",
+    "11873044",
+    "11/21/1981",
+    "Iron dextran test dose",
+    "Watch for anaphylaxis 1 hr"
+   ],
+   [
+    "Mann, Iris",
+    "11873050",
+    "05/16/1966",
+    "Leucovorin 400 mg/m2",
+    "Rose and Mann both in pod B"
+   ]
+  ],
+  "phi": [
+   "Baker, Will",
+   "11873002",
+   "08/08/1970",
+   "Hope, Grant",
+   "11873019",
+   "03/03/1958",
+   "Rose, Lily",
+   "11873044",
+   "11/21/1981",
+   "Mann, Iris",
+   "11873050",
+   "05/16/1966",
+   "Rose and Mann"
+  ],
+  "keep": [
+   "Ondansetron 8 mg",
+   "will start after hydration",
+   "Trastuzumab 6 mg/kg",
+   "Watch for anaphylaxis 1 hr"
+  ],
+  "note": "Patient names that are common English words (Will, Hope, Grant, Rose, Lily, Iris, Mann); lowercase 'will' in instructions must survive while surnames referenced in another row's comment are removed."
+ },
+ {
+  "id": "tbl-eponym-diagnoses-with-names",
+  "kind": "table",
+  "headers": [
+   "Appt Date",
+   "Patient",
+   "MR#",
+   "Dx",
+   "Regimen",
+   "Attending Notes"
+  ],
+  "rows": [
+   [
+    "11/13/2026",
+    "Strindberg, Leopold",
+    "4410982",
+    "Hodgkin lymphoma",
+    "ABVD",
+    "Bleomycin PFTs ok"
+   ],
+   [
+    "11/13/2026",
+    "Corvallis, Annunziata",
+    "4411037",
+    "Waldenstrom macroglobulinemia",
+    "BR",
+    "Bendamustine 90 mg/m2 D1-2"
+   ],
+   [
+    "11/13/2026",
+    "Ashdown-Price, Marcus",
+    "4411120",
+    "Crohn's disease",
+    "Infliximab 5 mg/kg",
+    "Seen by Dr. Hollis Verrinder at Northgate GI 10/29/2026"
+   ],
+   [
+    "11/13/2026",
+    "Ferreira-Kahn, Lucia",
+    "4411166",
+    "Non-Hodgkin lymphoma, DLBCL",
+    "Pola-R-CHP",
+    "Neuropathy grade 1"
+   ]
+  ],
+  "phi": [
+   "11/13/2026",
+   "Strindberg, Leopold",
+   "4410982",
+   "Corvallis, Annunziata",
+   "4411037",
+   "Ashdown-Price, Marcus",
+   "4411120",
+   "Hollis Verrinder",
+   "10/29/2026",
+   "Ferreira-Kahn, Lucia",
+   "4411166"
+  ],
+  "keep": [
+   "Hodgkin lymphoma",
+   "Waldenstrom macroglobulinemia",
+   "Crohn's disease",
+   "Pola-R-CHP"
+  ],
+  "note": "Eponymous diagnoses (Hodgkin, Waldenstrom, Crohn) and regimen codes beside real patient names and an outside GI provider."
+ },
+ {
+  "id": "tbl-device-serials-ssn-license",
+  "kind": "table",
+  "headers": [
+   "Pt Name",
+   "MRN",
+   "SSN",
+   "Device",
+   "Device Serial",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Galloway-Penn, Ottoline",
+    "73300418",
+    "900-55-0123",
+    "Port-a-cath",
+    "SN PWR8841-22ZQ",
+    "Flush with heparin 500 units after access"
+   ],
+   [
+    "Rutherford, Casimir",
+    "73300466",
+    "900-55-0147",
+    "CADD pump",
+    "CADD-7X44-0912",
+    "Home 5-FU 2400 mg/m2 over 46 hr; pump returned 11/7/26"
+   ],
+   [
+    "Oyelaran, Femi",
+    "73300501",
+    "xxx-xx-0168",
+    "PICC",
+    "Lot BRD-2219-K",
+    "Driver lic OH TQ448812 on file for sharps disposal pickup"
+   ]
+  ],
+  "phi": [
+   "Galloway-Penn, Ottoline",
+   "73300418",
+   "900-55-0123",
+   "PWR8841-22ZQ",
+   "Rutherford, Casimir",
+   "73300466",
+   "900-55-0147",
+   "CADD-7X44-0912",
+   "11/7/26",
+   "Oyelaran, Femi",
+   "73300501",
+   "TQ448812"
+  ],
+  "keep": [
+   "heparin 500 units",
+   "5-FU 2400 mg/m2 over 46 hr",
+   "Port-a-cath"
+  ],
+  "note": "SSN column, device serial numbers for port and ambulatory pump, driver licence number in a comment; masked SSN last-4 and lot number left out of phi."
+ },
+ {
+  "id": "tbl-pharmacy-queue-cross-refs",
+  "kind": "table",
+  "headers": [
+   "Order Date",
+   "Patient",
+   "Med Rec #",
+   "Drug",
+   "Dose",
+   "Pharmacy Comments"
+  ],
+  "rows": [
+   [
+    "11/08/2026 07:42",
+    "Castellane, Wendeline",
+    "8839201",
+    "Oxaliplatin",
+    "85 mg/m2",
+    "Pt prefers email: wcastellane77@example.net for schedule"
+   ],
+   [
+    "11/08/2026 07:55",
+    "Vionnet, Rodrigue",
+    "8839255",
+    "Cyclophosphamide",
+    "600 mg/m2",
+    "Mix with Castellane W.'s bag - same diluent D5W"
+   ],
+   [
+    "11/08/2026 08:10",
+    "Haverbrook, Juniper",
+    "8839318",
+    "Pemetrexed",
+    "500 mg/m2",
+    "Folic acid/B12 confirmed; per Vionnet R. order set copied incorrectly - fixed"
+   ],
+   [
+    "11/08/2026 08:21",
+    "Castellane, Wendeline",
+    "8839201",
+    "Leucovorin",
+    "400 mg/m2",
+    "Husband Augustin Castellane called 555-0158 re: copay"
+   ]
+  ],
+  "phi": [
+   "11/08/2026 07:42",
+   "Castellane, Wendeline",
+   "8839201",
+   "wcastellane77@example.net",
+   "11/08/2026 07:55",
+   "Vionnet, Rodrigue",
+   "8839255",
+   "Castellane W.",
+   "11/08/2026 08:10",
+   "Haverbrook, Juniper",
+   "8839318",
+   "Vionnet R.",
+   "11/08/2026 08:21",
+   "Augustin Castellane",
+   "555-0158"
+  ],
+  "keep": [
+   "Oxaliplatin",
+   "same diluent D5W",
+   "Folic acid/B12 confirmed",
+   "Pemetrexed"
+  ],
+  "note": "Pharmacy verification queue: datetime stamps, email, other patients referenced as 'Surname F.' in comments, husband sharing surname with phone."
+ }
 ]

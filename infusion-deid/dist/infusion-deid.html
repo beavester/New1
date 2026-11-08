@@ -1609,7 +1609,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     while ((am = RULES.AGE_TURNED.exec(text))) { const val = am[1]; const start = am.index + am[0].length - val.length; spans.push({ start, end: start + val.length, type: 'AGE', source: 'rule', text: val }); }
     // "<person> is 95": a person as the subject (honorific + name, pronoun, pt, or a capitalised name that is not a
     // lab/vital label) and a bare 90-119 with no unit after it. "Plt is 95", "HR is 95", "BP is 95/60" are left alone.
-    { const LABS = /^(plt|plts|platelets?|hgb|hb|hct|wbc|anc|alc|rbc|mcv|glu|glucose|na|k|cl|co2|bun|cr|creat|egfr|ca|mg|phos|alb|ast|alt|bili|ldh|inr|ptt|tsh|cea|psa|hr|bp|rr|sat|sats|spo2|o2|temp|t|weight|wt|ht|height|pulse|rate|score|count|level|ef|lvef|gfr|bmi|map|pain|ecog|kps|karnofsky|fev1|dose|volume|vol)$/i;
+    { const LABS = /^(plt|plts|platelets?|hgb|hb|hct|wbc|anc|alc|rbc|mcv|glu|glucose|na|k|cl|co2|bun|cr|creat|egfr|ca|mg|phos|alb|ast|alt|bili|ldh|inr|ptt|tsh|cea|psa|hr|bp|rr|sat|sats|spo2|o2|temp|t|weight|wt|ht|height|pulse|rate|score|count|level|ef|lvef|gfr|bmi|map|pain|ecog|kps|karnofsky|fev1|dose|volume|vol|oxygen|systolic|diastolic|sodium|potassium|calcium|albumin|protein|ferritin|saturation|creatinine|hemoglobin|magnesium|chloride|bicarb|ldl|hdl|a1c|reading|result|value|number)$/i;
       const re = /\b((?:(?:mr|mrs|ms|mx|dr)\.?\s+[A-Z][A-Za-z'’\-]+)|he|she|they|pt|patient|[A-Z][a-z'’\-]{2,})(?:\s+[A-Z][a-z'’\-]+)?\s+(?:is|was|'s|’s|now)\s+(9\d|1[01]\d)\b(?![\d\/%:.-]|,\d)(?!\s*(?:mg|kg|lb|lbs|%|mmhg|bpm|k\b|ml|cc|units?|percent|years?\s+(?:ago|since)|min|minutes|hours?))/g;
       let pm;
       while ((pm = re.exec(text))) {
