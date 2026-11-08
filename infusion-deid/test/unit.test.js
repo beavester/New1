@@ -541,3 +541,13 @@ test('town and ZIP after a street address are removed; eponym survives a same-su
   assert.ok(t1.includes("Bell's palsy"), 'eponym corrupted: ' + t1);
   assert.ok(!/\bGrace\b/.test(t1), 'patient first name leaked: ' + t1);
 });
+
+test('nicknames given by cue are removed; audit column never carries the date offset', () => {
+  const headers = ['Appt Date', 'Patient Name', 'MRN', 'DOB', 'Comments'];
+  const rows = [[new Date(2026, 10, 12), 'Okafor, Chinwe B', '00731164', '2/9/1948', 'Pt asks we call her Winnie. Husband calls him Big Al? no. Preferred name Bea. prefers Kasia today.']];
+  const r = D.processTable({ headers, rows }, { seed: 9 });
+  const t = r.rows[0][4];
+  for (const leak of ['Winnie', 'Bea', 'Kasia']) assert.ok(!new RegExp('\\b' + leak + '\\b').test(t), leak + ' leaked: ' + t);
+  const audit = r.rows[0][r.headers.indexOf('DeID Audit')];
+  assert.ok(!/shift:/.test(audit) && !/[+-]\d+d\b/.test(audit), 'offset in audit: ' + audit);
+});

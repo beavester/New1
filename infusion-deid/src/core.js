@@ -949,6 +949,10 @@
       if (t.word && /^(aka|nickname|nick)$/i.test(t.core)) j = i + 1;
       else if (t.word && /^(goes|known)$/i.test(t.core) && toks[i + 1].word && /^(by|as)$/i.test(toks[i + 1].core)) j = i + 2;
       else if (t.word && /^(prefers?|likes?|wants?)$/i.test(t.core) && i + 4 < toks.length && /^(to)$/i.test(toks[i + 1].core) && /^(be)$/i.test(toks[i + 2].core) && /^(called|addressed)$/i.test(toks[i + 3].core)) j = i + 4;
+      // "call her Winnie", "calls him Big Al", "we call them Sam", "prefers Kasia", "please call me Bea"
+      else if (t.word && /^(call|calls|called|calling|address|addresses|addressed)$/i.test(t.core) && toks[i + 1].word && /^(her|him|them|me|pt|patient)$/i.test(toks[i + 1].core)) j = i + 2;
+      else if (t.word && /^(prefers|preferred)$/i.test(t.core) && toks[i + 1].word && toks[i + 1].cap) j = i + 1;
+      else if (t.word && /^(name)$/i.test(t.core) && i > 0 && /^(preferred|nick|pet)$/i.test(toks[i - 1].core)) j = i + 1;
       if (j < 0 || j >= toks.length) continue;
       if (toks[j].raw === ':' || toks[j].raw === '"' || toks[j].raw === "'" || toks[j].raw === '“') j++;
       if (j >= toks.length || used[j] || !toks[j].word || !(toks[j].cap || toks[j].allcaps) || LEX.isClinical(toks[j].core) || isRel(toks[j]) || isHon(toks[j]) || (allow && allow.has(toks[j].core.toLowerCase()))) continue;
@@ -1751,7 +1755,7 @@
       if (cfg.auditColumn) {
         const counts = {}; detail.cells.forEach((c) => c.spans.forEach((s) => bump(counts, COARSE(s.type))));
         const srcs = {}; detail.cells.forEach((c) => c.spans.forEach((s) => bump(srcs, s.source.split(':')[0].split('+')[0])));
-        const parts = [detail.patientCode || '-', Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(' ') || 'no text PHI', Object.entries(srcs).map(([k, v]) => `${k}:${v}`).join(' '), cfg.surrogate.dateShift ? `shift:${offset > 0 ? '+' : ''}${offset}d` : 'dates removed'];
+        const parts = [detail.patientCode || '-', Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(' ') || 'no text PHI', Object.entries(srcs).map(([k, v]) => `${k}:${v}`).join(' '), cfg.surrogate.dateShift ? 'dates shifted' : 'dates removed']; // never the offset itself: with it, anyone could undo the shift
         detail.audit = parts.filter(Boolean).join(' | ');
         if (cfg.auditDetail) detail.audit += ' | ' + detail.cells.flatMap((c) => c.replacements.map((r) => `${r.type}:"${r.original}"→"${r.replacement}"`)).join('; ');
       }
