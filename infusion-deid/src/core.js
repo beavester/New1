@@ -4776,11 +4776,12 @@
       if (monthIndex(w)) return slot === 'first' ? (LEX.isFirstName(w) && listed ? (curated ? 1 : 0.5) : -3) : (curated ? -1 : -3);
       if (LINE_LABEL_WORD.test(w) || NOT_NAME.test(w) || LEX.ORG_SUFFIX_SET.has(lw) || LEX.CREDENTIAL_SET.has(lw)) return -3;
       if (HEAD_PAYER.test(w)) return listed ? 1 : -3;
+      if (slot === 'first' && PLACE_COUNTRY.test(w) && !curated) return LEX.isFirstName(w) && strong ? -2 : -3; // "Paris, France", "Florence, Italy"
       if (LEX.STATE_NAME_SET.has(lw)) return listed && (slot === 'last' || LEX.isFirstName(w)) ? 1 : -3;
       // "Hill", "Rose" are names first; "Parkinson", "Addison" and "Hodgkin" are surnames that named a disease; "Ocrevus", "CBC", "Labs" never are
       if (LEX.isClinical(w)) return curated ? 1 : strong ? 0.5 : (LEX.isSurname(w) && !LEX.isEnglishWord(w) && !LEX.isDictWord(w) && /^\p{Lu}\p{Ll}{3,}$/u.test(w)) ? 0 : -3;
       // a short all-capitals token beside a Title-case part is an abbreviation ("Bristol, ZIP", "Dec, CBC")
-      if (!pairCaps && /^[A-Z]{2,5}$/.test(w) && !LEX.isStrongName(w)) return -3;
+      if (!pairCaps && slot === 'first' && /^[A-Z]{2,5}$/.test(w) && !LEX.isStrongName(w)) return -3; // ("TREMBLAY-OSEI, Augustin" is a surname in capitals)
       const PL = placeData();
       const place = LEX.CITY_SET.has(lw) || (PL && PL.has(w) && (PL.isMajor ? PL.isMajor(w) : false));
       if (slot === 'first' && place && !LEX.isFirstName(w)) return -2; // "Buffalo, Rochester": a city in the given-name slot that is no given name
@@ -4799,9 +4800,13 @@
       const ls = lastParts.map((w) => headPartScore(w, 'last', pairCaps));
       // a compound surname is judged by its worst part when one is positively not a name, else by its best
       let score = (ls.length ? (Math.min(...ls) <= -2 ? Math.min(...ls) : Math.max(...ls)) : 0) + headPartScore(first, 'first', pairCaps);
+      // a town and its state ("Paris, Texas", "Jackson, Mississippi"): the state counts against the pair even when it is a given name too
+      let hardNeg = ls.some((x) => x <= -3) || headPartScore(first, 'first', pairCaps) <= -3;
+      { const PL = placeData(); if (LEX.STATE_NAME_SET.has(first.toLowerCase()) && lastParts.some((w) => LEX.CITY_SET.has(w.toLowerCase()) || (PL && PL.isMajor && PL.isMajor(w)))) { score -= 3; hardNeg = true; } }
+      let idEvidence = false;
       // beside the pair
-      if (/^\s*[,(\-–—:|]?\s*\(?\s*(?:MRN|MR#|DOB|D\.O\.B|Acct|CSN)\b|^\s*[,(|]?\s*#?\s*[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w])|^\s*[,(|]?\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/i.test(after)) score += 3;
-      else if (/^\s*[,(|]?\s*\d{1,3}\s*(?:-\s*)?(?:y\/?o\b|y\.o\.?|yrs?\b|years?\b|year-old|[yY]?\s?[MF]\b)/.test(after)) score += 3; // "67F", "72 yo M", "(58 y/o"
+      if (/^\s*[,(\-–—:|]?\s*\(?\s*(?:MRN|MR#|DOB|D\.O\.B|Acct|CSN)\b|^\s*[,(|]?\s*#?\s*[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w])|^\s*[,(|]?\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/i.test(after)) { score += 3; idEvidence = true; }
+      else if (/^\s*[,(|]?\s*\d{1,3}\s*(?:-\s*)?(?:y\/?o\b|y\.o\.?|yrs?\b|years?\b|year-old|[yY]?\s?[MF]\b)/.test(after)) { score += 3; idEvidence = true; } // "67F", "72 yo M", "(58 y/o"
       else if (/^(?:\s{2,}|\s*[|\t])/.test(after)) score += 2; // the next column
       else if (/^\s*[.;:]?\s*$/.test(after)) score += mIndex === 0 || /^\s*(?:(?:\d{3,4}|\d{1,2}:\d{2})\s*)?[|\[\]'!.]*\s*$/.test(before) ? 2 : 1; // the pair ends (or is) the line
       else if (/^\s+[a-z]/.test(after)) score -= 1; // the sentence runs on
@@ -4811,6 +4816,9 @@
       else if (mIndex === 0 || /^\s*(?:(?:\d{3,4}|\d{1,2}:\d{2})\s*)?[|\[\]'!.]*\s*$/.test(before)) score += 1; // starts the line, or follows only its time
       if (hasInitial) score += 1;
       if (pairCaps && /\p{Ll}/u.test(line)) score += 1; // "GARCIA, MARIA" set in capitals in a mixed-case line
+      // a part that is positively no name ("Florence, Italy", "Dec, CBC") is outweighed only by an identifier beside the pair
+      // (record number, birthdate, age and sex) or a patient label before it, never by the layout alone
+      if (hardNeg && !idEvidence && !/\b(?:pt|patient|name)\s*[:#\-]?\s*$/i.test(before)) return -9;
       return score;
     };
     // every "Last, First" on a line that has the structure of a census entry (first is the line's patient)
@@ -4921,7 +4929,10 @@
       const words = m[1].replace(/[-,]+$/, '').split('-');
       if (words.some((w) => nameWordBad(w) || w.length < 2 || relWord(w))) return null;
       if (/-$/.test(acc)) { if (!m[2]) return null; }
-      else if (/,$/.test(acc)) { if (m[2] || !words.every((w) => LEX.isFirstName(w) || (!LEX.isEnglishWord(w) && !LEX.isDictWord(w)))) return null; }
+      else if (/,$/.test(acc)) {
+        const prose = /^\s+[a-z]{2,}/.test(lines[li].slice(m.index + m[0].length)); // "Long infusion today", "Grace period ends"
+        if (m[2] || !words.every((w) => (!LEX.isEnglishWord(w) && !LEX.isDictWord(w)) || (LEX.isFirstName(w) && (!prose || (LEX.isStrongName(w) && !LEX.isDictWord(w)))))) return null;
+      }
       else return null;
       return { text: m[1], rest: lines[li].slice(m.index + m[0].length), start: m.index + m[0].length - m[1].length, loose: true };
     };
