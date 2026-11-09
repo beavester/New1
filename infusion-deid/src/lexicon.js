@@ -329,6 +329,7 @@
     Neurology Neurologic Gastroenterology Dermatology Orthopedics Orthopedic
     Community County Regional Memorial Home Agency Association Services
     Township Parish SNF ALF LTC Insurance BCBS Inc LLC Corp Corporation Company Ltd
+    Hosp Ctr Inst Assoc Med Onc Heme Surg Ortho Derm Neuro Peds Pulm Urol Gyn
     Industries Motors Transport Transportation Ambulance EMS Funeral
     Church Chapel Mosque Masjid Temple Synagogue Shul Ministries Congregation Cathedral
     Products Foods Bank Credit Union Mall Market Plaza Apartments Towers

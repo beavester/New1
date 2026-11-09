@@ -569,13 +569,12 @@
     URL: /\b(?:https?:\/\/|www\.)[^\s<>"']+/gi,
     IP: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,
     SSN: /(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)|\b[xX*]{3}-[xX*]{2}-\d{4}\b/g,
-    SSN_LAST4: /\b(?:ssn|social)\b[^\n]{0,24}?\b(?:last\s*(?:4|four)|ending(?:\s+in)?)\b\D{0,16}(\d{4})\b/gi,
     // insurer or plan name, then a member/policy identifier: "UHC / 009227418-02", "Aetna: W220893115", "Medicaid ID 44120099871", "BCBS member # XYZ123456789"
     INSURANCE_ID: /\b(?:uhc|united\s*healthcare|aetna|cigna|humana|anthem|bcbs|blue\s*cross|blue\s*shield|highmark|excellus|fidelis|univera|independent\s*health|mvp|medicaid|medicare|tricare|wellcare|molina|centene|oscar|kaiser|emblem|healthfirst|metroplus|caresource|member|subscriber|policy|plan|payer|insurance|ins)\b[^\n\d]{0,24}?[\/:#]?\s*((?=[A-Za-z0-9-]*\d)[A-Za-z]{0,4}\d[A-Za-z0-9]{4,}(?:-\d{1,3})?)\b/gi,
     // a phone number written in words or mixed ("five five five 0171", "five-five-five-zero-one-seven-one")
-    PHONE_WORDS: /\b(?:(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|\d)[\s\-.]*){7,}\b/gi,
+    PHONE_WORDS: /\b(?:(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|\d)[\s\-.,]*){7,}\b/gi,
     // separators tolerate OCR/keyboard spacing: "716 -555- 0177", "716 . 555 . 0177"
-    PHONE: /(?<![\d\w\/])(?:\+?1[-.\s]?)?(?:\(\d{3}\)\s?|\d{3}(?:\s*[-.]\s*|\s))\d{3}(?:\s*[-.]\s*|\s)\d{4}(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?(?![\d\w])|(?<![\d\w-])\d{3}-\d{4}(?:\s*(?:x|ext\.?)\s*\d{1,6})?(?![\d\w-])/gi,
+    PHONE: /(?<![\d\w\/])(?:\+?1[-.\s]?)?(?:\(\d{3}\)\s?|\d{3}(?:\s*[-.]\s*|\s))\d{3}(?:\s*[-.]\s*|\s)\d{4}(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?(?![\d\w])|(?<![\d\w-])\d{3}[-.]\d{4}(?:\s*(?:x|ext\.?)\s*\d{1,6})?(?![\d\w-])/gi,
     PHONE_PLAIN: /(?<![\d\w.-])\d{10}(?![\d\w-])(?!\.\d)(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?/gi,
     // OCR-noisy phone: digits with O/I/l confusions, at least 7 real digits, 3-3-4 shape
     PHONE_OCR: /(?<![\w])\(?[\dOIl]{3}\)?(?:\s*[-.]\s*|\s)[\dOIl]{3}(?:\s*[-.]\s*|\s)[\dOIl]{4}(?![\w])/g,
@@ -614,7 +613,7 @@
     // "DOB:03041951" written without separators
     DOB_COMPACT: /\b(?:dob|d\.o\.b\.?|birth\s*date|born)\s*[:#]?\s*((?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])(?:19|20)\d{2})(?!\d)/gi,
     // last four of a social security number: "SSN ending 4471", "SS# last 4: 4471", "social ends in 4471"
-    SSN_LAST4: /\b(?:ssn|ss#|ss\s*#|social(?:\s+security)?(?:\s+(?:number|no\.?|#))?)\s*(?:on\s+file\s*)?(?:ending(?:\s+in)?|ends(?:\s+(?:in|with))?|last\s*(?:4|four)(?:\s+digits)?|xxx-xx-)?\s*[:#]?\s*(\d{4})(?![\d-])/gi,
+    SSN_LAST4: /\b(?:ssn|ss#|ss\s*#|social(?:\s+security)?(?:\s+(?:number|no\.?|#))?)\s*(?:on\s+file\s*)?(?:ending(?:\s+in)?|ends(?:\s+(?:in|with))?|last\s*(?:4|four)(?:\s+digits)?|xxx-xx-)?(?:[^\n\d]{0,20}?)[:#]?\s*(\d{4})(?![\d-])/gi,
     // a street without a house number, named by its suffix: "near Brighton Rd", "on Sheridan Dr in"; "Dr." followed by a
     // capitalized word is an honorific and is excluded by the lookahead
     STREET: /\b((?:[A-Z][A-Za-z]+\s){1,2}(?:Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl)\.?)(?![A-Za-z])(?!\.?\s*[A-Z][a-z])/g,
@@ -655,7 +654,7 @@
     run(RULES.EMAIL, 'EMAIL'); run(RULES.URL, 'URL'); run(RULES.IP, 'IP'); run(RULES.SSN, 'SSN');
     { RULES.SSN_LAST4.lastIndex = 0; let sm; while ((sm = RULES.SSN_LAST4.exec(text))) { const st = sm.index + sm[0].length - 4; spans.push({ start: st, end: st + 4, type: 'ID_OTHER', source: 'rule', text: sm[1] }); } }
     { RULES.INSURANCE_ID.lastIndex = 0; let im; while ((im = RULES.INSURANCE_ID.exec(text))) { const st = im.index + im[0].lastIndexOf(im[1]); spans.push({ start: st, end: st + im[1].length, type: 'ID_OTHER', source: 'rule', text: im[1] }); } }
-    { RULES.PHONE_WORDS.lastIndex = 0; let pm; while ((pm = RULES.PHONE_WORDS.exec(text))) { const words = pm[0].trim().split(/[\s\-.]+/); const digits = words.reduce((n, w) => n + (/^\d+$/.test(w) ? w.length : 1), 0); if (digits >= 7 && words.filter((w) => !/^\d+$/.test(w)).length >= 3) spans.push({ start: pm.index, end: pm.index + pm[0].trim().length, type: 'PHONE', source: 'rule', text: pm[0].trim() }); } }
+    { RULES.PHONE_WORDS.lastIndex = 0; let pm; while ((pm = RULES.PHONE_WORDS.exec(text))) { const words = pm[0].trim().replace(/[,\s.]+$/, '').split(/[\s\-.,]+/); const digits = words.reduce((n, w) => n + (/^\d+$/.test(w) ? w.length : 1), 0); if (digits >= 7 && words.filter((w) => !/^\d+$/.test(w)).length >= 3) spans.push({ start: pm.index, end: pm.index + pm[0].trim().length, type: 'PHONE', source: 'rule', text: pm[0].trim() }); } }
     run(RULES.PHONE, 'PHONE'); run(RULES.ADDRESS, 'ADDRESS'); run(RULES.ZIP, 'ZIP'); run(RULES.ZIP_LABEL, 'ZIP');
     run(RULES.PO_BOX, 'ADDRESS'); run(RULES.ADDRESS_ROUTE, 'ADDRESS');
     RULES.ADDRESS_UNIT.lastIndex = 0; let au;
@@ -814,6 +813,7 @@
       return true;
     };
     run(/(?<=(?:#|\bno\.?|\bid|\bnum(?:ber)?)\s?)[A-Z]{0,2}\d{6,10}\b/gi, 'ID_OTHER', notPhoneExt);
+    run(/(?<![\w\/.-])[A-Z]{1,2}\d{6,10}-\d{1,2}(?![\w\/.-])/g, 'ID_OTHER', notPhoneExt); // "E0049182-7": a record number with a check digit
     if (cfg.mrnRegex) run(cfg.mrnRegex, 'MRN', notPhoneExt);
     if (cfg.accountRegex) run(cfg.accountRegex, 'ACCOUNT', notPhoneExt);
     // Fallback for pasted/OCR text with no learned MRN pattern: a standalone 6-9 digit integer in clinical free text is
@@ -1169,6 +1169,15 @@
       for (let q = i + 1; q <= j; q++) used[q] = true;
       spans.push({ start: toks[i + 1].start, end: toks[j].end, type: 'LOCATION', source: 'cue:place', conf: 0.6, text: text.slice(toks[i + 1].start, toks[j].end) });
       i = j;
+    }
+    // Pass F7b: a nickname in single quotes ('Bibi', ‘Peggy’) next to a name or a relation word
+    for (let i = 1; i + 1 < toks.length; i++) {
+      const q1 = toks[i - 1], nick = toks[i], q2 = toks[i + 1];
+      const glued = /['’]$/.test(nick.raw) && !/['’]s$/.test(nick.raw);
+      if (used[i] || !/^['‘]$/.test(q1.raw) || !(/^['’]$/.test(q2.raw) || glued) || !nick.word || !/^\p{Lu}[\p{Ll}\p{M}\-]+['’]?$/u.test(nick.core) || LEX.isClinical(nick.core.replace(/['’]$/, '')) || wordNotName({ core: nick.core.replace(/['’]$/, '') })) continue;
+      const near = (k) => toks[k] && ((toks[k].word && (toks[k].cap || isRel(toks[k]))) || toks[k].raw === '(');
+      if (!(near(i - 2) || near(i + 2)) && !LEX.isFirstName(nick.core)) continue;
+      addRun(i, i + 1, 'NAME_OTHER', 'cue:nickname', 0.65);
     }
     // Pass F7: a quoted nickname inside a name (Adebayo "Bayo" Ogunwale)
     for (let i = 0; i + 4 < toks.length; i++) {
@@ -1730,9 +1739,10 @@
       if (i >= 0 && !t.word && !t.nlAfter) continue;
       if (used[i + 1] || !n.word || !(n.cap || n.allcaps) || n.initial) continue;
       if (i >= 0 && !t.nlAfter && !/^(to|from|in|near|outside)$/i.test(t.core) && !(i + 2 < toks.length && /^\d{5}$/.test(toks[i + 2].raw || ''))) continue;
-      if (LEX.isClinical(n.core) || (LEX.isEnglishWord(n.core) && !(LEX.isSurname(n.core) && !LEX.isFirstName(n.core))) || LEX.isAnchorName(n.core) || isRel(n) || isHon(n) || isCred(n) || LEX.ORG_SUFFIX_SET.has(n.core.toLowerCase()) || (allow && allow.has(n.core.toLowerCase()))) continue;
       const prev = i > 0 ? toks[i - 1] : null;
-      const movement = i >= 0 && /^(to|from|in|near|outside)$/i.test(t.core) && prev && prev.word && /^(moving|moved|relocating|relocated|relocate|lives|living|live|travel(?:l)?ing|drove|driving|drive|coming|flew|flying|commutes|commuting|commute|traffic|ride|rides|bus|train|flight|resides|residing|staying|stays|wintering|summering|hospital|clinic|center|centre|office|practice|pharmacy|home|plant|factory|works|working|job)$/i.test(prev.core);
+      const facilityCue = prev && prev.word && /^(hospital|hosp|clinic|center|centre|ctr|office|practice|pharmacy|institute|inst|group|associates|lab|labs|oncology|hematology|imaging|radiology|dialysis|hospice|rehab|surgery|plant|factory)$/i.test(prev.core) && /^(in|at|near|outside)$/i.test(t.core);
+      if (LEX.isClinical(n.core) || (LEX.isEnglishWord(n.core) && !facilityCue && !(LEX.isSurname(n.core) && !LEX.isFirstName(n.core))) || (LEX.isAnchorName(n.core) && !facilityCue) || isRel(n) || isHon(n) || isCred(n) || COMMON_CAP.has(n.core.toLowerCase()) || LEX.ORG_SUFFIX_SET.has(n.core.toLowerCase()) || (allow && allow.has(n.core.toLowerCase()))) continue;
+      const movement = i >= 0 && /^(to|from|in|near|outside)$/i.test(t.core) && prev && prev.word && /^(moving|moved|relocating|relocated|relocate|lives|living|live|travel(?:l)?ing|drove|driving|drive|coming|flew|flying|commutes|commuting|commute|traffic|ride|rides|bus|train|flight|resides|residing|staying|stays|wintering|summering|hospital|hosp|clinic|center|centre|ctr|office|practice|pharmacy|home|plant|factory|works|working|job|institute|inst|group|associates|urgent|er|ed|lab|labs|oncology|hematology|imaging|radiology|dialysis|hospice|rehab|surgery)$/i.test(prev.core);
       const nextIsZip = n.cap && !n.allcaps && i + 2 < toks.length && toks[i + 2].num && /^\d{5}$/.test(toks[i + 2].raw) && (i < 0 || t.nlAfter || !/^(mrn|#|id|acct|rm|room|ext|ndc|lot|ref|rx|order|claim|auth)$/i.test(t.core)) && !/^\d{5}-\d/.test(text.slice(toks[i + 2].start, toks[i + 2].start + 7));
       if (!movement && !nextIsZip) continue;
       let e = i + 2; if (nextIsZip) e = i + 3;
@@ -1747,9 +1757,12 @@
       const t = toks[i];
       if (!(t.word && /^(pt|patient|called|call|phoned|spoke|re|w|with|for)$/i.test(t.core)) || /['’]s$/.test(t.raw)) continue;
       let j = i + 1; if (toks[j] && toks[j].raw === '/' && /^w$/i.test(t.core)) j++;
+      if (toks[j] && toks[j].word && /^(is|was|named|name|are)$/i.test(toks[j].core) && /^(pt|patient)$/i.test(t.core)) j++;
       let e = j;
       const lcName = (x) => x.word && /^[a-z][a-z'’\-]{2,}$/.test(x.core) && (!LEX.isEnglishWord(x.core) || (LEX.isStrongName(x.core) && LEX.isFirstName(x.core))) && !LEX.isClinical(x.core) && !isRel(x) && !isCred(x) && !/^(re|pt|pts|mrn|dob|tx|dx|hx|prn|bid|tid|qd|iv|po|sq|im|mg|mcg|ml|kg|lbs|yo|yrs|wk|wks|mo|mos)$/i.test(x.core) && !(allow && allow.has(x.core.toLowerCase()));
-      while (e < toks.length && e - j < 4 && !used[e] && lcName(toks[e]) && !(e > j && endsSentence(toks[e - 1]))) e++;
+      const particle = (x) => x.word && /^(de|del|dela|la|las|los|van|von|der|den|di|da|du|bin|ibn|al|el|y|e|san|st|mc|mac|o)$/i.test(x.core);
+      while (e < toks.length && e - j < 6 && !used[e] && (lcName(toks[e]) || (e > j && particle(toks[e]) && toks[e + 1] && (lcName(toks[e + 1]) || particle(toks[e + 1])))) && !(e > j && endsSentence(toks[e - 1]))) e++;
+      while (e > j && particle(toks[e - 1])) e--;
       if (e - j < 2) continue;
       if (!toks.slice(j, e).some((x) => LEX.isFirstName(x.core) || LEX.isSurname(x.core)) && e - j < 3) continue; // two unknown lower-case words need a third, or a name hit
       addRun(j, e, 'NAME_OTHER', 'cue:lowercase', 0.55);
@@ -1759,10 +1772,12 @@
     for (let i = 0; i + 2 < toks.length; i++) {
       const a = toks[i], b = toks[i + 1], nx = toks[i + 2];
       if (used[i] || used[i + 1] || !a.cap || !b.cap || a.nlAfter || endsSentence(a)) continue;
-      if (!(i === 0 || toks[i - 1].nlAfter || endsSentence(toks[i - 1]))) continue;
-      if (!(LEX.isFirstName(a.core) && LEX.isStrongName(a.core) && LEX.isSurname(b.core) && LEX.isStrongName(b.core))) continue;
+      const ptBefore = i > 0 && toks[i - 1].word && /^(pt|patient)$/i.test(toks[i - 1].core) && !/['’]s$/.test(toks[i - 1].raw);
+      if (!(i === 0 || toks[i - 1].nlAfter || endsSentence(toks[i - 1]) || ptBefore)) continue;
+      const frequent = (w) => LEX.isStrongName(w) || LEX.isCuratedName(w) || LEX.BIG.S2.has(w.toLowerCase()) || LEX.BIG.F2.has(w.toLowerCase());
+      if (!(LEX.isFirstName(a.core) && frequent(a.core) && LEX.isSurname(b.core) && frequent(b.core))) continue;
       if (LEX.isClinical(b.core) && !LEX.isSurname(b.core)) continue;
-      const personCtx = (nx.word && !nx.cap && PERSON_VERB_I.test(nx.core)) || (nx.word && /^(in|at)$/i.test(nx.core) && toks[i + 3] && toks[i + 3].word && /^(chair|bay|room|rm|waiting|lobby|infusion|clinic)$/i.test(toks[i + 3].core)) || nx.raw === ',' || nx.raw === '(';
+      const personCtx = (nx.word && !nx.cap && PERSON_VERB_I.test(nx.core)) || (nx.word && /^(in|at|here|for)$/i.test(nx.core) && toks[i + 3] && toks[i + 3].word && /^(chair|bay|room|rm|waiting|lobby|infusion|clinic|cycle|labs?|tx|treatment|for|today|c\d+)$/i.test(toks[i + 3].core)) || nx.raw === ',' || nx.raw === '(' || ptBefore;
       if (!personCtx) continue;
       if (b.word && i + 2 < toks.length && LEX.EPONYM_FOLLOW.has(nx.core.toLowerCase())) continue;
       addRun(i, i + 2, 'NAME_OTHER', 'cue:sentence-pair', 0.6);
@@ -1784,6 +1799,17 @@
       if (used[i] || !t.word || !t.cap || !LEX.isFirstName(t.core) || LEX.isAmbiguous(t.core) || LEX.isEnglishWord(t.core) || LEX.isClinical(t.core)) continue;
       if (!/^\s*(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3,4}[-.\s]?\d{0,4}\b/.test(text.slice(t.end, t.end + 18))) continue;
       addRun(i, i + 1, 'NAME_OTHER', 'cue:phone', 0.6);
+    }
+    // Pass H0: a detected name followed directly by a capitalised double-barrelled surname takes it ("pt Amadou Diallo-Barry")
+    for (const sp of spans.filter((x) => COARSE(x.type) === 'NAME')) {
+      const ti = toks.findIndex((x) => x.start === sp.end + 1 || x.start === sp.end + 2);
+      if (ti < 0 || used[ti]) continue;
+      const n = toks[ti];
+      if (!n.word || !/^\p{Lu}[\p{Ll}\p{M}]+-\p{Lu}[\p{Ll}\p{M}]+$/u.test(n.core) || !/^\s+$/.test(text.slice(sp.end, n.start))) continue;
+      const halves = n.core.split('-');
+      if (halves.some((h) => LEX.isClinical(h) || LEX.ORG_SUFFIX_SET.has(h.toLowerCase()) || (LEX.isEnglishWord(h) && !LEX.isSurname(h)))) continue;
+      if (ti + 1 < toks.length && toks[ti + 1].word && LEX.EPONYM_FOLLOW.has(toks[ti + 1].core.toLowerCase())) continue;
+      sp.end = n.end; sp.text = text.slice(sp.start, sp.end); used[ti] = true;
     }
     // Pass G2: preposition + known city or state name  (lives in Rochester; moved to Florida)
     for (let i = 0; i < toks.length - 1; i++) {
@@ -2250,6 +2276,7 @@
 
     // every fake phone is a 555-010-xxxx number (or 555-xxxx without an area code); separators and extensions keep their shape
     const fakePhone = (orig) => stringSurrogate('PHONE', orig, () => {
+      if (/\b(?:zero|oh|one|two|three|four|five|six|seven|eight|nine)\b/i.test(orig)) return `555-010-${randDigits(4)}`;
       const extM = orig.match(/\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6}$/i);
       const main = extM ? orig.slice(0, orig.length - extM[0].length) : orig, ext = extM ? extM[0] : '';
       const n = (main.match(/\d/g) || []).length;

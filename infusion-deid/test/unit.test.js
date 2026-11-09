@@ -1039,3 +1039,12 @@ test('round 7 classes: dose dates vs scores, lower-case own-row names, org towns
   assert.equal(row[1], '3390175'); assert.equal(row[2], '09/09/1976');
   assert.ok(!found('C2. Carbo AUC 5. Taxol 80 mg/m2.').length, 'drug abbreviations are not names');
 });
+
+test('round 8 classes: worded phones, last-4 SSN wording, check-digit record numbers, word-name pairs after Pt, single-quoted nicknames, lower-case names after "pt is", facility place cues, double-barrelled surname after a given name', () => {
+  const r = D.processTable({ headers: ['Comments'], rows: [['Call pt Amadou Diallo-Barry at five five five, oh one two nine before 5 pm. Alt # 555.0151 (brother Ousmane). SSN last 4 given as 4471 for billing. Pt E0049182-7 (Dumont, Genevieve) moved. Pt Rose Hill here for Cycle 2. Granddaughter \'Bibi\' (Beatrice Adeyinka-Reyes) will pick up. pt is maria de los angeles cortes-figueroa, dob 6/6/66. Old chart from St. Anselm Hosp in Duluth requested.']] }, { seed: 1 });
+  const out = r.rows[0][0];
+  for (const leak of ['Amadou', 'Diallo', 'five five five', '555.0151', '4471', 'E0049182', 'Dumont', 'Genevieve', 'Rose Hill', 'Bibi', 'Beatrice', 'Adeyinka', 'maria de los', 'cortes', '6/6/66', 'Duluth']) assert.ok(!out.includes(leak), leak + ' leaked: ' + out);
+  for (const keep of ['before 5 pm', 'for billing', 'here for Cycle 2', 'will pick up', 'requested']) assert.ok(out.includes(keep), keep + ' lost: ' + out);
+  const dates = (t) => D.ruleSpans(t, cfg()).filter((s) => s.type === 'DATE').map((s) => s.text);
+  assert.deepEqual(dates('Pt reports fatigue 6/10. Second dose 11/12.'), ['11/12']);
+});
