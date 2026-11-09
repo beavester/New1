@@ -1603,6 +1603,8 @@
       }
       // trim leading connectors and generic leading words
       while (k < i && /^(of|and|for|the|&|referred|referral|from|per|at|see|call|called|sent|to)$/i.test(toks[k].core)) k++;
+      // a national insurer or patient-assistance organisation ("PAN Foundation", "HealthWell Foundation") identifies nobody: kept
+      if (nonSuffix >= 1 && (k < i || j > i + 1) && LEX.isPayerOrg(text.slice(toks[k].start, toks[j - 1].end))) { i = j - 1; continue; }
       if (nonSuffix >= 1 && (k < i || j > i + 1)) {
         for (let q = k; q < j; q++) used[q] = true;
         // "Erie County" is a geographic unit, not an organization
@@ -1643,6 +1645,8 @@
       // a run of only generic words ("to Pharmacy", "from Radiology", "to Hospice") names a department, not a facility
       const allGeneric = toks.slice(i + 1, j).every((x) => LEX.ORG_SUFFIX_SET.has(x.core.toLowerCase()) || /^(of|&|and)$/i.test(x.core));
       if (allGeneric) continue;
+      // "Referred to LLS copay foundation", "to PAN Foundation": a national insurer or patient-assistance organisation is kept
+      if (LEX.isPayerOrg(text.slice(toks[i + 1].start, toks[j - 1].end))) { i = j - 1; continue; }
       for (let q = i + 1; q < j; q++) used[q] = true;
       spans.push({ start: toks[i + 1].start, end: toks[j - 1].end, type: 'ORG', source: 'cue:facility', conf: 0.55, text: text.slice(toks[i + 1].start, toks[j - 1].end) });
       i = j - 1;
@@ -3154,9 +3158,58 @@
   const DOSE_AFTER = /^\s*(?:\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|gm|units?|u|iu|ml|mL|l|meq|mmol|mg\/m2|mg\/kg|mcg\/kg|%)\b|(?:sq|sc|iv|im|po|ivpb|subq|subcut|infusion|injection|tablet|tab|cap|patch)\b|\d+(?:\.\d+)?\s*mg\/)/i;
   const STRICT_SKIP = /^(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight|yesterday|epic|mychart|cerner|snapboard|haiku|canto|rover|beacon|teams|zoom|portal|pyxis|omnicell|alaris|baxter|cadd|powerport|portacath|mediport|picc|huber|onpro|neulasta|pt|pts|dr|mr|mrs|ms|rn|lpn|np|pa|md|do|ok|okay|vit|diff|prbc|ffp|plt|plts|hgb|hct|wbc|anc|alc|inr|ptt|bmp|cmp|lft|lfts|tsh|psa|cea|ldh|egfr|upcr|tsat|dlco|lvef|ivig|scig|cidp|fmla|gcsf|csf|ecog|kps|nivo|ipi|pembro|atezo|durva|dara|ritux|obin|carbo|cis|oxali|gem|pacli|doce|methylpred|solumedrol|benadryl|tylenol|zofran|emend|decadron|pepcid|ativan|compazine|reglan|neupogen|udenyca|ziextenzo|fulphila|nyvepria|zarxio|granix|retacrit|aranesp|procrit|epogen|venofer|injectafer|feraheme|monoferric|infed|reclast|zometa|xgeva|prolia|evenity)$/i;
   const TOWN_WORD = /^(?:Falls|River|Rapids|Springs|Heights|Beach|Lake|Lakes|Valley|Hills|Grove|Bay|Harbor|Harbour|Point|Junction|Creek|Bluffs|Village|City|Ridge|Mills|Station|Landing|Shores|Forge|Ferry|Hollow|Glen|Crossing|Plains|Corners|Port|Haven|Vista|Woods|Meadows|Falls|Bend|Rock|Mountain|Island|Cove|Park)$/;
+  // What the slot is, for the strict pass (the vocabulary itself is in src/lexicon.js and src/clinvocab.js).
+  // a device, route, form or measure right after a word makes that word a drug or a clinical short form ("Epi pen", "Lev drip")
+  const STRICT_DEVICE_AFTER = /^[ \t]+(?:pens?|nebs?|nebulizer|inhaler|drip|gtt|push|flush|patch|patches|pump|tabs?|tablets?|caps?|capsules?|inj|injection|injector|auto-?injector|syringe|vial|vials|bolus|taper|trough|levels?|titer|IV|IVP|IVPB|SQ|SC|PO|IM|mg|mcg|units?)(?![A-Za-z'’\-])/;
+  // where a month cannot stand as a person: "in June", "since May", "early April"
+  const STRICT_DATE_LEAD = /(?<![A-Za-z])(?:in|since|until|till|thru|through|by|of|early|late|mid|last|next|this|every|each|before|after|during)[ \t]+$/i;
+  // what a person does, said of a month, a place or a pair of initials ("June will drive her", "Paris called", "JG says")
+  const STRICT_PERSON_DOES = /^[ \t]+(?:says|said|states|stated|reports|reported|called|calls|phoned|texted|emailed|asked|asks|wants|wanted|denies|denied|prefers|preferred|confirmed|confirms|agreed|agrees|declined|declines|requests|requested|verbalized|understands|drove|drives|brought|brings|is[ \t]+(?:here|aware|driving|bringing|coming|asking|requesting)|will[ \t]+(?:call|drive|bring|pick|come|accompany|translate|stay|return|be[ \t]+(?:driving|bringing|coming|staying|here|accompanying|calling|picking)))(?![A-Za-z])/;
+  // who is spoken with or of: the slot before a pair of initials ("per JG", "spoke w/ JG", "LVM for JG")
+  const STRICT_PERSON_LEAD = /(?<![A-Za-z])(?:per|spoke[ \t]+(?:w\/|with|to)|talked[ \t]+(?:w\/|with|to)|d\/w|discussed[ \t]+(?:w\/|with)|lvm[ \t]+for|vm[ \t]+for|message[ \t]+for|told|notified|informed|updated|contacted|reached|call(?:ed)?[ \t]+back|called)[ \t]+$/i;
+  // what may follow initials named after such a lead: the end of the phrase, never a noun they would describe ("per GI recs")
+  const STRICT_INITIALS_END = /^(?:[ \t]*(?:[.,;:)!?]|$|\n)|[ \t]+(?:re|who|that|ok|okay|and|to|about|regarding|will|is|was|has|at|on|today|yesterday|this|by|via|\(|-|–)(?![A-Za-z]))/i;
+  const STRICT_NAME_LABEL = /(?<![A-Za-z])(?:first|given|middle|last|sur|maiden|legal|preferred|nick)[ \t\-]?name(?:[ \t]+(?:is|was|of))?[ \t]*[:=]?[ \t]*["“'‘]?(\p{Lu}[\p{Ll}\p{M}'’\-]{1,19})(?![\p{L}\d])/giu;
+  const STRICT_KIN_LEAD = /(?<![A-Za-z])(?:husband|wife|spouse|partner|fianc[eé]e?|boyfriend|girlfriend|son|daughter|dtr|mother|mom|father|dad|sister|brother|aunt|uncle|niece|nephew|grandson|granddaughter|grandmother|grandfather|grandma|grandpa|cousin|friend|neighbou?r|caregiver|roommate|pt|patient|mr|mrs|ms|miss)\.?,?[ \t]+\(?$/i;
   function strictSpans(text, spans, cfg) {
     const toks = tokenize(text); if (!toks.length) return spans;
     const covered = (t) => spans.some((sp) => sp.start < t.end && t.start < sp.end);
+    const nameListed = (w) => LEX.isFirstName(w) || LEX.isSurname(w);
+    // a lower-case compound that can be a name ("seo-yeon", "al-amin", "o'brien"): never one made only of ordinary or clinical
+    // words ("son-in-law", "pre-tx", "self-pay", "you've", "nab-paclitaxel")
+    const compoundName = (w) => {
+      const parts = w.split(/[-'’]/).filter(Boolean);
+      if (parts.length < 2 || parts.length > 3 || relWord(w) || LEX.isClinical(w)) return false;
+      // a drug with its suffix ("infliximab-dyyb", "nab-paclitaxel") is one clinical word
+      if (parts.some((x) => x.length >= 5 && (LEX.isClinical(x) || DRUG_STEM.test(x) || LEX.hasDrugStem(x) || LEX.isDrugVocab(x)))) return false;
+      const plain = (x) => x.length < 3 ? !/^(?:al|el|o|d|de|di|la|le|mc|bo|jo|li|xi|yu|an|su|ji|ha|mi|da|do|vy|ye|ae|eu|in|ok|so)$/.test(x) || false : (LEX.isDictWord(x) || LEX.isEnglishWord(x) || LEX.isClinical(x) || DRUG_STEM.test(x) || LEX.hasDrugStem(x) || COMMON_LOWER.has(x));
+      if (parts.every((x) => x.length < 3)) return false;
+      return parts.some((x) => x.length >= 3 && !plain(x)) || (parts.every((x) => x.length < 3 || nameListed(x)) && parts.some((x) => x.length >= 3 && nameListed(x) && !LEX.isEnglishWord(x)));
+    };
+    // the strict pass's own vocabulary: what an unknown capitalised word is when its shape, a real word list or the slot it
+    // stands in says it is no person. A word of the name lists is cleared only by its slot, never by its shape.
+    const vocabWord = (t) => {
+      const w = t.core, lw = w.toLowerCase(), named = nameListed(w);
+      const before = text.slice(Math.max(0, t.start - 48), t.start), after = text.slice(t.fullEnd, t.fullEnd + 48);
+      // specialty and service shorthand ("per endo", "Referred to repro endo")
+      if (LEX.SPECIALTY_SHORT.has(lw) && !/(?:\b(?:dr|mr|mrs|ms|miss|pt|patient)\.?[ \t]+)$/i.test(before)) return true;
+      // a national insurer or patient-assistance organisation; one that is also a surname only beside insurance words
+      if (LEX.PAYER_WORD_SET.has(lw) && (!named || LEX.PAYER_CONTEXT.test(before) || LEX.PAYER_CONTEXT.test(after))) return true;
+      // a car after a colour or beside a vehicle word ("silver Camry", "drives a Tiguan", "plate 7KXR219, white Ford")
+      {
+        const pw = (before.match(/([A-Za-z]+)[ \t]+(?:(?:19|20)\d\d[ \t]+|\d\d[ \t]+)?$/) || [])[1] || '';
+        const colour = !!pw && LEX.COLOR_WORDS.has(pw.toLowerCase());
+        const vehicle = LEX.VEHICLE_CONTEXT.test(before) || LEX.VEHICLE_CONTEXT.test(after);
+        const kind = /^[ \t]+(?:car|truck|pickup|suv|van|minivan|sedan|coupe|hatchback)(?![A-Za-z])/i.test(after);
+        if (LEX.isCarWord(w) ? (named ? (colour && vehicle) || kind : colour || vehicle) : (!named && ((colour && vehicle) || (kind && (colour || /(?:\b(?:a|an|the|his|her|their|pt's|in)[ \t]+)$/i.test(before)))))) return true;
+      }
+      if (named) return false;
+      // a real drug name, a generic-name stem, a lab analyte or protein by its ending, a clinical prefix on an ordinary word
+      if (LEX.isDrugVocab(lw) || LEX.hasDrugStem(lw) || LEX.isLabWord(lw) || LEX.isPrefixedWord(lw)) return true;
+      // a device, route or form right after it: a drug or a clinical short form
+      if (STRICT_DEVICE_AFTER.test(text.slice(t.fullEnd, t.fullEnd + 20))) return true;
+      return false;
+    };
     const ordinary = (t) => {
       const w = t.core, lw = w.toLowerCase();
       if (LEX.isEnglishWord(w) || LEX.isDictWord(w) || LEX.isClinical(w)) return true;
@@ -3170,6 +3223,7 @@
       if (LEX.CREDENTIAL_SET.has(lw) || LEX.HONORIFIC_SET.has(lw.replace(/\.$/, '')) || LEX.STATE_ABBR_SET.has(w) || LEX.STATE_NAME_SET.has(lw)) return true;
       if (LEX.ORG_SUFFIX_SET.has(lw) || LEX.ORG_NAMEWORD_SET.has(lw) || LEX.ORG_PREFIX_SET.has(lw) || LEX.GEO_SUFFIX_SET.has(lw)) return true;
       if (cfg.allowSet && cfg.allowSet.has(lw)) return true;
+      if (vocabWord(t)) return true;
       // a word followed by a regimen/dose context is a drug or product ("Darzalex Faspro wk 9", "Lemtrada D3", "Herzuma charges")
       if (/^\s*(?:C\d+(?:D\d+)?|D\d+|wk\s*\d|week\s*\d|cycle|dose|doses|infusion|infusions|premed|premeds|charges?|load(?:ing)?|maint(?:enance)?|q\d+\s*w(?:ee)?ks?|qw|weekly|monthly|biweekly|induction|reload|faspro|hycela|sc\b|iv\b|subq|\/[a-z]|-[a-z]+\s+(?:wk|c\d|d\d))/i.test(text.slice(t.fullEnd, t.fullEnd + 18))) return true;
       if (/(?:\b(?:start|starting|started|continue|continued|hold|held|resume|resumed|on|off|switch(?:ed)?\s+to|premed(?:icate)?\s+with|given|infuse|infused|due\s+for|move\s+my|approved\s+for|auth\s+for|refill)\s+)$/i.test(text.slice(Math.max(0, t.start - 24), t.start)) && !LEX.isFirstName(w)) return true;
@@ -3245,8 +3299,8 @@
       if (near && !LEX.isClinical(m[1]) && nickOk(m[1]) && !/^(?:Mom|Dad|Son|Wife|Husband|Spouse|Daughter|Sister|Brother|Aunt|Uncle|Pt|Patient|Self|Hcp|Poa|Guardian|Rn|Md|Np|Pa)$/i.test(m[1])) { nicks.add(m[1]); if (free(a, b)) add.push({ start: a, end: b, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); }
     }
     // a lower-case name in brackets after a relation word: "husband (ike) says"
-    { const REL_PAREN = /\b(?:husband|wife|spouse|partner|son|daughter|mother|mom|father|dad|sister|brother|aunt|uncle|niece|nephew|grandson|granddaughter|friend|neighbou?r|caregiver|cousin)\s*\(([\p{L}'’]{2,15})\)/giu; let rm;
-      while ((rm = REL_PAREN.exec(text))) { const a = rm.index + rm[0].length - rm[1].length - 1; if ((LEX.isFirstName(rm[1]) || !LEX.isDictWord(rm[1])) && !LEX.isClinical(rm[1]) && free(a, a + rm[1].length)) add.push({ start: a, end: a + rm[1].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); } }
+    { const REL_PAREN = /\b(?:husband|wife|spouse|partner|son|daughter|mother|mom|father|dad|sister|brother|aunt|uncle|niece|nephew|grandson|granddaughter|friend|neighbou?r|caregiver|cousin)\s*\(([\p{L}'’]{2,15}(?:-[\p{L}'’]{2,15})?)\)/giu; let rm;
+      while ((rm = REL_PAREN.exec(text))) { const a = rm.index + rm[0].length - rm[1].length - 1; if ((LEX.isFirstName(rm[1]) || !LEX.isDictWord(rm[1])) && !LEX.isClinical(rm[1]) && !(/-/.test(rm[1]) && !compoundName(rm[1])) && free(a, a + rm[1].length)) add.push({ start: a, end: a + rm[1].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); } }
     const NICK_CUE = /\b(?:goes\s+by|go(?:es)?\s+by|known\s+as|a\.?k\.?a\.?|nick-?named|prefers\s+to\s+be\s+called|likes\s+to\s+be\s+called|call\s+(?:him|her|them)|calls\s+(?:him|her)self)\s+["“']?(\p{Lu}[\p{Ll}'’]{1,14})/gu;
     while ((m = NICK_CUE.exec(text))) {
       if (LEX.isClinical(m[1]) || !nickOk(m[1])) continue;
@@ -3261,6 +3315,10 @@
         if (nicks.has(t.core)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
         if (!firstNames.has(t.core)) continue;
         const nx = text.slice(t.end, t.end + 24);
+        // "due in April will call to confirm": after a date word the month is the month, whoever is called April
+        if (monthIndex(t.core) && STRICT_DATE_LEAD.test(text.slice(Math.max(0, t.start - 12), t.start))) continue;
+        // the eponym beats the first name already seen: "Addison's ruled out per endo", "No Addison's disease" in the note of a patient called Addison
+        if (eponymUse(text, t.start, t.end) || (LEX.isClinical(t.core) && /^(?:['’]s?)?[ \t]+([A-Za-z]+)/.test(nx) && (LEX.EPONYM_FOLLOW.has(nx.match(/^(?:['’]s?)?[ \t]+([A-Za-z]+)/)[1].toLowerCase()) || MED_SUFFIX.test(nx.match(/^(?:['’]s?)?[ \t]+([A-Za-z]+)/)[1])))) continue;
         if (/^\s+(?:will|would|is|was|has|had|can|could|should|says|said|reports|reported|called|asked|wants|states|stated|denies|tolerated|returns|returned|arrived|left|declined|agreed|feels|felt)\b/.test(nx) || /^['’]s\b/.test(nx)) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
       }
     }
@@ -3270,8 +3328,42 @@
       const t = toks[i]; if (!t.word || !free(t.start, t.end)) continue;
       const nx = text.slice(t.end, t.end + 30);
       const pv = toks[i - 1]; const inPhrase = pv && pv.word && pv.cap && /^\s$/.test(text.slice(pv.end, t.start)) && (LEX.isDictWord(pv.core) || LEX.isClinical(pv.core));
-      if (t.cap && !inPhrase && t.core.length >= 3 && LEX.isFirstName(t.core) && !DRUG_STEM.test(t.core) && /^\s+(?:to\s+(?:pick|drive|bring|take|come|stay|call|help|sign)|says|said|reports|reported|states|stated|wants|wanted|asks|asked|called|calls|denies|denied|agrees|agreed|declines|declined|feels|felt|tolerated|arrived|requests|requested|prefers|confirmed|confirms|texted|emailed|phoned|asking|brought|brings|visited|visits|came|comes|drove|drives|picked|signed|stayed|left\s+a)\b/.test(nx)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
+      if (t.cap && !inPhrase && t.core.length >= 3 && LEX.isFirstName(t.core) && !DRUG_STEM.test(t.core) && !(monthIndex(t.core) && STRICT_DATE_LEAD.test(text.slice(Math.max(0, t.start - 12), t.start))) && /^\s+(?:to\s+(?:pick|drive|bring|take|come|stay|call|help|sign)|says|said|reports|reported|states|stated|wants|wanted|asks|asked|called|calls|denies|denied|agrees|agreed|declines|declined|feels|felt|tolerated|arrived|requests|requested|prefers|confirmed|confirms|texted|emailed|phoned|asking|brought|brings|visited|visits|came|comes|drove|drives|picked|signed|stayed|left\s+a)\b/.test(nx)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
       if (/^[\p{Ll}]/u.test(t.core) && t.core.length >= 3 && LEX.isFirstName(t.core) && !LEX.isEnglishWord(t.core) && /^\s*(?:#|:|at|cell|ph|phone|tel)?\s*\(?\d{3}\)?[\s.\-]?\d{3,4}/i.test(nx)) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
+    // Person slots that hold even for a word that is a month, a place or a pair of initials.
+    // (a) a given name that is also a month or a word, written straight before a name already found ("LVM for June
+    //     Abernathy-Moss", "saw April Okafor"): a month is never followed by a surname
+    for (const sp of nameSpans) {
+      if (sp.initials || !/^\p{Lu}[\p{Ll}\p{M}]/u.test(text.slice(sp.start, sp.start + 2))) continue;
+      const lead = text.slice(Math.max(0, sp.start - 24), sp.start).match(/(?<![\p{L}\d'’\-])(\p{Lu}[\p{Ll}'’]{2,})[ \t]$/u);
+      if (!lead) continue;
+      const w = lead[1], a = sp.start - 1 - w.length, lw = w.toLowerCase();
+      const first = (text.slice(sp.start, sp.end).match(/^[\p{L}'’\-]+/u) || [''])[0];
+      if (!LEX.isFirstName(w) || !(monthIndex(w) || LEX.isAmbiguous(w)) || relWord(w) || LEX.HONORIFIC_SET.has(lw) || LEX.CREDENTIAL_SET.has(lw) || COMMON_CAP.has(lw)) continue;
+      if (LEX.HONORIFIC_SET.has(first.toLowerCase()) || relWord(first) || !(LEX.isSurname(first) || !LEX.isDictWord(first))) continue;
+      if (modalUse(text, a, a + w.length) || eponymUse(text, a, a + w.length)) continue;
+      if (free(a, a + w.length)) add.push({ start: a, end: a + w.length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
+    // (b) a name given by its label: "(first name Paris)", "last name: Reading", "maiden name Winter"
+    STRICT_NAME_LABEL.lastIndex = 0;
+    while ((m = STRICT_NAME_LABEL.exec(text))) {
+      const w = m[1].replace(/['’]s$/, ''), a = m.index + m[0].length - m[1].length, lw = w.toLowerCase();
+      if (!(nameListed(w) || !LEX.isDictWord(w)) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || relWord(w) || /^(?:unknown|none|same|blank|missing|field|only|change|changed|updated|verified|confirmed|corrected|misspelled|spelled|listed|entered|match|matches|mismatch)$/i.test(w)) continue;
+      if (free(a, a + w.length)) add.push({ start: a, end: a + w.length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i]; if (!t.word || !free(t.start, t.end)) continue;
+      const before = text.slice(Math.max(0, t.start - 32), t.start), after = text.slice(t.end, t.end + 40);
+      // (c) a month or a place that is also a given name, doing what a person does ("June will drive her", "Paris called")
+      if (t.cap && t.core.length >= 3 && LEX.isFirstName(t.core) && (monthIndex(t.core) || LEX.CITY_SET.has(t.core.toLowerCase()) || LEX.STATE_NAME_SET.has(t.core.toLowerCase()) || LEX.isAmbiguous(t.core)) && STRICT_PERSON_DOES.test(after) && !STRICT_DATE_LEAD.test(before) && !modalUse(text, t.start, t.end) && !eponymUse(text, t.start, t.end) && !(i > 0 && toks[i - 1].word && toks[i - 1].cap && /^[ \t]$/.test(text.slice(toks[i - 1].end, t.start)) && (LEX.isDictWord(toks[i - 1].core) || LEX.isClinical(toks[i - 1].core)) && !relWord(toks[i - 1].core))) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
+      // (d) two or three capital letters where a person stands ("JG called back", "per JG", "spoke w/ JG"), unless they are
+      //     a role, a department, a state or any clinical abbreviation
+      if (/^[A-Z]{2,3}$/.test(t.raw) && /\p{Ll}{3}/u.test(text) && !LEX.ROLE_ABBR.has(t.core.toLowerCase()) && !LEX.isClinical(t.core) && !STRICT_SKIP.test(t.core) && !LEX.CREDENTIAL_SET.has(t.core.toLowerCase()) && !LEX.STATE_ABBR_SET.has(t.core) && !RESIDUE_ABBR.has(t.core.toLowerCase()) && !LEX.PAYER_WORD_SET.has(t.core.toLowerCase()) && !(cfg.allowSet && cfg.allowSet.has(t.core.toLowerCase()))
+        && !/[\/\-+&#]$/.test(before) && !/^[\/\-+&#\d]/.test(after)
+        && ((STRICT_PERSON_DOES.test(after) && !(i > 0 && toks[i - 1].word && /^[A-Z]{2,}$/.test(toks[i - 1].core) && /^[ \t]$/.test(text.slice(toks[i - 1].end, t.start)))) || (STRICT_PERSON_LEAD.test(before) && STRICT_INITIALS_END.test(after)))) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5, initials: true }); continue; }
+      // (e) a lower-case hyphenated or apostrophe name where a person stands ("wife seo-yeon asking", "o'brien called back")
+      if (/^\p{Ll}[\p{Ll}\p{M}]*(?:[-'’]\p{Ll}[\p{Ll}\p{M}]+)+$/u.test(t.core) && compoundName(t.core) && (STRICT_KIN_LEAD.test(before) || STRICT_PERSON_DOES.test(after))) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
     }
     // "Pt May Tran": a first name that is also a word, between a patient cue and a name already found, is part of the name
     for (const sp of nameSpans) {
