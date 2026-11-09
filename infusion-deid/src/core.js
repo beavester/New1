@@ -4687,7 +4687,8 @@
     // block is cut into its columns (wide gaps, then pipes, then position) and written tile by tile, so each tile reads as
     // one patient's lines.
     {
-      const TILE_LABEL = /^(?:Bay|Chair|Room|Rm|Pod|Bed|Station|Slot|Recliner|Tile|Spot|Infusion\s+Chair)\s*#?\s*\d{1,3}[A-Z]?$/i;
+      // the label may be short and carry the tile's status: "Ch 2 - Infusing", "Chair 4: Pre-meds", "Bay 3 (Hold)"
+      const TILE_LABEL = /^(?:Bay|Chair|Ch|Chr|Room|Rm|Pod|Bed|Station|Stn|Slot|Recliner|Tile|Spot|Infusion\s+Chair)\.?\s*#?\s*\d{1,3}[A-Z]?(?:\s*[-–—:|(]\s*[A-Za-z][A-Za-z\- ]{0,18}\)?)?$/i;
       tileHeads.clear();
       const segsOf = (line) => { const out = []; const re = /\S+(?:\s{1,2}\S+)*/g; let m; while ((m = re.exec(line))) out.push({ text: m[0], start: m.index }); return out; };
       const out = []; let i = 0;
@@ -4887,9 +4888,14 @@
 
     // A name that wrapped over two or three lines of a narrow first column: "0800 Kowalczyk-" / "Hartley, Rosalind |MRN" /
     // "Esperanza   40071823", or "1000 | Ibarrondo   01/05/1962" / "Etxeberria,   MRN" / "Teodoro   40115569".
-    const FRAG_TOK = `(?!(?:DOB|MRN|MR#|ID|Acct|CSN)\\b)(?!${MONTH_NC_CAP}\\.?\\s+\\d)[A-Z][A-Za-z'’]*(?:-[A-Z][A-Za-z'’]*)*-?,?`;
-    const LEAD_RE = new RegExp(`^\\s*(?:(?:\\d{3,4}|\\d{1,2}:\\d{2})\\s*)?[|\\[\\]'!.]*\\s*(${FRAG_TOK}(?:\\s${FRAG_TOK}){0,3})(?=\\s{2,}|\\s*[|\\[\\]'!]|\\s+\\d|\\s*$|\\s+(?:DOB|MRN|MR#)\\b|\\s+${MONTH_NC_CAP}\\.?\\s+\\d)`);
+    const FRAG_TOK = `(?!(?:DOB|MRN|MR#|ID|Acct|CSN)\\b)(?!${MONTH_NC_CAP}\\.?\\s+\\d)(?:[A-Z][a-z]{1,3}\\.(?!\\S)|[A-Z][A-Za-z'’]*(?:-[A-Z][A-Za-z'’]*)*-?,?)`;
+    const LEAD_RE = new RegExp(`^\\s*(?:(?:\\d{1,2}:\\d{2}|\\d{3,4}|\\d[\\d\\/.\\-]{0,10}\\s)\\s*)?[|\\[\\]'!.]*\\s*(${FRAG_TOK}(?:\\s${FRAG_TOK}){0,3})(?=\\s{2,}|\\s*[|\\[\\]'!]|\\s+\\d|\\s*$|\\s+(?:DOB|MRN|MR#)\\b|\\s+${MONTH_NC_CAP}\\.?\\s+\\d)`);
     const TIME_LED = /^\s*(?:\d{3,4}|\d{1,2}:\d{2})\s*[|\[\]'!]*\s*[A-Z]/;
+    // a record line of a grid whose first cell is a time or a (possibly wrapped) date
+    const CELL_LED = /^\s*(?:\d{3,4}|\d{1,2}:\d{2}|\d[\d\/.\-]{0,10}\s)\s*[|\[\]'!]*\s*[A-Z]/;
+    const DATE_LED = /^\s*\d{1,2}[\/.\-]\d/;
+    // a line the reader made of a cell border or a stray mark (".", ":", "uni"): nothing of the name, nothing of a new record
+    const junkLed = (line) => /^(?:[^\w\s]{1,2}|[a-z]{1,3})$/.test(line.trim().split(/\s{2,}/)[0] || '');
     // the rest of a word broken by a narrow column ("Vanderhoe" / "k-", "Szczepano" / "wski,", "Bartholom" / "ew")
     const CONT_RE = /^\s*([a-z][a-z'’]{0,9}(?:-[A-Z][A-Za-z'’]*)*-?,?)(?=\s{2,}|\s+\d|\s*$)/;
     const contLead = (li) => {
@@ -4902,38 +4908,47 @@
     const lead = (li) => {
       if (li >= lines.length || !info[li]) return null;
       const m = lines[li].match(LEAD_RE); if (!m) return null;
-      const words = m[1].split(/\s+/).map((w) => w.replace(/[-,]+$/, '')).flatMap((w) => w.split('-'));
+      const words = m[1].split(/\s+/).map((w) => w.replace(/[-,]+$/, '').replace(/^([A-Z][a-z]{1,3})\.$/, '$1')).flatMap((w) => w.split('-'));
       // a middle initial after the given name is part of it ("Cornelius T")
       if (words.some((w, q) => nameWordBad(w) || (w.length < 2 && !(q > 0 && q === words.length - 1 && /^[A-Z]$/.test(w))))) return null;
       return { text: m[1], rest: lines[li].slice(m.index + m[0].length), start: m.index + m[0].length - m[1].length };
     };
     const override = new Map(); const fragments = {};
     for (let li = 0; li < lines.length; li++) {
-      if (override.has(li)) continue;
+      if (override.has(li) || tileHeads.has(li)) continue; // a tile label ("Ch 3 - Hold") is no part of a name
       const L = lead(li); if (!L) continue;
-      const midWord = (acc, n) => /[A-Za-z]$/.test(acc) && !acc.includes(',') && TIME_LED.test(lines[li]) && contLead(n);
-      const N1 = lead(li + 1) || (midWord(L.text, li + 1) ? contLead(li + 1) : null); if (!N1) continue;
+      const led = CELL_LED.test(lines[li]);
+      const midWord = (acc, n) => /[A-Za-z]$/.test(acc) && !acc.includes(',') && led && contLead(n);
+      // one junk line may stand between an unfinished name and its next piece
+      const n1 = (/[-,]$/.test(L.text) && li + 2 < lines.length && info[li + 1] && junkLed(lines[li + 1]) && !lead(li + 1)) ? li + 2 : li + 1;
+      const N1 = lead(n1) || (midWord(L.text, n1) ? contLead(n1) : null); if (!N1) continue;
       // a surname whose comma the reader lost ("10:00 Featherstonehaugh Jun 11, 40902287" over "Dmitri   1957"): a single
       // surname on a record line with its number, and a known given name alone under it
-      const commaLost = TIME_LED.test(lines[li]) && !/[-,\s]/.test(L.text) && info[li].ids.length > 0 && !N1.cont && /^[A-Z][a-z'’]+$/.test(N1.text) && LEX.isFirstName(N1.text) && info[li + 1] && !info[li + 1].ids.length && !info[li + 1].names.length;
+      const commaLost = TIME_LED.test(lines[li]) && !/[-,\s]/.test(L.text) && info[li].ids.length > 0 && !N1.cont && n1 === li + 1 && /^[A-Z][a-z'’]+$/.test(N1.text) && LEX.isFirstName(N1.text) && info[li + 1] && !info[li + 1].ids.length && !info[li + 1].names.length;
       if (!(/[-,]$/.test(L.text) || (!L.text.includes(',') && /,$/.test(N1.text)) || N1.cont || commaLost)) continue;
       let acc = L.text + (commaLost ? ',' : ''); const chain = [li]; const pieces = [{ li, start: L.start, text: L.text, part: 'last' }];
       // the surname may sit on the line above the record line it belongs to (".   Pellegrino-Vasquez," over "08:00 Annunziata  73310492")
-      const aboveRecord = !TIME_LED.test(lines[li]) && /,$/.test(L.text);
-      for (let n = li + 1; n < lines.length && chain.length < 6; n++) {
-        if (TIME_LED.test(lines[n]) && !(aboveRecord && n === li + 1)) break; // the next record line of the grid
-        const N = lead(n) || ((/[A-Za-z]$/.test(acc) && TIME_LED.test(lines[li])) ? contLead(n) : null); if (!N) break;
+      const aboveRecord = !led && /,$/.test(L.text);
+      let skipped = false;
+      for (let n = li + 1; n < lines.length && chain.length < 7; n++) {
+        // what is left of the wrapped date cell of this record ("026" under "11/16/2") does not start the next record
+        if (tileHeads.has(n)) break;
+        const dateRest = DATE_LED.test(lines[li]) && /^\s*\d{1,4}\s/.test(lines[n]) && info[n] && !info[n].ids.length && !info[n].dates.length;
+        if ((TIME_LED.test(lines[n]) || (CELL_LED.test(lines[n]) && info[n] && info[n].ids.length > 0)) && !dateRest && !(aboveRecord && n === li + 1)) break; // the next record line of the grid
+        const N = lead(n) || ((/[A-Za-z]$/.test(acc) && led) ? contLead(n) : null);
+        if (!N) { if (!skipped && /[-,]$/.test(acc) && info[n] && junkLed(lines[n])) { skipped = true; chain.push(n); continue; } break; }
         if (N.cont) acc += N.text; // a word broken mid-way
         else if (/-$/.test(acc)) acc += N.text;
         else if (/,$/.test(acc)) acc += ' ' + N.text;
         else if (!acc.includes(',') && /,$/.test(N.text)) acc += ' ' + N.text;
-        else if (/,\s*\S/.test(acc) && /^[A-Z][a-z'’]+$/.test(N.text) && !/[A-Za-z]{2,}/.test(N.rest.replace(/\b(?:MRN|MR|DOB|ID)\b/gi, ''))) acc += ' ' + N.text;
+        else if (/,\s*\S/.test(acc) && /^[A-Z][a-z'’]+$/.test(N.text) && (!/[A-Za-z]{2,}/.test(N.rest.replace(/\b(?:MRN|MR|DOB|ID)\b/gi, '')) || /,\s*[A-Z][a-z]{1,3}\.$/.test(acc))) acc += ' ' + N.text;
         else break;
         pieces.push({ li: n, start: N.start, text: N.text, cont: !!N.cont, part: N.cont ? 'cont' : (/,/.test(acc.slice(0, acc.length - N.text.length)) ? 'first' : 'last') });
         chain.push(n);
       }
       acc = acc.replace(/,$/, '').trim();
-      if (chain.length < 2 || !/^[^,]+,\s*[A-Z]/.test(acc) || /-$/.test(acc)) continue;
+      while (chain.length && !pieces.some((pc) => pc.li === chain[chain.length - 1])) chain.pop(); // no junk line at the end
+      if (pieces.length < 2 || !/^[^,]+,\s*[A-Z]/.test(acc) || /-$/.test(acc)) continue;
       const ovRec = { name: acc, chain }; chain.forEach((n) => override.set(n, ovRec));
       // pieces of a word broken by the column ("Vanderhoe" + "k-"): no detector can match them, so they are marked as the
       // patient's name for the line they sit on
