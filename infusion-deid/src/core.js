@@ -3192,7 +3192,8 @@
       const w = t.core, lw = w.toLowerCase(), named = nameListed(w);
       const before = text.slice(Math.max(0, t.start - 48), t.start), after = text.slice(t.fullEnd, t.fullEnd + 48);
       // specialty and service shorthand ("per endo", "Referred to repro endo")
-      if (LEX.SPECIALTY_SHORT.has(lw) && !/(?:\b(?:dr|mr|mrs|ms|miss|pt|patient)\.?[ \t]+)$/i.test(before)) return true;
+      // (one that is also a surname only as written in notes, in lower case: "Endo called back" is a person)
+      if (LEX.SPECIALTY_SHORT.has(lw) && !(named && !/^\p{Ll}/u.test(w)) && !/(?:\b(?:dr|mr|mrs|ms|miss|pt|patient)\.?[ \t]+)$/i.test(before)) return true;
       // a national insurer or patient-assistance organisation; one that is also a surname only beside insurance words
       if (LEX.PAYER_WORD_SET.has(lw) && (!named || LEX.PAYER_CONTEXT.test(before) || LEX.PAYER_CONTEXT.test(after))) return true;
       // a car after a colour or beside a vehicle word ("silver Camry", "drives a Tiguan", "plate 7KXR219, white Ford")
@@ -3340,7 +3341,7 @@
       if (!lead) continue;
       const w = lead[1], a = sp.start - 1 - w.length, lw = w.toLowerCase();
       const first = (text.slice(sp.start, sp.end).match(/^[\p{L}'’\-]+/u) || [''])[0];
-      if (!LEX.isFirstName(w) || !(monthIndex(w) || LEX.isAmbiguous(w)) || relWord(w) || LEX.HONORIFIC_SET.has(lw) || LEX.CREDENTIAL_SET.has(lw) || COMMON_CAP.has(lw)) continue;
+      if (!LEX.isFirstName(w) || !(monthIndex(w) || LEX.CITY_SET.has(lw) || LEX.STATE_NAME_SET.has(lw)) || relWord(w) || LEX.HONORIFIC_SET.has(lw) || LEX.CREDENTIAL_SET.has(lw) || COMMON_CAP.has(lw)) continue;
       if (LEX.HONORIFIC_SET.has(first.toLowerCase()) || relWord(first) || !(LEX.isSurname(first) || !LEX.isDictWord(first))) continue;
       if (modalUse(text, a, a + w.length) || eponymUse(text, a, a + w.length)) continue;
       if (free(a, a + w.length)) add.push({ start: a, end: a + w.length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
@@ -3352,18 +3353,25 @@
       if (!(nameListed(w) || !LEX.isDictWord(w)) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || relWord(w) || /^(?:unknown|none|same|blank|missing|field|only|change|changed|updated|verified|confirmed|corrected|misspelled|spelled|listed|entered|match|matches|mismatch)$/i.test(w)) continue;
       if (free(a, a + w.length)) add.push({ start: a, end: a + w.length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
     }
+    const initialsSeen = new Set();
+    const initialsShape = (t, before, after) => /^[A-Z]{2,3}$/.test(t.core) && !/[\/\-+&#.\d]$/.test(before) && !/^[\/\-+&#\d]/.test(after) && !/^\.[A-Za-z]/.test(after);
     for (let i = 0; i < toks.length; i++) {
       const t = toks[i]; if (!t.word || !free(t.start, t.end)) continue;
       const before = text.slice(Math.max(0, t.start - 32), t.start), after = text.slice(t.end, t.end + 40);
       // (c) a month or a place that is also a given name, doing what a person does ("June will drive her", "Paris called")
-      if (t.cap && t.core.length >= 3 && LEX.isFirstName(t.core) && (monthIndex(t.core) || LEX.CITY_SET.has(t.core.toLowerCase()) || LEX.STATE_NAME_SET.has(t.core.toLowerCase()) || LEX.isAmbiguous(t.core)) && STRICT_PERSON_DOES.test(after) && !STRICT_DATE_LEAD.test(before) && !modalUse(text, t.start, t.end) && !eponymUse(text, t.start, t.end) && !(i > 0 && toks[i - 1].word && toks[i - 1].cap && /^[ \t]$/.test(text.slice(toks[i - 1].end, t.start)) && (LEX.isDictWord(toks[i - 1].core) || LEX.isClinical(toks[i - 1].core)) && !relWord(toks[i - 1].core))) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
+      if (t.cap && t.core.length >= 3 && LEX.isFirstName(t.core) && (monthIndex(t.core) || LEX.CITY_SET.has(t.core.toLowerCase()) || LEX.STATE_NAME_SET.has(t.core.toLowerCase())) && STRICT_PERSON_DOES.test(after) && !STRICT_DATE_LEAD.test(before) && !modalUse(text, t.start, t.end) && !eponymUse(text, t.start, t.end) && !(i > 0 && toks[i - 1].word && toks[i - 1].cap && /^[ \t]$/.test(text.slice(toks[i - 1].end, t.start)) && (LEX.isDictWord(toks[i - 1].core) || LEX.isClinical(toks[i - 1].core)) && !relWord(toks[i - 1].core))) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
       // (d) two or three capital letters where a person stands ("JG called back", "per JG", "spoke w/ JG"), unless they are
-      //     a role, a department, a state or any clinical abbreviation
-      if (/^[A-Z]{2,3}$/.test(t.raw) && /\p{Ll}{3}/u.test(text) && !LEX.ROLE_ABBR.has(t.core.toLowerCase()) && !LEX.isClinical(t.core) && !STRICT_SKIP.test(t.core) && !LEX.CREDENTIAL_SET.has(t.core.toLowerCase()) && !LEX.STATE_ABBR_SET.has(t.core) && !RESIDUE_ABBR.has(t.core.toLowerCase()) && !LEX.PAYER_WORD_SET.has(t.core.toLowerCase()) && !(cfg.allowSet && cfg.allowSet.has(t.core.toLowerCase()))
-        && !/[\/\-+&#]$/.test(before) && !/^[\/\-+&#\d]/.test(after)
-        && ((STRICT_PERSON_DOES.test(after) && !(i > 0 && toks[i - 1].word && /^[A-Z]{2,}$/.test(toks[i - 1].core) && /^[ \t]$/.test(text.slice(toks[i - 1].end, t.start)))) || (STRICT_PERSON_LEAD.test(before) && STRICT_INITIALS_END.test(after)))) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5, initials: true }); continue; }
+      //     a role, a department, a state or any clinical abbreviation; three letters after "per" are a measure or a protocol
+      //     ("dose capped per GFR"), never taken there
+      if (initialsShape(t, before, after) && /\p{Ll}{3}/u.test(text) && !LEX.ROLE_ABBR.has(t.core.toLowerCase()) && !LEX.isClinical(t.core) && !STRICT_SKIP.test(t.core) && !LEX.CREDENTIAL_SET.has(t.core.toLowerCase()) && !LEX.STATE_ABBR_SET.has(t.core) && !RESIDUE_ABBR.has(t.core.toLowerCase()) && !LEX.PAYER_WORD_SET.has(t.core.toLowerCase()) && !(cfg.allowSet && cfg.allowSet.has(t.core.toLowerCase()))
+        && ((/^['’]s[ \t]+([A-Za-z\-]+)/.test(after) && relWord(after.match(/^['’]s[ \t]+([A-Za-z\-]+)/)[1])) || (STRICT_PERSON_DOES.test(after) && !(i > 0 && toks[i - 1].word && /^[A-Z]{2,}$/.test(toks[i - 1].core) && /^[ \t]$/.test(text.slice(toks[i - 1].end, t.start)))) || (STRICT_PERSON_LEAD.test(before) && STRICT_INITIALS_END.test(after) && !(t.core.length === 3 && /per[ \t]+$/i.test(before))))) { initialsSeen.add(t.core); add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5, initials: true }); continue; }
       // (e) a lower-case hyphenated or apostrophe name where a person stands ("wife seo-yeon asking", "o'brien called back")
       if (/^\p{Ll}[\p{Ll}\p{M}]*(?:[-'’]\p{Ll}[\p{Ll}\p{M}]+)+$/u.test(t.core) && compoundName(t.core) && (STRICT_KIN_LEAD.test(before) || STRICT_PERSON_DOES.test(after))) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
+    // initials taken as a person once are that person wherever they stand in the same text ("JG says ... JG tolerated well")
+    if (initialsSeen.size) for (const t of toks) {
+      if (!t.word || !initialsSeen.has(t.core) || !free(t.start, t.end)) continue;
+      if (initialsShape(t, text.slice(Math.max(0, t.start - 2), t.start), text.slice(t.end, t.end + 2))) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5, initials: true });
     }
     // "Pt May Tran": a first name that is also a word, between a patient cue and a name already found, is part of the name
     for (const sp of nameSpans) {

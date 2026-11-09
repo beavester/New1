@@ -386,14 +386,14 @@
   // Vocabulary of the strict pass only (never read by the name, organisation or place detectors, so "Dr. Kaiser" and
   // "Mr. Ford" are still people): what an unknown capitalised word is when it is not a person.
   // ---------------------------------------------------------------------
-  // US health insurers, pharmacy benefit managers and national patient-assistance organisations: national, so no
+  // US health insurers, pharmacy benefit managers and patient-assistance organisations that operate nationally (no regional
+  // plan, no health system, no state programme: those say where the patient lives): national, so no
   // identifier of a person. Each entry is the whole name as written; its words are looked up one by one by the strict pass.
   const PAYER_ORGS = `
     Medicare|Medicaid|Tricare|ChampVA|Humana|Aetna|Cigna|Anthem|Kaiser|Kaiser Permanente|UnitedHealthcare|United Healthcare|UHC|
     BCBS|Blue Cross|Blue Shield|Blue Cross Blue Shield|WellCare|Wellpoint|Molina|Centene|Ambetter|Amerigroup|CareSource|Healthfirst|
     EmblemHealth|Oscar Health|Optum|OptumRx|Express Scripts|Caremark|CVS Caremark|Accredo|Prime Therapeutics|MedImpact|Magellan|
-    Evicore|Carelon|Cohere|AIM Specialty Health|Devoted Health|Clover Health|Bright Health|Geisinger|Highmark|Premera|Regence|
-    Medica|HealthPartners|Priority Health|Harvard Pilgrim|Tufts Health Plan|AmeriHealth|Health Net|SelectHealth|Medi-Cal|MassHealth|
+    Evicore|Carelon|
     PAN|PAN Foundation|Patient Access Network|Patient Access Network Foundation|LLS|Leukemia & Lymphoma Society|Leukemia and Lymphoma Society|
     HealthWell|HealthWell Foundation|CancerCare|NeedyMeds|Good Days|Patient Advocate Foundation|PAF|Copay Relief|Accessia Health|
     The Assistance Fund|TAF|American Cancer Society|ACS|RxAssist|GoodRx|SingleCare|Rx Outreach|National Organization for Rare Disorders|NORD|
@@ -402,7 +402,7 @@
   const payerKey = (s) => String(s || '').toLowerCase().replace(/[.,]/g, '').replace(/\s*&\s*/g, ' and ').replace(/\s+/g, ' ').trim();
   const PAYER_ORG_SET = new Set(PAYER_ORGS.map(payerKey));
   const PAYER_WORD_SET = new Set();
-  PAYER_ORGS.forEach((o) => o.split(/[^A-Za-z\-]+/).forEach((w) => { if (w.length >= 3 && !/^(?:the|and|for|of|health|plan|care|net|fund|blue|cross|shield|good|days|united|social|security|family|reach|rare|american|cancer|society|national|organization|disorders|patient|access|network|advocate|foundation|support|community|assistance|triage|relief|copay|prime|bright|clover|devoted|oscar|express|scripts|priority|specialty|therapeutics|pilgrim|harvard|tufts|outreach|leukemia|lymphoma)$/i.test(w)) PAYER_WORD_SET.add(w.toLowerCase()); }));
+  PAYER_ORGS.forEach((o) => o.split(/[^A-Za-z\-]+/).forEach((w) => { if (w.length >= 3 && !/^(?:the|and|for|of|health|plan|care|net|fund|blue|cross|shield|good|days|united|social|security|family|reach|rare|american|cancer|society|national|organization|disorders|patient|access|network|advocate|foundation|support|community|assistance|triage|relief|copay|prime|oscar|express|scripts|therapeutics|outreach|leukemia|lymphoma)$/i.test(w)) PAYER_WORD_SET.add(w.toLowerCase()); }));
   // what a payer word is written beside ("ins: Medicare + Humana supplement", "Aetna member ID", "PAN Foundation grant")
   const PAYER_CONTEXT = /(?<![A-Za-z])(?:ins|insurance|insurer|insured|payer|payor|plan|plans|supplement|supplemental|coverage|covered|member|subscriber|policy|auth|authorization|prior\s+auth|copay|co-pay|deductible|claim|claims|denial|denied|appeal|benefits?|eligibility|medicare|medicaid|hmo|ppo|advantage|part\s+[abd]|foundation|grant|assistance|fund|funding)(?![A-Za-z])/i;
   // car models people are driven in (the makes come from src/clinvocab.js); a colour or a vehicle word beside one makes it a car
@@ -425,7 +425,7 @@
   // specialty and service shorthand as written in notes ("per endo", "referred to repro endo", "d/w cards")
   const SPECIALTY_SHORT = setOf(words(`
     endo repro onc heme hem neuro rheum derm cards cardio pulm nephro renal gastro uro gyn obgyn ortho psych ophtho
-    optho ent palli pall radonc rad rads surg peds geri allergy immuno hepato transplant vasc neurosurg plastics
+    optho ent palli pall radonc rad rads surg peds allergy immuno hepato transplant vasc neurosurg plastics
     pharm pharmd chemo premed premeds labs appt appts sched auth preauth precert admit triage fellow resident intern
     attending hospitalist navigator pcp`));
   // capital abbreviations that stand where a person can stand ("per MD", "SW called", "spoke w/ CM") and are a role, a
@@ -437,6 +437,8 @@
     NIH DOH DMV IRS SSA HMO PPO EOB COB APP ARNP CRNA PCA PCT LNA RPH BMT GYO HEM PCC ICD CPT AKA DNR DNI AMA LOA
     HE SHE WE HIS HER HIM YOU THE AND NOT ALL ANY BUT FOR OUT OFF NEW OLD YES SON MOM DAD CAR VAN BUS CAB PCR TPN
     NS LR KCL MG CA NA PRN BID TID QID QHS QAM QPM STAT NPO CT MRI PET US XR EKG ECG EEG EMG ECHO CXR KUB ABG
+    DTR SIL FIL MIL BIL DIL GF BF SO GM GD GS CG HHA HCA NN FD OSH PI AR HUC CN NM PSR PAR MOA CMA DON TOC IVT VAT RRT IDT MDT
+    PSA SNP DSNP MCO ACO PBM SP DM HTN CAD CHF CKD AKI UTI URI DVT PE MI TIA CVA GERD COPD OSA RA SLE MS IBD UC CD
     II III IV VI VII IX XI XII`));
   // lab analytes, proteins and enzymes by their ending (calprotectin, haptoglobin, transferrin, fibrinogen, lipase)
   const LAB_MORPH = /(?:[a-z]{3}ectin|globulin|[a-z]{3}globin|[a-z]{3}ferrin|[a-z]{3}albumin|[a-z]{3}protein|[a-z]{3}peptide|[a-z]{4}ogen|[a-z]{4}(?:t|l|n|d|r|x|th)ase|[a-z]{3}tonin|[a-z]{3}bilin|[a-z]{3}rubin|[a-z]{3}sterone|poietin|[a-z]{3}plasmin|[a-z]{3}thrombin|ephrine|osamine|glycoside|[a-z]{4}granin|hepcidin|[a-z]{4}mannan|[a-z]{3}glucan|[a-z]{4}limus|[a-z]{3}toxin)$/i;
