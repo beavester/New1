@@ -61,7 +61,7 @@ Known gap: an out-of-lexicon surname with no cue at all (`Vanterpool called abou
 
 ## Measured on blind red-team cases
 
-Five measurement-only rounds (fresh blind cases, scored once, no fixes before scoring), 92 cases each:
+Eight measurement-only rounds (fresh blind cases written by agents that cannot see the code or earlier cases, scored once, no fixes before scoring), 92 cases each:
 
 | Version measured | Ordinary comments leaking | Hard comments leaking | Screenshots leaking |
 | --- | --- | --- | --- |
@@ -70,8 +70,13 @@ Five measurement-only rounds (fresh blind cases, scored once, no fixes before sc
 | v0.4 (round 7) | 5 of 56 (9%) | 4 of 24 | 3 of 12 |
 | v0.5 (round 8) | 0 of 55 (0%) | 9 of 25 | 1 of 12 |
 | v0.6 (round 9) | 1 of 56 (2%) | 5 of 24 | 2 of 12 |
+| v0.8 (round 10) | 3 of 56 (5%) | 14 of 24 | 0 of 12 |
+| v0.9 (round 11) | 3 of 56 (5%) | 6 of 24 | 4 of 12 |
+| **v0.10 (round 12)**: strict pass + release scan | **0 of 56 (0%)** | **4 of 24** | **0 of 12** |
 
-Each round's leaks were fixed with general rules afterwards and the cases kept as regressions (`test/redteam/`, 350 text/table cases, 93 screenshots, all clean on the current build). Read the ordinary-comment row as "a few percent of comments in realistic notes still carry an identifier; hard-case text leaks far more often". The gold set on real reports remains the number that counts.
+Round 12's four leaks were all hard cases: a pump serial a few words after its label, a personal page as a bare-domain URL (both fixed since with general rules), the first name *Will* used as an ordinary verb right after the patient's name, and a nickname in parentheses (*Paddy*). Twelve rounds are small samples: 0 of 56 is consistent with a true ordinary-comment rate of up to about 5% (95% upper bound), so treat it as "rare", not "never".
+
+Each round's leaks were fixed with general rules afterwards and the cases kept as regressions (`test/redteam/`, 810 text/table cases and 129 screenshots; on the current build 3 text cases and 1 screenshot still leak: the two round-12 name cases above, a scorer artifact in m5-t15, and a ZIP that OCR moves onto its own line in m9-scr-09). Read the ordinary-comment row as "a few percent of comments in realistic notes still carry an identifier; hard-case text leaks far more often". The gold set on real reports remains the number that counts.
 
 
 Rounds 1–4 were find-and-fix rounds: the fixed corpus in `test/redteam/` (170 text/table cases, 45 screenshots) is a regression guarantee, not a miss rate. Round 5 was measurement only (92 fresh cases, no fixes): with the curated lexicon, 10 of 56 ordinary comments and 12 of 24 hard ones leaked at least one identifier; screenshots 0 of 12. Nine of the ten ordinary leaks were a patient's full name in a stand-alone note; v0.3's large lexicon and person-cue rules target exactly that. The unbiased number for v0.3 comes from round 6 (see `docs/PLAN.md` §7). Run the scorer yourself: `node test/redteam/score.js --ocr`.

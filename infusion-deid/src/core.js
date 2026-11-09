@@ -798,7 +798,9 @@
     // (a match starts only where the run of address characters starts, so a long run with no @ is scanned once, not once per
     // character)
     EMAIL: /(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
-    URL: /\b(?:https?:\/\/|www\.)[^\s<>"']+/gi,
+    URL: /\b(?:https?:\/\/|www\.)[^\s<>"']+|\b[a-z0-9][a-z0-9\-]*(?:\.[a-z0-9\-]+)*\.(?:com|org|net|edu|gov|us|io|me|info|co|ly|page|site|health|care)\/[^\s<>"',;)]+/gi,
+    // a serial named a few words after its label: "Pump serial CADD-S 4419-88213", "serial no. for the pump 7731-0042"
+    SERIAL_NEAR: /\b(?:serial|s\/n|sn)\b(?:\s*(?:#|no\.?|num(?:ber)?))?[\s:]+(?:[A-Za-z][\w\-]*\s+){0,3}?([A-Z0-9]*\d[A-Z0-9]*(?:-[A-Z0-9]+|\s[A-Z0-9]*\d[A-Z0-9]*)*)/gi,
     IP: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,
     SSN: /(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)|\b[xX*]{3}-[xX*]{2}-\d{4}\b/g,
     // insurer or plan name, then a member/policy identifier: "UHC / 009227418-02", "Aetna: W220893115", "Medicaid ID 44120099871", "BCBS member # XYZ123456789"
@@ -885,7 +887,8 @@
 
     // Spanish / French / Portuguese / Italian day-month dates ("3 de noviembre", "12 novembre 2026", "le 4 mars")
     run(/\b\d{1,2}(?:\s+de)?\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|sept?iembre|octubre|noviembre|diciembre|janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre|janeiro|fevereiro|mar[cç]o|maio|junho|julho|setembro|outubro|novembro|dezembro|gennaio|febbraio|aprile|maggio|giugno|luglio|settembre|ottobre|dicembre)(?:\s+(?:de\s+)?\d{4})?\b/gi, 'DATE');
-    run(RULES.EMAIL, 'EMAIL'); run(RULES.URL, 'URL'); run(RULES.IP, 'IP'); run(RULES.SSN, 'SSN');
+    run(RULES.EMAIL, 'EMAIL'); run(RULES.URL, 'URL');
+    { RULES.SERIAL_NEAR.lastIndex = 0; let sm; while ((sm = RULES.SERIAL_NEAR.exec(text))) { const v = sm[1]; if (v.replace(/\D/g, '').length < 5) continue; const a = sm.index + sm[0].length - v.length; if (spans.some((x) => x.start < a + v.length && a < x.end)) continue; spans.push({ start: a, end: a + v.length, type: 'ID_OTHER', source: 'rule', conf: 0.9, text: v }); } } run(RULES.IP, 'IP'); run(RULES.SSN, 'SSN');
     { RULES.SSN_LAST4.lastIndex = 0; let sm; while ((sm = RULES.SSN_LAST4.exec(text))) { const st = sm.index + sm[0].length - 4; spans.push({ start: st, end: st + 4, type: 'ID_OTHER', source: 'rule', text: sm[1] }); } }
     { RULES.INSURANCE_ID.lastIndex = 0; let im; while ((im = RULES.INSURANCE_ID.exec(text))) { const st = im.index + im[0].lastIndexOf(im[1]); spans.push({ start: st, end: st + im[1].length, type: 'ID_OTHER', source: 'rule', text: im[1] }); } }
     { RULES.PHONE_WORDS.lastIndex = 0; let pm; while ((pm = RULES.PHONE_WORDS.exec(text))) { const words = pm[0].trim().replace(/[,\s.]+$/, '').split(/[\s\-.,]+/); const digits = words.reduce((n, w) => n + (/^\d+$/.test(w) ? w.length : 1), 0); if (digits >= 7 && words.filter((w) => !/^\d+$/.test(w)).length >= 3) spans.push({ start: pm.index, end: pm.index + pm[0].trim().length, type: 'PHONE', source: 'rule', text: pm[0].trim() }); } }
