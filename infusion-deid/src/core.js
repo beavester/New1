@@ -74,10 +74,17 @@
     if (/[^\x00-\x7F]/.test(t)) {
       try { t = t.normalize('NFC'); } catch (e) { /* lone surrogates: leave as is */ }
       t = t.replace(ZERO_WIDTH, '').replace(UNI_SPACE, ' ').replace(/[\u2028\u2029]/g, '\n')
-        .replace(/[\u2018\u2019\u201A\u201B\u2032\u02BC\uFF07]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033\uFF02]/g, '"');
+        .replace(/[\u2018\u2019\u201A\u201B\u2032\u02BC\uFF07]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033\uFF02]/g, '"')
+        // compatibility folding (NFKC) of the full-width forms ("\uFF2D\uFF32\uFF2E \uFF10\uFF10\uFF17\uFF13\uFF11\uFF19\uFF14\uFF12", "\uFF12\uFF10\uFF12\uFF16\uFF0F\uFF11\uFF11\uFF0F\uFF10\uFF13"): each full-width letter,
+        // digit or punctuation mark becomes its ASCII form one code unit for one, so offsets stay valid; NFKC proper is not
+        // applied to the whole text because it changes lengths and clinical text (\u00BD, m\u00B2, ligatures)
+        .replace(FULL_WIDTH, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(FULL_WIDTH_SIGN, (c) => FULL_WIDTH_SIGNS[c]);
     }
     return t;
   }
+  const FULL_WIDTH = /[\uFF01-\uFF5E]/g;
+  const FULL_WIDTH_SIGN = /[\uFFE0-\uFFE6]/g;
+  const FULL_WIDTH_SIGNS = { '\uFFE0': '\u00A2', '\uFFE1': '\u00A3', '\uFFE2': '\u00AC', '\uFFE3': '\u00AF', '\uFFE4': '\u00A6', '\uFFE5': '\u00A5', '\uFFE6': '\u20A9' };
   // strings are normalised; numbers, booleans, dates and empty cells pass as they are; any other object (a rich-text run, an
   // array, a value whose toString throws) becomes its text, so nothing unread reaches the output
   // a BigInt becomes its digits; a value that cannot be read at all (a revoked proxy) throws, and the whole run fails closed
@@ -403,6 +410,10 @@
   function buildCensus(headers, rows, columns, opts) {
     if (!Array.isArray(rows)) rows = [];
     if (!Array.isArray(columns)) columns = [];
+    // a roster or a part of a long export can reach the census straight from the page: its cells are read as the detectors
+    // read text (full-width forms folded, zero-width characters gone); idempotent for rows processTable already normalised
+    // (the rows' own properties, extras, fragments and sections from parseTextDocument, travel with them)
+    if (rows.some((r) => Array.isArray(r) && r.some((v) => typeof v === 'string' && normalizeText(v) !== v))) rows = Object.assign(rows.map((r) => (Array.isArray(r) ? r.map(normalizeCell) : r)), { extras: rows.extras, fragments: rows.fragments, sectionOf: rows.sectionOf });
     const colByRole = (role) => columns.filter((c) => c.role === role).map((c) => c.index);
     const nameCols = colByRole('patient_name'), mrnCols = colByRole('mrn'), dobCols = colByRole('dob');
     const acctCols = colByRole('account'), phoneCols = colByRole('phone'), provCols = colByRole('provider');
@@ -804,6 +815,10 @@
     SERIAL_NEAR: /\b(?:serial|s\/n|sn)\b(?:\s*(?:#|no\.?|num(?:ber)?))?[\s:]+(?:[A-Za-z][\w\-]*\s+){0,3}?([A-Z0-9]*\d[A-Z0-9]*(?:-[A-Z0-9]+|\s[A-Z0-9]*\d[A-Z0-9]*)*)/gi,
     IP: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,
     SSN: /(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)|\b[xX*]{3}-[xX*]{2}-\d{4}\b/g,
+    SSN_CUE: /\b(?:ssn|ss#|ss\s*#|soc(?:ial)?(?:\s*sec(?:urity)?)?(?:\s*(?:number|num|no\.?|#))?)\s*(?:is|on\s+file)?\s*[:#]?\s*(\d{3}\s*[\s.\-]\s*\d{2}\s*[\s.\-]\s*\d{4}|\d{9})(?![\d\-\/]|[.,]\d)/gi,
+    SSN_SPACED: /(?<![\d\/.:\-,$#+])\d{3}(?:[ .]|[ ]?-[ ]?)\d{2}(?:[ .]|[ ]?-[ ]?)\d{4}(?![\d\/:\-]|[.,]\d)/g,
+    VIN_CUE: /\bVIN\b\s*(?:#|no\.?|number)?\s*[:#]?\s*((?=[A-Za-z0-9\- ]{0,24}\d)[A-HJ-NPR-Za-hj-npr-z0-9]{3,17}(?:[ \-][A-HJ-NPR-Z0-9]{2,14}){0,4})(?![A-Za-z0-9])/gi,
+    VIN: /(?<![A-Za-z0-9\-])(?=[0-9]{0,16}[A-HJ-NPR-Z])(?=[A-HJ-NPR-Z]{0,16}[0-9])[A-HJ-NPR-Z0-9]{17}(?![A-Za-z0-9\-])/g,
     // insurer or plan name, then a member/policy identifier: "UHC / 009227418-02", "Aetna: W220893115", "Medicaid ID 44120099871", "BCBS member # XYZ123456789"
     INSURANCE_ID: /\b(?:uhc|united\s*healthcare|aetna|cigna|humana|anthem|bcbs|blue\s*cross|blue\s*shield|highmark|excellus|fidelis|univera|independent\s*health|mvp|medicaid|medicare|tricare|wellcare|molina|centene|oscar|kaiser|emblem|healthfirst|metroplus|caresource|member|subscriber|policy|plan|payer|insurance|ins)\b[^\n\d]{0,24}?[\/:#]?\s*((?=[A-Za-z0-9-]*\d)[A-Za-z]{0,4}\d[A-Za-z0-9]{4,}(?:-\d{1,3})?)\b/gi,
     // a phone number written in words or mixed ("five five five 0171", "five-five-five-zero-one-seven-one")
@@ -880,6 +895,7 @@
   const RANGE_BEFORE = /(?:\b(?:cycles?|days?|doses?|weeks?|wks?|months?|mos?|yrs?|years?|(?<!\/)c\d*d?|dose|ratio|grade|range|levels?|pages?|items?|q|x|times|courses?|fractions?|fx|sessions?|pain|fatigue|nausea|distress|anxiety|depression|dyspnea|score|scores?|rated?|rating|scale|severity|intensity|vas|nrs|esas)|#)\s*$/i;
 
   // ordinary words that are also common in street names ("Old Mill", "Main", "Park"): not a reason to reject an address
+  const streetish = (w) => !LEX.isDictWord(w) || PLACE_WORD.test(w) || /(?:shore|wood|view|side|field|crest|land|ville|ton|burg|port|haven|dale|brook|mont|ridge|vale|park|hurst|wick|worth|ford|mere|gate)$/i.test(w);
   const PLACE_WORD = /^(?:Old|New|North|South|East|West|Upper|Lower|Mill|Park|Lake|Hill|Oak|Pine|Elm|Maple|Cedar|Spring|Main|High|Church|Union|River|Valley|Forest|Grove|Green|Bay|Rose|King|Queen|Market|Center|Centre|Bridge|Water|Meadow|Field|Wood|Glen|Brook|Stone|Rock|Willow|Birch|Ash|Cherry|Sunset|Hillside|Lakeview|Ridge)$/;
   function ruleSpans(text, cfg) {
     const spans = [];
@@ -913,11 +929,53 @@
       // an address written in lower case after an address cue: "new addr 1207 w magnolia st, apt 3, fresno ca 93705"
       const ADDR_LC = /\b(?:addr|address|lives\s+at|living\s+at|staying\s+at|moved\s+to|new\s+home|home\s+at|located\s+at)\b[\s:.,]*(\d{1,6}\s+(?:[nsew]\.?\s+)?(?:[a-z][a-z'’\-]*\s+){1,3}(?:st|street|ave|avenue|rd|road|blvd|dr|drive|ln|lane|ct|court|way|pl|place|pkwy|ter|cir|hwy)\b\.?(?:,?\s*(?:apt|apartment|unit|ste|suite|#)\.?\s*#?[a-z]?\d+[a-z]?)?(?:,?\s+[a-z][a-z'’\-]*(?:\s[a-z][a-z'’\-]*)?,?\s+[a-z]{2}\s+\d{5}(?:-\d{4})?)?)/gi;
       while ((pm = ADDR_LC.exec(text))) { const v = pm[1], a = pm.index + pm[0].length - v.length; pushId(a, a + v.length, 'ADDRESS'); }
+      // a house number and a street with no suffix, then the town, after a place word: "Summers at 8 Lakeshore, Angola",
+      // "home on 41 Glenwood, Eden"; the street words are never clinical or room/chair/cycle words
+      const ADDR_TOWN = /\b(?:at|on|in|near|to|from|lives?|living|address|addr|home|house|camp|cottage)\b[ \t:]+(\d{1,6}[ \t]+(\p{Lu}\p{Ll}+(?:[ \t]\p{Lu}\p{Ll}+)?)),[ \t]+(\p{Lu}\p{Ll}+(?:[ \t]\p{Lu}\p{Ll}+)?)(?![\p{L}\d])/gu;
+      while ((pm = ADDR_TOWN.exec(text))) {
+        const street = pm[2].split(/[ \t]+/), town = pm[3];
+        if ((street.length === 1 && LEX.PLACE_PREFIX_SET.has(street[0].toLowerCase())) || !street.some((w) => streetish(w)) || street.some((w) => (LEX.isClinical(w) && !PLACE_WORD.test(w)) || COMMON_CAP.has(w.toLowerCase()) || monthIndex(w) || /^(?:Room|Rm|Bed|Bay|Chair|Pod|Floor|Fl|Suite|Unit|Cycle|Day|Dose|Tab|Tabs|Cap|Caps|Vial|Vials|Bag|Bags|Lot|Box|Order|Rx|Ward|Wing|Tower|Building|Bldg|Clinic|Weeks?|Days?|Hours?|Months?|Units?|Doses?|Times|Minutes?)$/i.test(w))) continue;
+        if (LEX.isClinical(town) || COMMON_CAP.has(town.toLowerCase()) || monthIndex(town) || (LEX.isFirstName(town) && !LEX.CITY_SET.has(town.toLowerCase()) && (/^(?:at|in|to|from)$/i.test(pm[0].split(/[ \t:]/)[0]) && /^(?:[01]?\d|2[0-3])[0-5]\d$/.test(pm[1].match(/^\d+/)[0])))) continue; // "at 1030 Smith, Jane" is a schedule
+        const a = pm.index + pm[0].indexOf(pm[1]); // the cue word holds no digit, so the house number starts the value
+        pushId(a, a + pm[1].length, 'ADDRESS');
+        const tz = pm.index + pm[0].length - town.length;
+        lateIds.push({ start: tz, end: tz + town.length, type: 'LOCATION', source: 'rule', conf: 0.8, text: town });
+      }
       const ALNUM = /\b[A-Z]{1,4}\d{7,12}\b(?!\s*(?:mg|mcg|ml|units?|iu)\b)/g;
       while ((pm = ALNUM.exec(text))) pushId(pm.index, pm.index + pm[0].length, 'ID_OTHER');
     }
     { RULES.SERIAL_NEAR.lastIndex = 0; let sm; while ((sm = RULES.SERIAL_NEAR.exec(text))) { const v = sm[1]; if (v.replace(/\D/g, '').length < 5) continue; const a = sm.index + sm[0].length - v.length; if (spans.some((x) => x.start < a + v.length && a < x.end)) continue; spans.push({ start: a, end: a + v.length, type: 'ID_OTHER', source: 'rule', conf: 0.9, text: v }); } } run(RULES.IP, 'IP'); run(RULES.SSN, 'SSN');
-    { RULES.SSN_LAST4.lastIndex = 0; let sm; while ((sm = RULES.SSN_LAST4.exec(text))) { const st = sm.index + sm[0].length - 4; spans.push({ start: st, end: st + 4, type: 'ID_OTHER', source: 'rule', text: sm[1] }); } }
+    { // a social security number in 3-2-4 groups with spaces, dots or mixed separators ("SSN 123 45 6789", "123.45.6789",
+      // "social 123-45 6789"), or nine digits run together after the label. Without a label the groups must be a number the
+      // SSA issues (area not 000, 666 or 9xx, group not 00, serial not 0000), stand alone (no digit, slash, colon or decimal
+      // beside them) and not follow a lab or vital name, so lab values and phone fragments stay
+      let sm;
+      RULES.SSN_CUE.lastIndex = 0;
+      while ((sm = RULES.SSN_CUE.exec(text))) { const v = sm[1], st = sm.index + sm[0].length - v.length; if (!spans.some((x) => x.type === 'SSN' && x.start <= st && x.end >= st + v.length)) spans.push({ start: st, end: st + v.length, type: 'SSN', source: 'rule', text: v, labeled: true }); }
+      RULES.SSN_SPACED.lastIndex = 0;
+      while ((sm = RULES.SSN_SPACED.exec(text))) {
+        const v = sm[0], st = sm.index, d = v.replace(/\D/g, '');
+        if (/^-\d{2}-$/.test(v.slice(3, 7))) continue; // 123-45-6789: the plain SSN rule has it
+        if (/^(?:000|666|9)/.test(d) || d.slice(3, 5) === '00' || d.slice(5) === '0000') continue;
+        if (/\b(?:hr|bp|rr|spo2|o2|sat|sats|pulse|wt|weight|ht|height|glucose|bg|temp|k|na|cl|co2|bun|cr|plt|plts|hgb|hct|wbc|anc|alc|inr|ptt|ldh|labs?|values?|results?|counts?|vitals?|dose|doses|mg|ml|units?|cycles?|days?|x)\s*[:=]?\s*$/i.test(text.slice(Math.max(0, st - 12), st))) continue;
+        // a record, account or other labelled number that happens to be grouped 3-2-4 keeps its own label's rule
+        if (/\b(?:mrn|mr|acct|account|csn|har|fin|id|member|policy|group|grp|claim|auth|ref|order|rx|npi|dea|lot|ndc|serial|sn|phone|ph|tel|fax|cell)\s*(?:#|no\.?|num(?:ber)?)?\s*[:#]?\s*$/i.test(text.slice(Math.max(0, st - 18), st))) continue;
+        if (spans.some((x) => x.start < st + v.length && st < x.end)) continue;
+        spans.push({ start: st, end: st + v.length, type: 'SSN', source: 'rule', text: v });
+      }
+      // a vehicle identification number: 17 letters and digits without I, O or Q. After a "VIN" label the value may be
+      // lower case or grouped; without the label it must be the exact 17-character shape with both letters and digits
+      RULES.VIN_CUE.lastIndex = 0;
+      while ((sm = RULES.VIN_CUE.exec(text))) {
+        let v = sm[1]; const alnum = () => v.replace(/[^A-Za-z0-9]/g, '').length;
+        while (alnum() > 17 && /[\s-]/.test(v)) v = v.replace(/[\s-]+[A-Za-z0-9]+$/, '');
+        if (alnum() < 11 || alnum() > 17 || !/\d/.test(v)) continue;
+        const st = sm.index + sm[0].length - sm[1].length;
+        spans.push({ start: st, end: st + v.length, type: 'ID_OTHER', source: 'rule', text: v, labeled: true });
+      }
+      run(RULES.VIN, 'ID_OTHER', (m) => !spans.some((x) => x.start < m.index + m[0].length && m.index < x.end));
+    }
+    { RULES.SSN_LAST4.lastIndex = 0; let sm; while ((sm = RULES.SSN_LAST4.exec(text))) { const st = sm.index + sm[0].length - 4; if (spans.some((x) => x.type === 'SSN' && x.start < st + 4 && st < x.end)) continue; spans.push({ start: st, end: st + 4, type: 'ID_OTHER', source: 'rule', text: sm[1] }); } }
     { RULES.INSURANCE_ID.lastIndex = 0; let im; while ((im = RULES.INSURANCE_ID.exec(text))) { const st = im.index + im[0].lastIndexOf(im[1]); spans.push({ start: st, end: st + im[1].length, type: 'ID_OTHER', source: 'rule', text: im[1] }); } }
     { RULES.PHONE_WORDS.lastIndex = 0; let pm; while ((pm = RULES.PHONE_WORDS.exec(text))) { const words = pm[0].trim().replace(/[,\s.]+$/, '').split(/[\s\-.,]+/); const digits = words.reduce((n, w) => n + (/^\d+$/.test(w) ? w.length : 1), 0); if (digits >= 7 && words.filter((w) => !/^\d+$/.test(w)).length >= 3) spans.push({ start: pm.index, end: pm.index + pm[0].trim().length, type: 'PHONE', source: 'rule', text: pm[0].trim() }); } }
     run(RULES.PHONE, 'PHONE'); run(RULES.ADDRESS, 'ADDRESS'); run(RULES.ZIP, 'ZIP'); run(RULES.ZIP_LABEL, 'ZIP');
@@ -1233,7 +1291,8 @@
     const toks = []; let m; TOKEN_RE.lastIndex = 0;
     while ((m = TOKEN_RE.exec(text))) {
       const raw = m[0];
-      const core = raw.replace(/['’]s$/i, '').replace(/\.$/, '');
+      // a closing quote glued to the word ("goes by 'Bunny'.") is punctuation, not part of the name
+      const core = raw.replace(/['’]s$/i, '').replace(/\.$/, '').replace(/(?<=\p{L})['’]+$/u, '');
       toks.push({
         raw, core, start: m.index, end: m.index + core.length, fullEnd: m.index + raw.length,
         cap: /^\p{Lu}[\p{Ll}\p{M}'’\-]*$/u.test(core) || /^\p{Lu}[\p{Ll}\p{M}]+-\p{Lu}[\p{Ll}\p{M}]+$/u.test(core) || /^\p{Lu}[\p{Ll}\p{M}]+-[\p{Ll}\p{M}]{2,}$/u.test(core) || /^(?:al|el|ad|ar|as|ash|at|az|an|bin|ibn|ben|bint|abu|ould)-[A-Z][a-z'’]+(?:-[A-Z][a-z'’]+)?$/.test(core) || /^[A-Z][a-z]+-[A-Z][a-z]+$/.test(core) || (/^[A-Z][A-Za-z'’\-]*[a-z]$/.test(core) && (core.match(/[A-Z]/g) || []).length <= 3 && /^(Mc|Mac|De|Di|Da|La|Le|Van|Von|O'|O’|D'|D’|St|Fitz|Del|Des|Du)[A-Z'’]/.test(core)),
@@ -1396,10 +1455,14 @@
         while (e < toks.length && e - q < 3 && !used[e] && toks[e].word && (toks[e].cap || toks[e].allcaps) && !LEX.isClinical(toks[e].core) && !isRel(toks[e]) && !isHon(toks[e]) && !isCred(toks[e]) && !FIELD_WORD.test(toks[e].core) && !(e > q && endsSentence(toks[e - 1]))) { e++; if (endsSentence(toks[e - 1])) break; }
         if (e > q) { j = e; nonSuffix++; }
       }
+      // "Insurance ID W2948", "Policy #": the suffix word is a field label here, not the end of an organisation's name
+      if (j === i + 1 && /^(?:insurance|policy|member|plan|coverage)$/i.test(t.core) && toks[j] && (/^(?:id|#|no|num|number|card|member|policy|group|grp)$/i.test(toks[j].core) || toks[j].raw === '#' || toks[j].raw === ':')) continue;
       let k = i;
       while (k > 0 && i - k < 5) {
         const p = toks[k - 1];
         if (used[k - 1] || endsSentence(p)) break;
+        // a letter glued to an identifier ("order 99812-A. Insurance") is the identifier's suffix, never a name's first word
+        if (p.start > 0 && (/\d[\-\/#]?$/.test(text.slice(Math.max(0, p.start - 2), p.start)) || (p.initial && /[\p{L}\p{N}\-\/#]/u.test(text[p.start - 1])))) break;
         if (p.word && (p.cap || p.allcaps) && !isRel(p) && !isHon(p) && !isCred(p)) { if (!LEX.ORG_SUFFIX_SET.has(p.core.toLowerCase()) || LEX.ORG_NAMEWORD_SET.has(p.core.toLowerCase())) nonSuffix++; k--; continue; }
         if (p.word && /^(of|and|for|the|&)$/i.test(p.core) && k - 2 >= 0 && !used[k - 2] && toks[k - 2].word && (toks[k - 2].cap || toks[k - 2].allcaps) && i - k < 4) { k--; continue; }
         // "Elderwood at Williamsville SNF": "at" joins a facility name only when the word before it is a
@@ -1471,7 +1534,7 @@
       let j = i + 1;
       while (j < toks.length && j - i <= 3 && !used[j] && toks[j].word && (toks[j].cap || toks[j].allcaps) && !LEX.isClinical(toks[j].core) && !isRel(toks[j]) && !isHon(toks[j]) && !isCred(toks[j]) && !FIELD_WORD.test(toks[j].core) && !(allow && allow.has(toks[j].core.toLowerCase())) && !(j > i + 1 && endsSentence(toks[j - 1]))) j++;
       if (j === i + 1) continue;
-      if (toks.slice(i + 1, j).every((x) => inLex(x) && !LEX.ORG_SUFFIX_SET.has(x.core.toLowerCase()))) continue; // "works with Karen Lee" is a person
+      if (toks.slice(i + 1, j).every((x) => inLex(x) && !LEX.ORG_SUFFIX_SET.has(x.core.toLowerCase())) && (/^(?:with|by)$/i.test(t.core) || j - i > 2 || (LEX.isFirstName(toks[i + 1].core) && !LEX.isSurname(toks[i + 1].core)))) continue; // "works with Karen Lee" is a person; "works at Boeing" is not
       addRun(i + 1, j, 'ORG', 'cue:employer', 0.6); i = j - 1;
     }
     // "Employer: Rich Products" / "Employer - GEICO"
@@ -1549,6 +1612,12 @@
       if (!isHon(toks[i])) continue;
       if (toks[i + 1] && ((LEX.isEnglishWord(toks[i + 1].core) && !LEX.isFirstName(toks[i + 1].core) && !LEX.isSurname(toks[i + 1].core)) || (/^MS$/.test(toks[i].core) && !inLex(toks[i + 1])))) continue; // "MS. Premed solumedrol", "Dr. Notes"
       let j = nameRun(i + 1, 3, true);
+      // a surname that opens with lower-case particles ("Dr van der Berg", "Mrs de la Cruz")
+      if (j === i + 1 && !toks[i].nlAfter) {
+        let s = i + 1;
+        while (s < toks.length && s - i <= 2 && toks[s].word && /^(?:van|von|de|del|della|der|den|di|da|du|dos|das|la|le|bin|ibn|al|el|mc|mac)$/.test(toks[s].core) && text.slice(toks[s - 1].fullEnd, toks[s].start) === ' ') s++;
+        if (s > i + 1 && s < toks.length && !used[s] && toks[s].cap && isNameish(toks[s], allow) && text.slice(toks[s - 1].fullEnd, toks[s].start) === ' ') j = nameRun(s, 3, true);
+      }
       // a surname that is also a clinical eponym or device ("Mr. Hickman's Hickman catheter", "Mrs. Graves called"): after an
       // honorific it is the person, unless the next word makes it the disease or sign ("Bell's palsy")
       if (j === i + 1 && i + 1 < toks.length && toks[i + 1].word && toks[i + 1].cap && toks[i + 1].core.length >= 3 && LEX.isClinical(toks[i + 1].core) && !used[i + 1] && !toks[i].nlAfter) {
@@ -1623,7 +1692,16 @@
       const relaxedFirst = (toks[j].cap || toks[j].allcaps) && inLex(toks[j]) && !(allow && allow.has(toks[j].core.toLowerCase()));
       const wordNotName = LEX.isEnglishWord(toks[j].core) && !inLex(toks[j]); // "WIFE AWARE", "and Nutrition"
       if ((isNameish(toks[j], allow) || relaxedFirst) && !wordNotName && !isCred(toks[j]) && !isRel(toks[j]) && !isHon(toks[j])) {
-        const e = nameRun(j, 3, true);
+        let e = nameRun(j, 3, true);
+        // after a role or kin word a two-word name is taken whole even when its second word is short or is also a lab or
+        // clinical abbreviation ("interpreter Li Na", "caregiver Mai Ho"), unless a value follows it ("Na 138", "Na+ low")
+        if (e === j + 1 && e < toks.length && !used[e]) {
+          const n2 = toks[e], gap = text.slice(toks[j].fullEnd, n2.start);
+          const valueAfter = /^\s*(?:[+\-]|\d|=|:|<|>|%|\/)/.test(text.slice(n2.fullEnd, n2.fullEnd + 3)) || /[+\-]$/.test(n2.raw);
+          if (gap === ' ' && toks[j].fullEnd === toks[j].end && !toks[j].nlAfter && n2.word && n2.cap && n2.core.length >= 2 && n2.core.length <= 4 && !valueAfter && inLex(toks[j])
+            && !isCred(n2) && !isRel(n2) && !isHon(n2) && !COMMON_CAP.has(n2.core.toLowerCase()) && !COMMON_LOWER.has(n2.core.toLowerCase()) && !FIELD_WORD.test(n2.core) && !LEX.STATE_ABBR_SET.has(n2.core) && !monthIndex(n2.core) && !(allow && allow.has(n2.core.toLowerCase()))
+            && (inLex(n2) || !LEX.isEnglishWord(n2.core) || LEX.isClinical(n2.core))) e++;
+        }
         if (e > j) addRun(j, e, 'NAME_OTHER', 'cue:relation', 0.85);
         continue;
       }
@@ -2077,15 +2155,47 @@
       if (!t.word || !/^(?:lives?|living|lived|resides?|residing|resided|moved|moving|relocated|relocating|staying|stays|stayed|drives?|drove|driving|comes|coming|came|travels?|traveled|travelled|traveling|travelling|commutes?|commuting|flies|flew|flying|visiting|visits?|visited|returned|returning|originally|born|raised|grew)$/i.test(t.core)) continue;
       let q = i + 1;
       while (q < toks.length && q - i <= 4 && toks[q].word && /^(?:alone|up|down|over|back|here|out|all|the|way|now|currently|still|together|with|her|his|their|family|husband|wife|son|daughter|mother|father|parents|in|on)$/i.test(toks[q].core) && !(toks[q].core.toLowerCase() === 'in' && toks[q + 1] && toks[q + 1].cap)) q++;
-      if (q >= toks.length || !toks[q].word || !/^(?:in|from|near|outside|to)$/i.test(toks[q].core) || toks[q].nlAfter) continue;
+      if (q < toks.length && toks[q].word && /^across$/i.test(toks[q].core) && toks[q + 1] && toks[q + 1].word && /^from$/i.test(toks[q + 1].core)) q++; // "lives across from"
+      const onOk = q < toks.length && toks[q].word && /^on$/i.test(toks[q].core) && /^(?:lives?|living|lived|resides?|residing|resided|staying|stays|stayed)$/i.test(t.core);
+      if (q >= toks.length || !toks[q].word || !(/^(?:in|from|near|outside|to)$/i.test(toks[q].core) || onOk) || toks[q].nlAfter) continue;
       let e = q + 1; while (e < toks.length && e - q <= 2 && placeOk(toks[e]) && !(e > q + 1 && (endsSentence(toks[e - 1]) || toks[e - 1].nlAfter))) e++;
       if (e === q + 1) continue;
+      if (onOk && !toks.slice(q + 1, e).some((x) => streetish(x.core))) continue; // "lives on Disability", "on Fixed Income"
       const nx = toks[e];
       if (!(closes(e) || toks[e - 1].nlAfter || (nx && nx.word && !nx.cap && !nx.allcaps))) continue;
       if (toks.slice(q + 1, e).some((x) => inLex(x) && !LEX.CITY_SET.has(x.core.toLowerCase()) && /^to$/i.test(toks[q].core))) continue; // "drives to Karen's"
       const placeTxt = toks.slice(q + 1, e).map((x) => x.core).join(' ').toLowerCase();
       if (LEX.STATE_NAME_SET.has(placeTxt) || LEX.STATE_NAME_SET.has(toks[q + 1].core.toLowerCase()) || LEX.CITY_SET.has(toks[q + 1].core.toLowerCase()) || LEX.PLACE_PREFIX_SET.has(toks[q + 1].core.toLowerCase())) continue; // known places: the city/state passes
       addRun(q + 1, e, 'LOCATION', 'cue:place', 0.6); i = e - 1;
+    }
+    // Pass S: a staff member named by a source cue ("Per Jen in pharmacy, hold dose", "per Kowalczyk ok to run") or by her
+    // department ("Kim from lab called", "Jen in pharmacy says"): a name of the lexicon, never a department, a protocol,
+    // a system or a clinical word ("Per protocol", "Per MD", "Per Pharmacy", "Per Epic"); a word-name (Will, Hope) only
+    // with the department after it
+    const DEPT = /^(?:pharmacy|pharm|lab|labs|laboratory|scheduling|registration|billing|finance|financial|radiology|imaging|oncology|onc|hematology|heme|infusion|admitting|admissions|triage|clinic|transport|nutrition|dietary|it|access|intake|reception|records|blood|bank|ir|pathology|path|nursing|psych|sw|cm|pt|ot|rehab|central|supply|chemo|research|endo|cardiology|derm|gi|neuro|ortho|surgery|anesthesia|security)$/i;
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i];
+      const perCue = t.word && /^per$/i.test(t.core) && i + 1 < toks.length;
+      const ni = perCue ? i + 1 : i;
+      const n = toks[ni];
+      if (!n || used[ni] || !n.word || !n.cap || n.core.length < 2 || n.fullEnd !== n.end) continue;
+      if (perCue && (t.nlAfter || text.slice(t.fullEnd, n.start) !== ' ')) continue;
+      if (LEX.isClinical(n.core) || COMMON_CAP.has(n.core.toLowerCase()) || isHon(n) || isCred(n) || isRel(n) || FIELD_WORD.test(n.core) || monthIndex(n.core) || LEX.ORG_SUFFIX_SET.has(n.core.toLowerCase()) || LEX.ORG_NAMEWORD_SET.has(n.core.toLowerCase()) || LEX.STATE_ABBR_SET.has(n.core) || LEX.CITY_SET.has(n.core.toLowerCase()) || DEPT.test(n.core) || /^(?:epic|mychart|cerner|protocol|policy|order|orders|guidelines?|plan|chart|note|notes|team|consult)$/i.test(n.core) || (allow && allow.has(n.core.toLowerCase()))) continue;
+      const k = ni + 1, a = toks[k], b = toks[k + 1];
+      const deptAfter = a && b && a.word && /^(?:in|from|at|with|w)$/i.test(a.core) && b.word && DEPT.test(b.core) && !endsSentence(n) && !n.nlAfter;
+      if (!perCue && !deptAfter) continue;
+      const nameLex = LEX.isFirstName(n.core) || LEX.isSurname(n.core);
+      if (!nameLex) continue;
+      if (LEX.isAmbiguous(n.core) && !deptAfter) continue; // "per Will" alone is not enough
+      if (!perCue && i > 0 && (isHon(toks[i - 1]) || isRel(toks[i - 1]))) continue; // another pass has these
+      // the phrase closes after the name (punctuation, the end, a department, a person verb), or a surname follows
+      let e = ni + 1;
+      if (perCue && a && a.word && a.cap && !used[k] && text.slice(n.fullEnd, a.start) === ' ' && !endsSentence(n) && inLex(a) && !LEX.isClinical(a.core) && !wordNotName(a) && !isCred(a)) e = k + 1;
+      const after = toks[e];
+      const closes = !after || deptAfter || endsSentence(toks[e - 1]) || toks[e - 1].nlAfter || /^[,;:)\-–]$/.test(after.raw) || (after.word && /^(?:in|from|at|says|said|states|stated|called|aware|ok|okayed|ok'd|approved|notified|confirmed|recommends|recommended|wants|asked|agrees|agreed|re|to|and)$/i.test(after.core));
+      if (!closes) continue;
+      if (toks[e] && isCred(toks[e])) continue; // "per Jen RN": the credential pass
+      addRun(ni, e, 'NAME_OTHER', 'cue:staff', 0.6);
     }
     // Pass W: a message or note typed all in lower case ("hi its beverly szymanski again", "husband rufus at bedside",
     // "thanks, bev"): with no capitals to go by, a word right after a relation word, a self-introduction or a sign-off that
@@ -2315,6 +2425,114 @@
       for (let q = ti; q < te; q++) used[q] = false;
       spans.splice(si, 1);
     }
+    // Pass Z: places and organisations named by what surrounds them. Each target is one to three capitalised words that
+    // are not clinical (drugs, eponyms, anatomy), not a weekday or month, not a room, chair, bay or unit with its number,
+    // and not an ordinary sentence word:
+    //   - the street of an employer: "Works at Tops on Elmwood", "Employed at Boeing on Elm"
+    //   - a transfer chain: "Transferred from Sisters to Roswell, then to Brooks-TLC"
+    //   - a town before an occupation: "a Buffalo firefighter", "Amherst police officer"
+    //   - a fire company or precinct: "Engine 21", "Ladder 7", "Precinct 4"
+    //   - a newspaper: "the Buffalo News", "Lockport Gazette"
+    {
+      const ROOMISH = /^(?:room|rm|bed|bay|chair|pod|floor|fl|suite|unit|station|recliner|slot|tile|spot|wing|tower|building|bldg|clinic|side|lab|ward|icu|picu|nicu|micu|sicu|ccu|pacu|or|er|ed|ir|cath|ob|step-?down|tele|telemetry|rehab|home|hospice)$/i;
+      const zOk = (q) => {
+        const t = toks[q];
+        if (!t || !t.word || used[q]) return false;
+        const mixed = /^\p{Lu}[\p{L}\p{M}'’]*(?:-[\p{L}\p{M}'’]+)+$/u.test(t.core) && /-\p{Lu}/u.test(t.core); // "Brooks-TLC"
+        const acro = t.allcaps && /^[A-Z]{3,6}$/.test(t.core) && !LEX.STATE_ABBR_SET.has(t.core) && !LEX.CREDENTIAL_SET.has(t.core.toLowerCase());
+        if (!(t.cap || mixed || acro)) return false;
+        if (!mixed && !acro && !placeOk(t)) return false;
+        if (LEX.isClinical(t.core) || DRUG_STEM.test(t.core) || FIN_DRUG.test(t.core) || MED_SUFFIX.test(t.core) || ROOMISH.test(t.core) || STRICT_SKIP.test(t.core) || isRel(t) || isHon(t) || isCred(t) || LEX.LANGUAGE_SET.has(t.core.toLowerCase()) || (allow && allow.has(t.core.toLowerCase()))) return false;
+        return true;
+      };
+      // a run of acceptable words from q, closed by punctuation, a lower-case word or the end; a number right after it
+      // makes it a room or a unit ("to Bay 3"), not a place
+      const zRun = (q, max) => {
+        let e = q; while (e < toks.length && e - q < max && zOk(e) && !(e > q && (endsSentence(toks[e - 1]) || toks[e - 1].nlAfter))) e++;
+        if (e === q) return q;
+        if (toks[e] && toks[e].num && !endsSentence(toks[e - 1])) return q;
+        return e;
+      };
+      const zAdd = (q, e, type, src) => { if (e > q) addRun(q, e, type, src, 0.6); };
+      // the street of an employer or of an organisation just named
+      for (const sp of spans.filter((x) => x.type === 'ORG')) {
+        const ti = toks.findIndex((x) => x.start >= sp.end); if (ti < 0) continue;
+        const si = toks.findIndex((x) => x.start >= sp.start);
+        if (!(/cue:employer|lexicon:org/.test(sp.source) && toks.slice(Math.max(0, si - 4), si).some((x) => x.word && /^(?:works?|working|worked|employed|employer|job|cashier|clerk|manager|shift|hired)$/i.test(x.core)))) continue; // an employer only ("Meals on Wheels" stays)
+        const on = toks[ti];
+        if (!on.word || !/^(?:on|off)$/.test(on.core) || text.slice(sp.end, on.start) !== ' ') continue;
+        const e = zRun(ti + 1, 3);
+        if (e > ti + 1 && !LEX.PLACE_PREFIX_SET.has(toks[e - 1].core.toLowerCase()) && toks.slice(ti + 1, e).some((x) => streetish(x.core))) zAdd(ti + 1, e, 'LOCATION', 'cue:place'); // "on Weekends" stays
+      }
+      for (let i = 0; i < toks.length; i++) {
+        const t = toks[i];
+        if (!t.word) continue;
+        // transfer chains: every "to"/"from" target in the sentence after the transfer verb
+        if (/^(?:transferred|transfer|transferring|xferred|xfer|xfered|discharged|admitted|readmitted|sent|went|came|moved|moving|relocated)$/i.test(t.core)) { // (a referral names a programme: "Referred to Road to Recovery")
+          for (let q = i + 1; q < toks.length && q - i < 24; q++) {
+            if (q > i + 1 && endsSentence(toks[q - 1])) break;
+            if (!toks[q].word || !/^(?:to|from)$/i.test(toks[q].core) || toks[q].nlAfter) continue;
+            const e = zRun(q + 1, 3);
+            if (e === q + 1) continue;
+            const words = toks.slice(q + 1, e);
+            // "transferred to Step Down", "went to Emergency Dept": ordinary words name a unit or a service, not a place
+            if (!words.some((x) => !LEX.isDictWord(x.core) || LEX.ORG_NAMEWORD_SET.has(x.core.toLowerCase()) || LEX.LOCAL_ORG_SET.has(x.core.toLowerCase()) || LEX.CITY_SET.has(x.core.toLowerCase()) || x.allcaps || /-/.test(x.core))) continue;
+            // "came to Karen", "went to Mark's": a lone given name after a movement verb is a person, the other passes decide
+            if (words.length === 1 && LEX.isFirstName(words[0].core) && !LEX.ORG_NAMEWORD_SET.has(words[0].core.toLowerCase()) && !LEX.LOCAL_ORG_SET.has(words[0].core.toLowerCase()) && !LEX.CITY_SET.has(words[0].core.toLowerCase()) && !/-/.test(words[0].core) && !words[0].allcaps && !/^(?:transferred|transfer|transferring|xferred|xfer|xfered|discharged|admitted|readmitted|referred)$/i.test(t.core)) continue;
+            zAdd(q + 1, e, /^(?:moved|moving|relocated|went|came)$/i.test(t.core) ? 'LOCATION' : 'ORG', 'cue:place');
+            q = e - 1;
+          }
+        }
+        // a town or city before an occupation: "Buffalo firefighter", "Amherst police officer", "Lackawanna teacher"
+        if (i > 0 && /^(?:firefighters?|fireman|firemen|police|policeman|policewoman|cop|cops|sheriff|deputy|trooper|paramedics?|emt|teachers?|schools?|librarian|principal|councilman|councilwoman|councilor|mayor|dpw|transit|postal|pd|fd)$/i.test(t.core)) {
+          let k = i; while (k > 0 && i - k < 2 && toks[k - 1].word && toks[k - 1].cap && !used[k - 1] && !endsSentence(toks[k - 1]) && text.slice(toks[k - 1].fullEnd, toks[k].start) === ' ') k--;
+          if (k === i) continue;
+          const words = toks.slice(k, i);
+          if (!words.every((x) => zOk(x.idx))) continue;
+          if (!words.some((x) => LEX.CITY_SET.has(x.core.toLowerCase()) || LEX.STATE_NAME_SET.has(x.core.toLowerCase()) || LEX.PLACE_PREFIX_SET.has(x.core.toLowerCase()) || !LEX.isDictWord(x.core))) continue;
+          if ((k === 0 || endsSentence(toks[k - 1])) && !words.some((x) => LEX.CITY_SET.has(x.core.toLowerCase()))) continue; // at a sentence start, a known town only
+          zAdd(k, i, 'LOCATION', 'cue:place');
+        }
+        // a fire company, police precinct or union local with its number
+        if (t.cap && !used[i] && /^(?:Engine|Ladder|Precinct|Battalion|Firehouse|Rescue|Squad|Truck|Station|Local|Post|Company|District)$/.test(t.core) && toks[i + 1] && toks[i + 1].num && /^\d{1,4}$/.test(toks[i + 1].raw) && text.slice(t.fullEnd, toks[i + 1].start) === ' ') {
+          const strong = /^(?:Engine|Ladder|Precinct|Battalion|Firehouse)$/.test(t.core);
+          const near = toks.slice(Math.max(0, i - 12), Math.min(toks.length, i + 6));
+          const service = near.some((x) => x.word && /^(?:fire|firefighter|firefighters|fireman|firemen|police|cop|officer|sheriff|deputy|trooper|paramedic|emt|union|legion|vfw|precinct|engine|ladder|works|worked|working|stationed|volunteer|volunteers)$/i.test(x.core));
+          const prepBefore = i > 0 && toks[i - 1].word && /^(?:at|with|from|of|on|for)$/i.test(toks[i - 1].core);
+          if ((strong && (service || prepBefore)) || (!strong && service && prepBefore)) { used[i] = true; used[i + 1] = true; spans.push({ start: t.start, end: toks[i + 1].end, type: 'ORG', source: 'cue:org', conf: 0.6, text: text.slice(t.start, toks[i + 1].end) }); i++; continue; }
+        }
+        // a newspaper: "the Buffalo News", "the Lockport Gazette", "Niagara Herald"
+        if (t.cap && i > 0 && !used[i] && /^(?:News|Times|Gazette|Herald|Tribune|Courier|Chronicle|Sentinel|Dispatch|Observer|Journal|Post|Register|Record|Star|Daily|Bee|Express|Ledger|Examiner|Democrat|Leader|Citizen)$/.test(t.core)) {
+          const isLoc = (q) => used[q] && spans.some((x) => COARSE(x.type) === 'LOCATION' && x.start <= toks[q].start && x.end >= toks[q].end);
+          let k = i; while (k > 0 && i - k < 2 && toks[k - 1].word && toks[k - 1].cap && !endsSentence(toks[k - 1]) && text.slice(toks[k - 1].fullEnd, toks[k].start) === ' ' && (zOk(k - 1) || isLoc(k - 1))) k--;
+          if (k === i) continue;
+          const words = toks.slice(k, i);
+          const strongPaper = /^(?:Gazette|Herald|Tribune|Courier|Chronicle|Sentinel|Dispatch|Observer|Ledger|Examiner)$/.test(t.core);
+          if (!strongPaper && !words.some((x) => LEX.CITY_SET.has(x.core.toLowerCase()) || LEX.STATE_NAME_SET.has(x.core.toLowerCase()) || LEX.PLACE_PREFIX_SET.has(x.core.toLowerCase()))) continue;
+          const before = (toks[k - 1] && toks[k - 1].word) ? toks[k - 1].core : '';
+          if (!strongPaper && !/^(?:the|in|on|to|for|from|by|with)$/i.test(before)) continue;
+          // a town already found as a place: the newspaper takes it over
+          for (let si = spans.length - 1; si >= 0; si--) { const x = spans[si]; if (x.start >= toks[k].start && x.end <= t.end && COARSE(x.type) === 'LOCATION') spans.splice(si, 1); }
+          for (let q = k; q <= i; q++) used[q] = true;
+          spans.push({ start: toks[k].start, end: t.end, type: 'ORG', source: 'cue:org', conf: 0.6, text: text.slice(toks[k].start, t.end) });
+        }
+      }
+    }
+    // Pass W0: a surname typed in lower case right after a patient cue ("pt nguyen here", "patient okafor tolerated",
+    // "mrs tran called"): an anchor surname of four or more letters that is not a dictionary word (so "pt walker",
+    // "pt states", "pt long", "pt tol", "pt lue swelling" stay); collectPropagation re-finds it elsewhere in the note ("nguyen's daughter")
+    for (let i = 0; i + 1 < toks.length; i++) {
+      const t = toks[i], n = toks[i + 1];
+      if (!t.word || !/^(?:pt|pts|patient|mrs)$/i.test(t.core) || t.nlAfter || used[i + 1] || !n.word) continue; // ("ms flare", "mr angio": a disease, a scan)
+      if (!/^\s{1,2}$/.test(text.slice(t.fullEnd, n.start)) && !/^\.\s$/.test(text.slice(t.end, n.start))) continue;
+      const w = n.core;
+      if (!/^[a-z][a-z'’\-]{3,}$/.test(w) || !LEX.isAnchorName(w) || LEX.isDictWord(w) || LEX.isClinical(w) || COMMON_LOWER.has(w) || relWord(w) || monthIndex(w) || LEX.CREDENTIAL_SET.has(w) || (allow && allow.has(w))) continue;
+      // "pt augustin, yolene": a given name after the comma comes with it
+      let e = i + 2;
+      const c = toks[i + 2], g = toks[i + 3];
+      if (c && g && c.raw === ',' && !used[i + 3] && g.word && /^[a-z][a-z'’\-]{2,}$/.test(g.core) && text.slice(n.fullEnd, c.start) === '' && (LEX.isFirstName(g.core) || !LEX.isDictWord(g.core)) && !LEX.isAmbiguous(g.core) && !LEX.isClinical(g.core) && !COMMON_LOWER.has(g.core) && !relWord(g.core)) e = i + 4;
+      addRun(i + 1, e, 'NAME_OTHER', 'cue:pt-lower', 0.6);
+    }
     // Pass G2: preposition + known city or state name  (lives in Rochester; moved to Florida)
     for (let i = 0; i < toks.length - 1; i++) {
       const t = toks[i];
@@ -2436,7 +2654,7 @@
         while (start > 0 && text[start - 1] === '-' && /[A-Za-z]/.test(text[start - 2] || '')) { const mm = text.slice(Math.max(0, start - 61), start - 1).match(/[A-Za-z'’]+$/); if (/^[a-z]/.test(mm[0]) && mm[0].length < 3) break; start -= 1 + mm[0].length; }
         let relative = false;
         if (p && p.ownTokens) {
-          const toks = text.slice(start, end).toLowerCase().split(/[^a-z'’]+/).filter(Boolean);
+          const toks = text.slice(start, end).toLowerCase().split(/[^\p{L}\p{M}'’]+/u).filter(Boolean); // any script: "nuñez" is one token
           relative = toks.some((t) => !ownTokenHas(p.ownTokens, t) && !(t.length === 1 && [...p.ownTokens].some((o) => o[0] === t)));
         }
         if (relative) { spans.push({ start, end, type: 'NAME_OTHER', source: 'census', relative: entity, text: text.slice(start, end), conf: 0.9, ownTokens: p.ownTokens }); continue; }
@@ -2550,7 +2768,7 @@
         // "daughter Siobhan Fitzgerald-Nowak": the union added a token that is not one of the patient's own names, so
         // this is a relative who shares the surname, not the patient
         if (k.type === 'NAME_PATIENT' && k.entity && k.ownTokens) {
-          const toks = k.text.toLowerCase().split(/[^a-z'’]+/).filter(Boolean);
+          const toks = k.text.toLowerCase().split(/[^\p{L}\p{M}'’]+/u).filter(Boolean);
           if (toks.some((t) => !ownTokenHas(k.ownTokens, t) && !(t.length === 1 && [...k.ownTokens].some((o) => o[0] === t)) && !/^(?:md|do|np|pa|rn|jr|sr|ii|iii|iv|mr|mrs|ms|dr|pt)$/.test(t))) { k.type = 'NAME_OTHER'; k.relative = k.entity; delete k.entity; }
         }
       }
@@ -2633,6 +2851,20 @@
         const monthGiven = hop === 0 && p.cap && p.core.length >= 4 && monthIndex(p.core) && LEX.isFirstName(p.core) && LEX.isAnchorName(toks[ti].core) && (!pp || pp.nlAfter || endsSentence(pp) || /^[:(\-–]$/.test(pp.raw) || (pp.word && (/^(?:pt|patient)$/i.test(pp.core) || isRel(pp) || isHon(pp))));
         if (!monthGiven && !tokOk(p, toks[ti])) break;
         ti--; added.push(p);
+      }
+      // surname particles written before the found surname, in any case, belong to it ("VAN DER MERWE", "de la Cruz",
+      // "van der Berg"); "der", "den", "la", "le", "los", "las" only after another particle
+      for (let hop = 0; hop < 3 && ti > 0; hop++) {
+        const p = toks[ti - 1];
+        if (!p.word || p.fullEnd !== p.end || text.slice(p.fullEnd, toks[ti].start) !== ' ' || p.nlAfter || covered(p)) break;
+        const pc = p.core.toLowerCase().replace(/\.$/, '');
+        const lead = /^(?:van|von|de|del|della|di|da|du|dos|das|bin|ibn|al|el|st|mc|mac|o'|o’)$/.test(pc);
+        const inner = /^(?:der|den|la|le|los|las)$/.test(pc) && ti >= 2 && toks[ti - 2].word && /^(?:van|von|de|del|della|di|da|du|dos|das)$/i.test(toks[ti - 2].core) && text.slice(toks[ti - 2].fullEnd, p.start) === ' ';
+        if (!lead && !inner) break;
+        const ref = toks[ti];
+        if (!(ref.cap || ref.allcaps) || (p.allcaps && !ref.allcaps) || (/^\p{Lu}/u.test(p.core) && !p.allcaps && ref.allcaps && p.core.length > 3)) break; // "VAN MERWE", "van Merwe", "Van Merwe"
+        ti--; added.push(p);
+        if (inner) { ti--; added.push(toks[ti]); hop++; }
       }
       // forward: "<found given name> <surname>"
       for (let hop = 0; hop < 2 && te < toks.length && te - ti < 4; hop++) {
@@ -2950,6 +3182,13 @@
       // a removed span must stay removed even if a merged/propagated span re-covers exactly it
       for (const r of manual.remove) { const i = out.findIndex((s) => s.start === r[0] && s.end === r[1] && !s.manual); if (i >= 0) out.splice(i, 1); }
     }
+    // a word-span never carries the quotes around it: they stay in the output as written ("goes by 'Bunny'." keeps both;
+    // "Davis'" keeps its apostrophe after the surrogate)
+    out.forEach((s) => {
+      if (s.manual || !/^(?:NAME|ORG|LOCATION)$/.test(COARSE(s.type))) return;
+      while (s.end - s.start > 1 && /['"’”]/.test(text[s.end - 1])) s.end--;
+      while (s.end - s.start > 1 && /['"‘“]/.test(text[s.start])) s.start++;
+    });
     out.forEach((s) => { s.text = text.slice(s.start, s.end); delete s.fullText; });
     return out;
   }
@@ -2976,6 +3215,8 @@
       }
       if (COARSE(s.type) !== 'NAME' || s.source === 'census' || s.source === 'propagate' || s.initials) continue;
       const full = s.text.trim();
+      // a lower-case surname found after a patient cue is re-found as written and in Title case ("nguyen's", "Nguyen")
+      if (/cue:pt-lower/.test(s.source) && /^[a-z][a-z'’\-]{2,}(?:,\s*[a-z][a-z'’\-]{2,})?$/.test(full)) { full.split(/,\s*/).forEach((w) => { terms.add(w); terms.add(titleCase(w)); }); continue; }
       if (full.length >= 4 && /\s/.test(full)) terms.add(full);
       // dotted initials used as a name ("goes by T.J.", "Pt J.R. Whitcombe"): the initials alone are re-found ("T.J. reports")
       (full.match(/(?<![\w.])(?:[A-Z]\.){1,2}[A-Z](?![\w])/g) || []).forEach((x) => { if (!/^(?:I\.V|P\.O|N\.P\.O|R\.N|M\.D|D\.O|N\.P|P\.A|A\.M|P\.M|U\.S|D\.C|B\.I\.D|T\.I\.D|Q\.I\.D|P\.R\.N|E\.R|S\.C|I\.M)$/.test(x)) terms.add(x); });
@@ -3251,7 +3492,7 @@
         return matchCase(t, tokenMap.get(k));
       };
       let out;
-      if (parsed.format === 'last_first') out = `${tok(parsed.last, false)}, ${tok(parsed.first, true)}${parsed.middle ? ' ' + parsed.middle : ''}`;
+      if (parsed.format === 'last_first') out = `${tok(parsed.last, false)}, ${tok(parsed.first, true)}${parsed.middle ? ' ' + parsed.middle.split(' ').map((m) => tok(m, true)).join(' ') : ''}`; // a second given name is replaced too
       else if (parsed.format === 'single') out = tok(parsed.last, LEX.isFirstName(parsed.last) && !LEX.isSurname(parsed.last));
       else out = [tok(parsed.first, true), ...(parsed.middle ? parsed.middle.split(' ').map((m) => tok(m, true)) : []), tok(parsed.last, false)].join(' ');
       return out + cred;
@@ -3277,6 +3518,8 @@
     // Other identifiers: numeric/alphanumeric codes keep their shape with new digits; user names and handles
     // (letters that may spell a name) are replaced wholesale so no name fragment survives.
     const fakeId = (orig) => stringSurrogate('ID', orig, () => freshNumber(() => {
+      // a digit-led code typed in lower case ("vin 1hgcm82633a004352") is not a user name: new digits and letters, same shape
+      if (/[a-z]{3,}/.test(orig) && /^\d/.test(orig) && !/[._@]/.test(orig)) return orig.replace(/\d/g, () => randDigits(1)).replace(/^(\D*)\d/, '$19').replace(/[a-z]/g, () => String.fromCharCode(97 + Math.floor(rng() * 26))).replace(/[A-Z]/g, () => String.fromCharCode(65 + Math.floor(rng() * 26)));
       if (/[a-z]{3,}/.test(orig) || /^@/.test(orig)) return orig.replace(/^(@?)[A-Za-z][\w.\-]*/, (m, at) => `${at}user${randDigits(4)}`);
       if (orig.replace(/\D/g, '').length === 10 && !/[A-Za-z]/.test(orig)) { const d = ('555010' + randDigits(4)).split(''); let i = 0; return orig.replace(/\d/g, () => d[i++]); }
       return orig.replace(/\d/g, () => randDigits(1)).replace(/^(\D*)\d/, '$19').replace(/[A-Z]/g, () => String.fromCharCode(65 + Math.floor(rng() * 26)));
@@ -3530,7 +3773,12 @@
   // 5c. Text documents (pasted text or OCR output) -> table with a line census
   // ---------------------------------------------------------------------
   // (word lengths are bounded so a long run of hyphenated capitals cannot make the match quadratic)
-  const LINE_NAME_RE = /(?<![\w,])([A-Z][A-Za-z'’\-]{1,40}(?:[ -][A-Z][A-Za-z'’\-]{1,40})?),[ \t]{0,8}([A-Z][A-Za-z'’\-]{0,40})(?:[ \t]{1,8}([A-Z])\b\.?|[ \t]([A-Z][A-Z'’\-]{0,40})(?=\s|$)|[ \t]([A-Z][a-z'’\-]{2,40})(?=\s{3,}|\s*$))?(?![\w,])/g;
+  // "Last, First [Second]" on a line. Letters of any script ("Nuñez, José Ángel"); a surname may open with particles in any
+  // case ("VAN DER MERWE, PIETER", "de la Cruz, Maria", "St. John, Ava"); a Title-case second given name closes on a column
+  // gap, the end of the line, punctuation or an identifier label ("Pham, Quoc Dung  ", "Nunez, Jose Angel (MRN")
+  const ci = (w) => w.replace(/[a-z]/g, (c) => `[${c.toUpperCase()}${c}]`);
+  const LINE_PARTICLE = `(?:(?:${['van', 'von', 'de', 'del', 'della', 'der', 'den', 'di', 'da', 'du', 'dos', 'das', 'la', 'le', 'bin', 'ibn', 'al', 'el', 'mc', 'mac'].map(ci).join('|')}|${ci('st')}\\.?|[Oo]['’])[ ]+){0,2}`;
+  const LINE_NAME_RE = new RegExp(`(?<![\\p{L}\\p{N}_,])(${LINE_PARTICLE}\\p{Lu}[\\p{L}\\p{M}'’\\-]{1,40}(?:[ -]\\p{Lu}[\\p{L}\\p{M}'’\\-]{1,40})?),[ \\t]{0,8}(\\p{Lu}[\\p{L}\\p{M}'’\\-]{0,40})(?:[ \\t]{1,8}(\\p{Lu})(?![\\p{L}\\p{N}_])\\.?|[ \\t](\\p{Lu}[\\p{Lu}\\p{M}'’\\-]{0,40})(?=\\s|$)|[ \\t](\\p{Lu}[\\p{Ll}\\p{M}'’\\-]{2,40})(?=\\s{3,}|\\s*$|\\s*[(;|]|[,.](?:\\s|$)|\\s+(?:MRN|MR#|DOB|D\\.O\\.B|Acct|CSN|c\\/o)\\b|\\s+\\d))?(?![\\p{L}\\p{N}_]|,(?![ \\t]*#?\\d))`, 'gu'); // a comma closes the name only before a number ("Okafor, Chidi Emeka, 4410923")
   const STREET_SUFFIX_WORD = /^(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Pkwy|Parkway|Hwy|Highway|Cir|Circle|Ter|Terrace|Trl|Trail|Pike|Row|Sq|Square|Box)\.?$/i;
   const LINE_ID_RE = /(?<![\w\/\-.:])(?:MRN\s*[:#]?\s*)?([A-Z]{0,2}[0-9OIlSB]{6,10})(?![\w\/\-])(?!:\d)(?!\.[\w])/g;
   // a labelled MRN may be written with internal spaces or hyphens ("MRN#0041 2345", "MRN: 0041-2345")
@@ -3658,6 +3906,12 @@
         // "52 Birchwood Ln, Tisbury": a street and its town, not "Last, First"
         if (last.split(/[ -]/).some((w) => STREET_SUFFIX_WORD.test(w))) continue;
         const after = line.slice(m.index + m[0].length), before = line.slice(Math.max(0, mIndex - 80), mIndex);
+        // "Summers at 8 Lakeshore, Angola": a house number, a street and a town that is no given name; a schedule time
+        // before a patient ("0900 Smith, Jane") keeps its patient
+        { const hn = before.match(/(?:^|[^\d:\/.\-])(\d{1,6})[ \t]+$/);
+          const clock = hn && /^(?:[01]?\d|2[0-3])[0-5]\d$/.test(hn[1]);
+          const placeCue = hn && /\b(?:at|on|near|lives?|living|address|addr|home|house)\s+\d{1,6}[ \t]+$/i.test(before);
+          if (hn && ((placeCue && !(clock && LEX.isFirstName(first))) || (!LEX.isFirstName(first) && (LEX.CITY_SET.has(first.toLowerCase()) || PLACE_WORD.test(last) || /(?:shore|wood|view|side|field|crest|land|ville|ton|burg|port|haven|dale|brook|mont|ridge|vale|park)$/i.test(last))))) continue; }
         // a clinician ("per Bruno, Georgiana MD", "Dr. Lee, Karen") is not a new patient
         if (LINE_CRED_AFTER.test(after) || LINE_PROVIDER_BEFORE.test(before)) continue;
         if (LEX.STATE_ABBR_SET.has(first) || LEX.CREDENTIAL_SET.has(first.toLowerCase()) || LEX.HONORIFIC_SET.has(last.toLowerCase())) continue;
@@ -3667,6 +3921,9 @@
         const drugLike = (w) => /(ated|ized|ised|ins|ine|ol|ide|ate|mab|nib|ium|ase|ex|oid)$/i.test(w) && !LEX.isFirstName(w) && !LEX.isSurname(w);
         const knownSurname = (w) => w.split(/[-\s]+/).some((h) => LEX.isSurname(h));
         if (drugLike(first) && !knownSurname(last)) continue; // "Penicillins, Iodinated" but not "Kowalczyk-Brennan, Ottoline"
+        // "On Rituxan, Venofer.": clinical words that are no name of any tier, with a preposition before them, are a list
+        { const ws = [...last.split(/[ -]/), first].filter((w) => w && !/^(?:on|off|and|or|with|of|per|s\/p)$/i.test(w));
+          if (ws.length && ws.every((w) => LEX.isClinical(w) && !LEX.isFirstName(w) && !LEX.isSurname(w))) continue; }
         // a label or form word is not half of a name ("Health Plan, Member ID ...", "Van Minh, DOB 03041951")
         if ([last, first].some((w) => LINE_LABEL_WORD.test(w) || LEX.ORG_SUFFIX_SET.has(w.toLowerCase()) || LEX.GREETING_SET.has(w.toLowerCase()) || /^(?:thanks|thank|thx|regards|sincerely|cheers|hi|hello|hey|dear|yes|no|ok|okay|please|sorry|also|then|today|tomorrow|yesterday|tonight)$/i.test(w))) continue;
         // "this is Bobby, Roberta Szymanski's grandson": the pair runs on into another name, so it is not "Last, First"
@@ -3832,7 +4089,7 @@
       const pick = ids[0];
       if (pick && (name || pick.labeled || !o.requireNameForMrn)) mrn = pick.norm;
       if (pick && !name) name = wrappedName(line, pick.index, lines[li + 1]);
-      if (pick && !name) { const lm = line.match(/(?<![\w])([a-z][a-z'’\-]{2,}(?:[ -][a-z][a-z'’\-]{2,})?),[ \t]*([a-z][a-z'’\-]{2,})(?=[ \t]*[(\-–—:|]?[ \t]*\(?[ \t]*(?:mrn|mr#|dob|#)|[ \t]+[a-z]{0,2}\d{6,10}\b)/i); if (lm && !LEX.isEnglishWord(lm[2]) && !LEX.isClinical(lm[2]) && !lm[1].split(/[ -]/).some((w) => LEX.isEnglishWord(w) && !LEX.isSurname(w))) name = `${lm[1]}, ${lm[2]}`; }
+      if (pick && !name) { const lm = line.match(/(?<![\w])((?:(?:van|von|de|del|della|der|den|di|da|du|dos|das|la|le|bin|ibn|al|el|st\.?|mc|mac)[ ]+){0,2}[a-z][a-z'’\-]{2,}(?:[ -][a-z][a-z'’\-]{2,})?),[ \t]*([a-z][a-z'’\-]{2,})(?=[ \t]*[(\-–—:|]?[ \t]*\(?[ \t]*(?:mrn|mr#|dob|#)|[ \t]+[a-z]{0,2}\d{6,10}\b)/i); if (lm && !LEX.isEnglishWord(lm[2]) && !LEX.isClinical(lm[2]) && !lm[1].split(/[ -]/).some((w) => LEX.isEnglishWord(w) && !LEX.isSurname(w) && !NAME_PARTICLE.test(w.replace(/\.$/, '')))) name = `${lm[1]}, ${lm[2]}`; }
       // "First Last" right before its record number or birthdate ("for Rosalind Graves (MRN 66120934)", "PARK MI-SOOK (MRN
       // 8830217)", "Patient Dang Van Minh, DOB 03041951"): that is the line's patient, so the name is not "not read"
       if (!name && (pick || /\b(?:dob|d\.o\.b)\b/i.test(line))) name = firstLastBeforeId(line);

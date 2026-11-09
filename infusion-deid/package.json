@@ -5,7 +5,7 @@
   "description": "Offline, single-file de-identification for Epic infusion schedule and ordering exports: census dictionary + rules + cue detector + hide-in-plain-sight surrogates.",
   "scripts": {
     "build": "node build.js",
-    "test": "node --test test/unit.test.js && node test/run_eval.js",
+    "test": "node --test test/unit.test.js test/detect.test.js && node test/run_eval.js",
     "eval": "node test/run_eval.js",
     "e2e": "node test/e2e.js"
   },
