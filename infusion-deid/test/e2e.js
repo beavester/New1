@@ -3,7 +3,10 @@
  * Flow under test: drop → auto-run → verdict (self-check) → review → download; a session that links the same
  * patients across a second spreadsheet and pasted text; the columns gate; new session; restore from a key;
  * the Check accuracy tab; Restore identities round trips; and, on the OCR build, two synthetic screenshots of
- * the same patients recognised in the page and linked to one set of codes. */
+ * the same patients recognised in the page and linked to one set of codes. On both builds: the patient list (pasted and
+ * as a roster file) fills the registry without adding a source and nothing from it reaches any file; a check with no
+ * patients to check against is amber, never green; a run or check that throws leaves nothing downloadable; no exported
+ * cell can start a formula; a 3,000-row export is protected in parts with progress while the page keeps answering. */
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -431,8 +434,261 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     await octx.close();
   }
 
+  // 8. bulletproofing, on both builds: the patient list, honest verdicts, failing closed, formula-safe files, long inputs
+  const FORMULA = /^[=+\-@\t\r]/;
+  const unsafeCells = (wb) => { const bad = []; for (const n of wb.SheetNames) { const ws = wb.Sheets[n]; for (const a of Object.keys(ws)) { if (a[0] === '!') continue; const c = ws[a]; if (c.f || (typeof c.v === 'string' && FORMULA.test(c.v))) bad.push(`${n}!${a}=${c.f || c.v}`); } } return bad; };
+  const allCellsText = (wb) => wb.SheetNames.map((n) => JSON.stringify(aoaOf(wb, n))).join(' ').toLowerCase();
+  const robust = async (distPath, label) => {
+    const rctx = await browser.newContext({ acceptDownloads: true, viewport: { width: 1280, height: 900 } });
+    const rp = await rctx.newPage(); watch(rp);
+    await rp.goto('file://' + distPath);
+    const rDone = (timeout) => rp.waitForFunction(() => { const it = window.__deid.state.current; return !!it && !it.running && /Done in/.test(document.querySelector('#runInfo').textContent); }, null, { timeout: timeout || 60000 });
+    const rdl = async (sel) => { const [d] = await Promise.all([rp.waitForEvent('download', { timeout: 20000 }), rp.click(sel)]); const p = path.join(tmp, `${label}_${++dlSeq}_${d.suggestedFilename()}`); await d.saveAs(p); return p; };
+    const strip = () => rp.textContent('#session');
+    const sources = (n) => rp.waitForFunction((k) => new RegExp(`\\b${k} sources`).test(document.querySelector('#session').textContent), n);
+    const rowsText = () => rp.evaluate(() => window.__deid.session.items.map((it) => (it.result ? JSON.stringify(it.result.rows) : '')).join(' ').toLowerCase());
+    const paste = async (text) => { await rp.click('#pasteOpen'); await rp.fill('#pasteText', text); await rp.click('#pasteRun'); };
+    const verdict = () => rp.textContent('#verdict');
+
+    // (b) no patients at all to check against: amber, never green; downloads allowed and say so
+    await paste('Vanterpool called about labs, tolerating C3D1 well.\nRide home arranged by daughter.');
+    await sources(1); await rDone();
+    let v = await verdict();
+    assert(/No patient list/.test(v) && /found by rules only/.test(v) && /make this check real/.test(v) && !/Checked:/.test(v), `${label}: amber verdict expected: ${v.slice(0, 200)}`);
+    assert(await rp.$('#verdictBody .verdict.amber'), `${label}: amber verdict must be styled amber`);
+    assert(!(await rp.isDisabled('#dlXlsx')) && !(await rp.isDisabled('#dlNow')) && !(await rp.isDisabled('#dlAll')), `${label}: amber must still allow downloads`);
+    assert(/not checked against a patient list/i.test(await rp.textContent('#dlNow')) && /not checked against a patient list/i.test(await rp.textContent('#dlXlsx')) && /patient list/i.test(await rp.textContent('#dlAmber')), `${label}: amber download buttons must say so`);
+    assert(/No patient list/.test(await strip()), `${label}: strip should say there is no patient list`);
+    assert(/Self-check: no patients to check against/.test(fs.readFileSync(await rdl('#dlReport'), 'utf8')), `${label}: run summary must record the amber check`);
+
+    // (a) a pasted patient list fills the registry, adds no source, re-runs what was protected, and turns the check real
+    const roster = ['Vanterpool, Desmond   MRN 00555111   DOB 2/3/1951', 'Clifford Nyambura      00987654', '08:30 Chair 4 Hydration', 'Infusion Schedule Monday'].join('\n');
+    await rp.click('#rosterOpen'); await rp.fill('#rosterText', roster); await rp.click('#rosterRun');
+    await rp.waitForFunction(() => /Patient list: 2 patients/.test(document.querySelector('#session').textContent));
+    await rDone();
+    v = await verdict();
+    assert(/Checked:/.test(v), `${label}: with a patient list the verdict should be green: ${v.slice(0, 200)}`);
+    assert(!(await rowsText()).includes('vanterpool'), `${label}: a patient-list surname survived the re-run`);
+    assert(/\b1 sources/.test(await strip()), `${label}: the patient list must not add a source: ${await strip()}`);
+    const regNames = await rp.evaluate(() => window.__deid.session.registry.toMappingRows().map((r) => r.RealName));
+    assert(regNames.some((n) => /Vanterpool, Desmond/.test(n)) && regNames.some((n) => /Nyambura, Clifford/.test(n)) && !regNames.some((n) => /Hydration|Schedule|Chair|Monday|Infusion/.test(n)), `${label}: registry after the patient list: ${JSON.stringify(regNames)}`);
+    await paste('Spoke with Desmond Vanterpool re: ride. Nyambura to call back after 2pm.\nMRN 00987654 labs ok, tolerating well.');
+    await sources(2); await rDone();
+    assert(/Checked:/.test(await verdict()), `${label}: text naming patient-list patients: ${(await verdict()).slice(0, 200)}`);
+    // a roster export (split name columns) through the file chooser
+    const rwb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(rwb, XLSX.utils.aoa_to_sheet([['Last Name', 'First Name', 'MRN', 'DOB'], ['Thistlewood', 'Avery', '00661122', '5/6/1949'], ['Quenneville', 'Marlowe', '00661133', '1/2/1960']]), 'Roster');
+    const rosterFile = path.join(tmp, `${label}_roster.xlsx`); fs.writeFileSync(rosterFile, XLSX.write(rwb, { type: 'buffer', bookType: 'xlsx' }));
+    await rp.setInputFiles('#rosterFile', rosterFile);
+    await rp.waitForFunction(() => /Patient list: 4 patients/.test(document.querySelector('#session').textContent)); await rDone();
+    assert(/\b2 sources/.test(await strip()), `${label}: a roster file must not add a source`);
+    await paste('Avery Thistlewood called re: parking. Quenneville in chair 3, premeds given.');
+    await sources(3); await rDone();
+    assert(/Checked:/.test(await verdict()), `${label}: roster-file patients: ${(await verdict()).slice(0, 200)}`);
+    await rp.click('#sessionShow');
+    assert(/4 patients from today's schedule/.test(await rp.textContent('#rosterPanelInfo')), `${label}: session panel patient list`);
+    await rp.click('#sessionShow');
+
+    // (c) fail closed: a processing error, or an error inside the check, leaves nothing to download
+    await rp.evaluate(() => window.__deid.failNext('process'));
+    await rp.evaluate(() => { window.__deid.runDeid(window.__deid.state.current, false); });
+    await rp.waitForFunction(() => /could not be processed/.test(document.querySelector('#verdict').textContent));
+    v = await verdict();
+    assert(/Stop:/.test(v) && /forced test failure while protecting/.test(v), `${label}: error verdict: ${v.slice(0, 200)}`);
+    for (const id of ['dlXlsx', 'dlCsv', 'dlTxt', 'dlNow', 'dlAll', 'dlReport']) assert(await rp.isDisabled('#' + id), `${label}: #${id} must be disabled for an input that errored`);
+    assert(await rp.evaluate(() => { const it = window.__deid.state.current; return it.result === null && !!it.error && window.__deid.blockReason(it) !== ''; }), `${label}: an errored input keeps no result`);
+    await rp.click('#sessionShow');
+    assert(/could not be processed/.test(await rp.textContent('#sourcesList')) && (await rp.$$('#sourcesList [data-dl]')).length === 2, `${label}: the errored source must offer no download in the panel`);
+    await rp.click('#sessionShow');
+    let forcedDownload = false; const onDl = () => { forcedDownload = true; }; rp.on('download', onDl);
+    await rp.evaluate(() => { for (const id of ['dlXlsx', 'dlCsv', 'dlTxt', 'dlAll']) { const b = document.querySelector('#' + id); b.disabled = false; b.click(); } });
+    await rp.waitForTimeout(1000); rp.off('download', onDl);
+    assert(!forcedDownload, `${label}: export handlers must refuse an errored input even when a button is forced on`);
+    assert(/Not downloaded/.test(await rp.textContent('#inputNotice')), `${label}: a refused export should say why`);
+    await rp.evaluate(() => { window.__deid.runDeid(window.__deid.state.current, false); }); await rDone();
+    assert(/Checked:/.test(await verdict()) && !(await rp.isDisabled('#dlXlsx')) && !(await rp.isDisabled('#dlAll')), `${label}: a clean re-run must recover`);
+    await rp.evaluate(() => window.__deid.failNext('check'));
+    await rp.evaluate(() => { window.__deid.runDeid(window.__deid.state.current, false); });
+    await rp.waitForFunction(() => /could not be processed/.test(document.querySelector('#verdict').textContent));
+    assert(/check of the result could not run/.test(await verdict()) && (await rp.isDisabled('#dlXlsx')) && (await rp.isDisabled('#dlAll')), `${label}: a check that throws must be red: ${(await verdict()).slice(0, 200)}`);
+    await rp.evaluate(() => { window.__deid.runDeid(window.__deid.state.current, false); }); await rDone();
+    // an error in another input than the one on screen still blocks Download all
+    await rp.evaluate(() => { window.__deid.failNext('process'); window.__deid.rerunAll(); });
+    await rp.waitForFunction(() => !!window.__deid.session.items[0].error && !window.__deid.session.items.some((it) => it.running) && /Done in/.test(document.querySelector('#runInfo').textContent));
+    assert((await rp.isDisabled('#dlAll')) && !(await rp.isDisabled('#dlXlsx')), `${label}: an errored input elsewhere must block Download all only`);
+    await rp.evaluate(() => { window.__deid.rerunAll(); });
+    await rp.waitForFunction(() => window.__deid.session.items.every((it) => it.result && !it.error && !it.running) && /Done in/.test(document.querySelector('#runInfo').textContent));
+    assert(!(await rp.isDisabled('#dlAll')), `${label}: Download all must come back once every input is clean`);
+
+    // (d) no cell of any file can start a formula
+    await paste(['Okafor, Chidi  MRN 00551234  DOB 4/4/1954', '=HYPERLINK("http://example.invalid/x","open")', '+1+2 premeds given', '-3 dose held per protocol', '@SUM(A1:A2) labs ok'].join('\n'));
+    await sources(4); await rDone();
+    const fx = readWb(await rdl('#dlXlsx'));
+    assert(!unsafeCells(fx).length, `${label}: xlsx cells start a formula: ${unsafeCells(fx).slice(0, 4)}`);
+    // (the detector may rewrite "@SUM" as a user handle; the guard must hold whatever the text became)
+    assert(/'=hyperlink/.test(allCellsText(fx)) && /'\+1\+2 premeds/.test(allCellsText(fx)) && /'-3 dose held/.test(allCellsText(fx)) && /'@\w+\(a1:a2\) labs ok/.test(allCellsText(fx)), `${label}: guarded cells must keep their text: ${allCellsText(fx).slice(0, 600)}`);
+    const fcsv = fs.readFileSync(await rdl('#dlCsv'), 'utf8');
+    const fcsvWb = XLSX.read(fcsv, { type: 'string', raw: true });
+    assert(!unsafeCells(fcsvWb).length && /HYPERLINK/.test(fcsv), `${label}: csv cells start a formula: ${unsafeCells(fcsvWb).slice(0, 4)}`);
+    const ftxt = fs.readFileSync(await rdl('#dlTxt'), 'utf8');
+    assert(ftxt.split('\n').every((l) => !FORMULA.test(l)) && /HYPERLINK/.test(ftxt), `${label}: txt lines start a formula`);
+    const fall = readWb(await rdl('#dlAll'));
+    assert(fall.SheetNames.length === 4 && !unsafeCells(fall).length, `${label}: Download all: ${fall.SheetNames} ${unsafeCells(fall).slice(0, 4)}`);
+    // (a) again: nothing from the patient list survives in any file
+    const rosterBits = ['vanterpool', 'desmond', 'nyambura', 'clifford', 'thistlewood', 'avery', 'quenneville', 'marlowe', '00555111', '00987654', '00661122', '00661133', '555111', '987654', '661122', '661133'];
+    for (const [what, text] of [['xlsx', allCellsText(fx)], ['txt', ftxt.toLowerCase()], ['csv', fcsv.toLowerCase()], ['Download all', allCellsText(fall)], ['rows', await rowsText()]]) {
+      const hit = rosterBits.filter((b) => text.includes(b)); assert(!hit.length, `${label}: patient-list data in ${what}: ${hit}`);
+    }
+
+    // (e) a long export: protected in parts with progress, the page answers throughout, and the result is checked
+    // (seed 9 is avoided on purpose: its made-up organization "Brightwater Insurance" shares a patient's surname, which the
+    // check rightly refuses; that collision belongs to the made-up-name allocator, not to this test)
+    const wk = S.make({ n: 120, seed: 11 });
+    const longRows = []; for (let k = 0; k < 25; k++) wk.rows.forEach((r) => longRows.push(r)); // 3,000 rows: the same patients week after week
+    const lwb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(lwb, XLSX.utils.aoa_to_sheet([wk.headers, ...longRows], { cellDates: true }), 'Schedule');
+    const longFile = path.join(tmp, `${label}_long.xlsx`); fs.writeFileSync(longFile, XLSX.write(lwb, { type: 'buffer', bookType: 'xlsx', cellDates: true }));
+    await rp.evaluate(() => {
+      window.__prog = []; window.__stopSeen = false;
+      new MutationObserver(() => { window.__prog.push(document.querySelector('#runInfo').textContent); if (!document.querySelector('#stopRun').classList.contains('hidden')) window.__stopSeen = true; }).observe(document.querySelector('#verdict'), { childList: true, characterData: true, subtree: true, attributes: true });
+    });
+    // a heartbeat from before the file is chosen to the end of the run (reading the workbook included): every gap must stay short
+    await rp.evaluate(() => { window.__hb = { last: performance.now(), max: 0, ticks: 0 }; window.__hbTimer = setInterval(() => { const t = performance.now(); window.__hb.max = Math.max(window.__hb.max, t - window.__hb.last); window.__hb.last = t; window.__hb.ticks++; }, 20); });
+    await rp.setInputFiles('#file', longFile);
+    await rp.waitForFunction(() => { const it = window.__deid.state.current; return !!it && !!it.table && it.table.rows.length === 3000 && !!it.result && !it.running && /Done in/.test(document.querySelector('#runInfo').textContent); }, null, { timeout: 300000 });
+    const lr = await rp.evaluate(() => { clearInterval(window.__hbTimer); const it = window.__deid.state.current; return { hb: window.__hb, prog: window.__prog, stop: window.__stopSeen, parts: (it.result.parts || []).length, rows: it.result.rows.length, details: it.result.details.length, verdict: document.querySelector('#verdict').textContent }; });
+    assert(lr.parts > 1 && lr.rows === 3000 && lr.details === 3000, `${label}: long input should be protected in parts: ${JSON.stringify({ parts: lr.parts, rows: lr.rows })}`);
+    assert(lr.prog.some((t) => /Protecting row [\d,]+ of 3,?000/.test(t)) && lr.prog.some((t) => /Checking the result: row [\d,]+ of 3,?000/.test(t)), `${label}: progress updates missing: ${JSON.stringify(lr.prog.slice(0, 6))}`);
+    assert(lr.stop, `${label}: a long run should offer Stop`);
+    assert(lr.hb.ticks > 10 && lr.hb.max < 2500, `${label}: the page froze for ${Math.round(lr.hb.max)} ms during a long run (${lr.hb.ticks} heartbeats)`);
+    assert(/Checked:/.test(lr.verdict), `${label}: long input verdict: ${lr.verdict.slice(0, 200)}`);
+    const longOut = aoaOf(readWb(await rdl('#dlXlsx')));
+    assert(longOut.length === 3001, `${label}: long output rows ${longOut.length - 1}`);
+    const longText = JSON.stringify(longOut).toLowerCase();
+    for (const p of wk.patients) { if (!wk.rows.some((r) => r.includes(p.mrn))) continue; assert(!longText.includes(String(p.mrn)) && !longText.includes(`${p.last}, ${p.first}`.toLowerCase()), `${label}: long output leaked ${p.last}`); }
+    // Stop: a long run can be ended; the input then keeps nothing downloadable, and the stopped run never comes back
+    await rp.evaluate(() => { window.__deid.runDeid(window.__deid.state.current, false); });
+    // press Stop from inside the page the moment progress shows (a click from outside can lose the race with a fast run)
+    await rp.waitForFunction(() => { const s = document.querySelector('#stopRun'); if (!/Finding patients|Protecting row|Checking the result/.test(document.querySelector('#runInfo').textContent) || s.classList.contains('hidden')) return false; s.click(); return true; }, null, { timeout: 30000, polling: 10 });
+    await rp.waitForFunction(() => /could not be processed/.test(document.querySelector('#verdict').textContent));
+    assert(/Stopped/.test(await verdict()) && (await rp.isDisabled('#dlXlsx')) && (await rp.isDisabled('#dlAll')), `${label}: a stopped run must leave nothing to download: ${(await verdict()).slice(0, 160)}`);
+    await rp.waitForTimeout(2000);
+    assert(await rp.evaluate(() => { const it = window.__deid.state.current; return !!it.error && !it.result && !it.running; }) && (await rp.isDisabled('#dlXlsx')), `${label}: the stopped run came back`);
+    await rctx.close();
+    return { hbMaxMs: Math.round(lr.hb.max), parts: lr.parts };
+  };
+  const robustSummary = {};
+  for (const [d, label] of [[dist, 'plain'], [distOcr, 'ocr']]) if (fs.existsSync(d)) robustSummary[label] = await robust(d, label);
+
+  // 9. second bulletproofing pass (plain build; the page code is the same in both builds)
+  const b5 = {};
+  {
+    const bctx = await browser.newContext({ acceptDownloads: true, viewport: { width: 1280, height: 900 } });
+    let bp = await bctx.newPage(); watch(bp);
+    await bp.goto('file://' + dist);
+    const bDone = (timeout) => bp.waitForFunction(() => { const it = window.__deid.state.current; return !!it && !it.running && /Done in/.test(document.querySelector('#runInfo').textContent); }, null, { timeout: timeout || 60000 });
+    const bdl = async (sel) => { const [d] = await Promise.all([bp.waitForEvent('download', { timeout: 20000 }), bp.click(sel)]); const p = path.join(tmp, `b5_${++dlSeq}_${d.suggestedFilename()}`); await d.saveAs(p); return p; };
+    const writeXlsx = (name, aoa) => { const w = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet(aoa), 'Sheet1'); const p = path.join(tmp, name); fs.writeFileSync(p, XLSX.write(w, { type: 'buffer', bookType: 'xlsx' })); return p; };
+    const startHeartbeat = () => bp.evaluate(() => { window.__hb = { last: performance.now(), max: 0, ticks: 0 }; window.__hbTimer = setInterval(() => { const t = performance.now(); window.__hb.max = Math.max(window.__hb.max, t - window.__hb.last); window.__hb.last = t; window.__hb.ticks++; }, 20); });
+    const stopHeartbeat = () => bp.evaluate(() => { clearInterval(window.__hbTimer); return window.__hb; });
+    const sources = () => bp.evaluate(() => window.__deid.session.items.length);
+
+    // (a) a heading that holds patient information never reaches the run summary, and the summary follows the same gate as
+    // every other download
+    await bp.setInputFiles('#file', writeXlsx('b5_header.xlsx', [['Patient: Gatsby, Jay', 'MRN: 00418327', 'DOB: 03/04/1951', 'Hubert Vanterpool notes'], ['Chair 4', 'Keytruda 200 mg', 'pt tolerated well', 'labs ok'], ['Chair 5', 'Herceptin', 'no issues', 'f/u 2 wk']]));
+    await bDone();
+    assert(await bp.$('#colsCard.gate'), 'b5: a table with no patient-name column must raise the gate');
+    assert(await bp.isDisabled('#dlReport') && (await bp.getAttribute('#dlReport', 'title')) === 'Confirm columns first', 'b5: the run summary must be gated like every other download');
+    await bp.click('#colsConfirm');
+    assert(!(await bp.isDisabled('#dlReport')), 'b5: confirmed and clean: the run summary may be downloaded');
+    const rep = fs.readFileSync(await bdl('#dlReport'), 'utf8');
+    for (const x of ['Gatsby', '00418327', '03/04/1951', 'Vanterpool', 'Hubert']) assert(!rep.includes(x), `b5: the run summary leaks the heading text "${x}":\n${rep}`);
+    assert(/Column roles \(protected headings\):/.test(rep), 'b5: run summary column list');
+
+    // (b) a column of names under a heading the page does not know is the name column (with a patient list in the session)
+    await bp.click('#rosterOpen'); await bp.fill('#rosterText', 'Quennell, Orsolya  00418327\nBrakspear, Thaddeus 00418328'); await bp.click('#rosterRun');
+    await bp.waitForFunction(() => /Patient list: 2 patients/.test(document.querySelector('#session').textContent)); await bDone();
+    await bp.setInputFiles('#file', writeXlsx('b5_booked.xlsx', [['Booked For', 'Chair', 'Regimen'], ['Ottilie Wolstenholme', '4', 'Ocrevus'], ['Lucan Featherby', '5', 'Prolia'], ['Bartosz Szczepanik', '6', 'Entyvio']]));
+    await bp.waitForFunction(() => window.__deid.session.items.length === 2); await bDone();
+    const booked = await bp.evaluate(() => { const it = window.__deid.state.current; return { roles: it.columns.map((c) => c.role), own: it.result.census.patients.size, out: JSON.stringify(it.result.rows), verdict: document.querySelector('#verdict').textContent }; });
+    assert(booked.roles[0] === 'patient_name' && booked.own === 3, `b5: Booked For should be read as the name column: ${JSON.stringify(booked.roles)} own ${booked.own}`);
+    for (const x of ['Wolstenholme', 'Featherby', 'Szczepanik', 'Ottilie', 'Lucan', 'Bartosz']) assert(!booked.out.includes(x), `b5: ${x} survived in ${booked.out}`);
+    assert(/Checked:/.test(booked.verdict) && /3 patients/.test(booked.verdict), `b5: Booked For verdict: ${booked.verdict.slice(0, 160)}`);
+
+    // (c) a remembered "Keep unchanged" on the name column never passes the next file: the gate is raised again and a table
+    // with no patient of its own is never green and cannot be downloaded
+    await bp.setInputFiles('#file', writeXlsx('b5_keepA.xlsx', [['Patient Name', 'Appt', 'Comments'], ['Ashdown, Perpetua', '9:00', 'ok'], ['Lindqvist, Soren', '9:30', 'ok'], ['Okafor, Ngozi', '10:00', 'ok']]));
+    await bp.waitForFunction(() => window.__deid.session.items.length === 3); await bDone();
+    await bp.evaluate(() => { document.querySelector('#colsDetails').open = true; });
+    await bp.selectOption('#colsTable select[data-i="0"]', 'keep'); await bDone();
+    assert(await bp.$eval('#rememberLayout', (e) => e.checked), 'b5: remember-layout should be on by default');
+    if (await bp.$('#colsConfirm:not(.hidden)')) await bp.click('#colsConfirm');
+    await bp.setInputFiles('#file', writeXlsx('b5_keepB.xlsx', [['Patient Name', 'Appt', 'Comments'], ['Pemberton, Araminta', '9:00', 'ok'], ['Fairweather, Caspian', '9:30', 'ok'], ['Ollerenshaw, Delphine', '10:00', 'ok']]));
+    await bp.waitForFunction(() => window.__deid.session.items.length === 4); await bDone();
+    let keepB = await bp.evaluate(() => { const it = window.__deid.state.current; return { saved: it.savedLayout, gate: document.querySelector('#colsCard').classList.contains('gate'), dl: document.querySelector('#dlXlsx').disabled, verdict: document.querySelector('#verdict').textContent }; });
+    assert(keepB.saved && keepB.gate && keepB.dl, `b5: a remembered Keep on the name column must still raise the gate: ${JSON.stringify(keepB).slice(0, 300)}`);
+    await bp.click('#colsConfirm');
+    keepB = await bp.evaluate(() => ({ dl: document.querySelector('#dlXlsx').disabled, dlAll: document.querySelector('#dlAll').disabled, title: document.querySelector('#dlXlsx').title, verdict: document.querySelector('#verdict').textContent }));
+    assert(keepB.dl && keepB.dlAll && /patient names or record numbers/.test(keepB.title) && /No patient column/.test(keepB.verdict) && !/Checked:/.test(keepB.verdict), `b5: a table with no patient of its own must be blocked: ${JSON.stringify(keepB).slice(0, 300)}`);
+    let forced = false; const onDl = () => { forced = true; }; bp.on('download', onDl);
+    await bp.evaluate(() => { for (const id of ['dlXlsx', 'dlCsv', 'dlReport']) { const b = document.querySelector('#' + id); b.disabled = false; b.click(); } });
+    await bp.waitForTimeout(800); bp.off('download', onDl);
+    assert(!forced, 'b5: export handlers must refuse a table with no patient of its own');
+
+    // (d) a small xlsx that declares the whole sheet as its range is read from its real cells, and the page keeps answering
+    const bigRef = (() => {
+      const w = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet([['Patient Name', 'MRN'], ['Quennell, Orsolya', '00418327']]), 'S');
+      const cfb = XLSX.CFB.read(XLSX.write(w, { type: 'buffer', bookType: 'xlsx' }), { type: 'buffer' });
+      const i = cfb.FullPaths.findIndex((p) => /sheet1\.xml$/.test(p));
+      cfb.FileIndex[i].content = Buffer.from(Buffer.from(cfb.FileIndex[i].content).toString().replace(/<dimension ref="[^"]*"\/>/, '<dimension ref="A1:XFD1048576"/>'));
+      const p = path.join(tmp, 'b5_bigref.xlsx'); fs.writeFileSync(p, XLSX.CFB.write(cfb, { type: 'buffer', fileType: 'zip' })); return p;
+    })();
+    await startHeartbeat();
+    await bp.setInputFiles('#file', bigRef);
+    await bp.waitForFunction(() => window.__deid.session.items.length === 5, null, { timeout: 20000 }); await bDone(20000);
+    let hb = await stopHeartbeat();
+    const bigRefState = await bp.evaluate(() => { const it = window.__deid.state.current; return { rows: it.table.rows.length, cols: it.table.headers.length, out: JSON.stringify(it.result.rows) }; });
+    assert(bigRefState.rows === 1 && bigRefState.cols === 2 && !/Quennell|00418327/.test(bigRefState.out), `b5: declared full-sheet range: ${JSON.stringify(bigRefState)}`);
+    assert(hb.max < 2500, `b5: the page froze ${Math.round(hb.max)} ms on a declared full-sheet range`);
+
+    // (e) 150,000 columns: refused before any processing, with a request to split; the page keeps answering
+    const wide = path.join(tmp, 'b5_wide.csv');
+    { const n = 150000; const h = new Array(n); const r = new Array(n); for (let i = 0; i < n; i++) { h[i] = 'H' + i; r[i] = i === 0 ? '"Quennell, Orsolya"' : 'x' + i; } fs.writeFileSync(wide, h.join(',') + '\n' + r.join(',') + '\n'); }
+    await startHeartbeat();
+    await bp.setInputFiles('#file', wide);
+    await bp.waitForFunction(() => /columns/.test(document.querySelector('#inputNotice').textContent) && /Split it/.test(document.querySelector('#inputNotice').textContent), null, { timeout: 30000 });
+    hb = await stopHeartbeat();
+    assert((await sources()) === 5, 'b5: a refused file must not add a source');
+    assert(hb.max < 5000, `b5: the page froze ${Math.round(hb.max)} ms on a 150,000-column file`);
+
+    // (f) more rows than one page protects: refused with a request to split
+    const tall = path.join(tmp, 'b5_tall.csv');
+    { const lines = ['Patient Name,MRN,Comments']; for (let i = 0; i < 60000; i++) lines.push(`"Pat${i}, Orsolya",${10000000 + i},ok`); fs.writeFileSync(tall, lines.join('\n')); }
+    await bp.setInputFiles('#file', tall);
+    await bp.waitForFunction(() => /rows/.test(document.querySelector('#inputNotice').textContent) && /Split it/.test(document.querySelector('#inputNotice').textContent), null, { timeout: 60000 });
+    assert((await sources()) === 5, 'b5: an over-long file must not add a source');
+
+    // (g) a carriage return inside a kept cell never starts a new CSV record (and so never a formula cell)
+    await bp.setInputFiles('#file', writeXlsx('b5_cr.xlsx', [['Patient Name', 'MRN', 'Chair'], ['Quennell, Orsolya', '00418327', 'chair 2\r@SUM(1)'], ['Brakspear, Thaddeus', '00418328', '\r=1+1 chair 3']]));
+    await bp.waitForFunction(() => window.__deid.session.items.length === 6); await bDone();
+    if (await bp.$('#colsConfirm:not(.hidden)')) await bp.click('#colsConfirm');
+    const crCsv = fs.readFileSync(await bdl('#dlCsv'), 'utf8');
+    const crAoa = XLSX.utils.sheet_to_json(XLSX.read(crCsv, { type: 'string', raw: true }).Sheets.Sheet1, { header: 1, raw: true, defval: null });
+    assert(crAoa.length === 3, `b5: CSV records: ${crAoa.length} (a carriage return split a record): ${JSON.stringify(crCsv)}`);
+    assert(crAoa.every((r) => r.every((v) => v == null || !/^[=+\-@\t\r]/.test(String(v)))), `b5: CSV cell starts a formula: ${JSON.stringify(crAoa)}`);
+    assert(/"chair 2\r@SUM\(1\)"/.test(crCsv), `b5: a field with a carriage return must be quoted: ${JSON.stringify(crCsv)}`);
+
+    // (h) the made-up names and date shifts come from a number drawn for each session, never a fixed default
+    const seedInfo = async () => bp.evaluate(() => ({ seed: window.__deid.session.seed, field: document.querySelector('#optSeed').value, opts: localStorage.getItem('deid:opts') || '' }));
+    const s1 = await seedInfo();
+    await bp.close(); bp = await bctx.newPage(); watch(bp); await bp.goto('file://' + dist);
+    const s2 = await seedInfo();
+    assert(s1.field === '' && s2.field === '' && s1.seed > 0 && s2.seed > 0 && s1.seed !== 12345 && s1.seed !== s2.seed, `b5: per-session seeds: ${JSON.stringify([s1, s2])}`);
+    assert(!/optSeed/.test(s1.opts + s2.opts), 'b5: the consistency number must not be saved on this computer');
+    b5.seeds = [s1.seed, s2.seed]; b5.wideHbMs = Math.round(hb.max);
+    await bctx.close();
+  }
+
   await browser.close();
   fs.rmSync(tmp, { recursive: true, force: true });
   if (errors.length) throw new Error('browser errors:\n' + errors.join('\n'));
-  console.log('e2e OK:', { rows: synth.rows.length, deid: path.basename(deidPath), key: path.basename(mapPath), reidentifiedMrns: okMrn, reidentifiedDates: okDate, ocr: ocrSummary });
+  console.log('e2e OK:', { rows: synth.rows.length, deid: path.basename(deidPath), key: path.basename(mapPath), reidentifiedMrns: okMrn, reidentifiedDates: okDate, ocr: ocrSummary, robust: robustSummary, b5 });
 })().catch((e) => { console.error('e2e FAILED:', e.message); process.exit(1); });

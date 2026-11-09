@@ -55,7 +55,7 @@ button.btn:disabled{opacity:.5;cursor:not-allowed}
 .drop.over{border-color:var(--accent);color:var(--ink);background:var(--soft)}
 .drop.compact{min-height:56px;padding:10px 16px;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center}
 .drop.compact h2,.drop.compact .sub,.drop.compact .chips{display:none}
-.drop.compact #pasteBox,.drop.compact #inputNotice{width:100%}
+.drop.compact #pasteBox,.drop.compact #rosterBox,.drop.compact #inputNotice{width:100%}
 .drop.compact .links{margin:0}
 .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px}
 .chip{font-size:12px;padding:2px 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
@@ -94,7 +94,10 @@ details summary{cursor:pointer;color:var(--muted)}
 footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
 .progress{height:4px;background:var(--soft);border-radius:2px;overflow:hidden;margin:8px 0}.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
 .verdict{border-radius:6px;padding:12px 14px;font-size:15px;border:1px solid var(--line)}
-.verdict.ok{background:var(--ok-bg);border-color:var(--ok)}.verdict.bad{background:var(--bad-bg);border-color:var(--bad)}
+.verdict.ok{background:var(--ok-bg);border-color:var(--ok)}.verdict.bad{background:var(--bad-bg);border-color:var(--bad)}.verdict.amber{background:var(--warn-bg);border-color:var(--warn)}
+#rosterBox{text-align:left;margin-top:6px}
+#rosterBox textarea{width:100%;min-height:110px;font:13px/1.4 var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px}
+#rosterBox.over{outline:2px dashed var(--accent)}
 .verdict ul{margin:8px 0 0 18px;font-size:13px}
 #colsCard.gate{border-color:var(--warn);border-width:2px;background:var(--warn-bg)}
 #colsCard.gate h2{color:var(--warn)}
@@ -132,11 +135,17 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
     <div class="links">
       <button class="btn primary big" id="chooseBtn">Choose a file…</button><input type="file" id="file" multiple accept=".xlsx,.xls,.xlsm,.csv,.txt,.png,.jpg,.jpeg,.gif,.bmp,.webp" class="hidden">
       <span class="lnk" id="pasteOpen">Paste text…</span>
+      <span class="lnk" id="rosterOpen" title="Today's schedule or roster: the check before download then looks for these patients">Patient list…</span>
       <span class="lnk" id="loadDemo">Try it with a made-up example (no real patients)</span>
     </div>
     <div id="pasteBox" class="hidden">
       <textarea id="pasteText" placeholder="Paste schedule text, a note, or an order. Start a new section with === when patients change."></textarea>
       <div class="row" style="margin-top:6px"><button class="btn primary" id="pasteRun">Protect this text</button><span class="muted small">Nothing you paste is stored or sent anywhere.</span></div>
+    </div>
+    <div id="rosterBox" class="hidden">
+      <div class="small"><b>Patient list.</b> Paste today's schedule or roster, one patient per line (Last, First · MRN · birthdate, or First Last), or choose the roster export. These patients are then found in everything you protect, and the check before download looks for each of them. The list stays in this tab only: it is never turned into a file of its own.</div>
+      <textarea id="rosterText" placeholder="Halvorsen, Prudence    MRN 00412345    DOB 3/4/1950&#10;Clifford Nyambura      00987654"></textarea>
+      <div class="row" style="margin-top:6px"><button class="btn primary" id="rosterRun">Use as patient list</button><button class="btn" id="rosterChoose">Choose a roster file (.xlsx, .csv)…</button><input type="file" id="rosterFile" accept=".xlsx,.xls,.xlsm,.csv,.txt" class="hidden"><span class="small" id="rosterInfo"></span></div>
     </div>
     <div class="chips"><span class="chip">Excel / CSV export</span><span class="chip" id="chipShot">Screenshot (PNG, JPG)</span><span class="chip">Pasted text</span></div>
     <div id="inputNotice" class="small" style="text-align:left"></div>
@@ -181,7 +190,7 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
     <div class="row" id="verdictActions" style="margin-top:10px"><button class="btn primary big" id="dlNow">Download protected file (.xlsx)</button><span class="lnk small" id="toReview"></span></div>
     <div class="small muted" id="datesLine" style="margin-top:8px"></div>
     <div class="progress hidden" id="prog"><i></i></div>
-    <div class="row small" style="margin-top:6px"><span class="muted" id="runInfo"></span><button class="btn link hidden" id="run">Run again</button></div>
+    <div class="row small" style="margin-top:6px"><span class="lnk hidden" id="stopRun">Stop</span><span class="muted" id="runInfo"></span><button class="btn link hidden" id="run">Run again</button></div>
     <div id="summary" style="margin-top:10px"></div>
   </div>
 
@@ -211,6 +220,7 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
       <button class="btn hidden" id="dlTxt">Plain text (.txt)</button>
       <button class="btn" id="dlReport">Run summary (.txt, no patient info)</button>
     </div>
+    <div class="small warn" id="dlAmber" style="margin-top:6px"></div>
     <div class="small warn" id="dlNudge" style="margin-top:6px"></div>
     <div class="small muted" id="dlNote" style="margin-top:6px"></div>
   </div>
@@ -239,8 +249,8 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
       <summary class="small">Technical</summary>
       <div class="grid" style="margin-top:8px">
         <label class="f">Shift range in days<input id="optRange" value="30-365"></label>
-        <label class="f">MRN format<input id="optMrn" placeholder="auto-detected from the MRN column"><span class="muted" id="optMrnLearned"></span></label>
-        <label class="f">Consistency number (same number, same made-up names)<input id="optSeed" value="12345"></label>
+        <label class="f">MRN format<input id="optMrn" placeholder="auto-detected from the MRN column"><span class="muted" id="optMrnLearned"></span><span class="warn" id="optMrnBad"></span></label>
+        <label class="f">Consistency number (optional, this session only: the same number gives the same made-up names and date shifts; leave empty for a new random one each session)<input id="optSeed" value="" inputmode="numeric" placeholder="random for each session"></label>
       </div>
       <div class="row small" style="margin-top:10px">
         <label><input type="checkbox" id="optAudit" checked disabled> Add a column that lists what was changed in each row (always on)</label>
@@ -297,7 +307,7 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
   </div>
   <div class="card">
     <h2>What this tool stores</h2>
-    <p class="small">Only three kinds of things, in this browser's local storage on this computer: which column is which for each report layout (header names only), your Always remove / Never remove word lists, and the Advanced settings. Never names, record numbers or dates of birth. The session key is written only when you press its button and only to where you save it. Nothing is sent anywhere: the page's security policy forbids every network connection.</p>
+    <p class="small">Only three kinds of things, in this browser's local storage on this computer: which column is which for each report layout (header names only), your Always remove / Never remove word lists, and the Advanced settings. Never names, record numbers or dates of birth: a patient list you paste or choose stays in this tab's memory and is gone when the tab closes. The session key is written only when you press its button and only to where you save it. Nothing is sent anywhere: the page's security policy forbids every network connection.</p>
     <p class="small"><b>If compliance requires Safe Harbor, set Dates to Remove under Advanced.</b> The default shifts dates by a secret per-patient number of days so treatment intervals stay correct; the key holds the offsets.</p>
     <p class="small"><b>Made-up names are never reused.</b> One allocator per session hands out every made-up name, for patients, doctors, relatives, streets and organizations alike, and a saved key seeds it, so a name in the key is never given to a second person and Restore identities is one-to-one.</p>
   </div>
@@ -348,6 +358,8 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
 <div id="sessionPanel" class="hidden">
   <div class="row"><b>Patients in this session</b><label class="small"><input type="checkbox" id="hideReal" checked> Hide real names</label></div>
   <div style="overflow:auto;margin-top:6px"><table id="patientsTable"></table></div>
+  <div class="row" style="margin-top:10px"><b>Patient list</b><span class="small" id="rosterPanelInfo"></span><span class="lnk small" id="rosterPanelAdd">Add patients…</span></div>
+  <div class="small muted">Today's schedule or roster. Used only to find these patients in what you protect and to check the result; it is never written into a protected file.</div>
   <div class="row" style="margin-top:10px"><b>Sources</b></div>
   <div id="sourcesList" class="small"></div>
   <div class="row small" style="margin-top:10px"><label class="lnk" for="continueKey">Continue a session from a saved key</label><input type="file" id="continueKey" accept=".xlsx" class="hidden"></div>

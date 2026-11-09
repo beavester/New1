@@ -315,6 +315,21 @@
     employer landlord tenant neighbour roomate housemate caregiver aide companion
   `);
 
+  // Greetings and sign-offs that open or close a message ("Hello, ...", "Bonjour, ...", "Thanks, ..."): never a surname; the
+  // words after them are the writer introducing themself or the person addressed.
+  // (Best, Love and Morning are also surnames, so they are not on this list)
+  const GREETINGS = words(`hi hello hey hiya howdy greetings dear bonjour bonsoir salut hola ciao hallo namaste salaam shalom aloha
+    thanks thank thx cheers regards sincerely gracias merci obrigado obrigada danke grazie`);
+  // Languages and nationalities: "prefers French interpreter", "Interpreter (Spanish)", "Haitian Creole" are never a person,
+  // though several are also surnames (French, English, Welsh, Irish)
+  const LANGUAGES = words(`english spanish french creole haitian portuguese italian german dutch polish russian ukrainian
+    arabic hebrew farsi persian dari pashto urdu hindi bengali bangla punjabi gujarati tamil telugu marathi nepali
+    chinese mandarin cantonese taiwanese vietnamese korean japanese tagalog filipino thai lao laotian khmer cambodian burmese
+    hmong somali swahili amharic tigrinya oromo yoruba igbo hausa twi wolof greek turkish albanian serbian croatian bosnian
+    romanian bulgarian hungarian czech slovak lithuanian latvian estonian finnish swedish norwegian danish icelandic irish
+    welsh scottish gaelic american canadian mexican cuban dominican puerto rican guatemalan salvadoran honduran colombian
+    venezuelan peruvian ecuadorian brazilian jamaican nigerian ghanaian ethiopian eritrean kenyan sudanese egyptian moroccan
+    lebanese syrian iraqi iranian afghan pakistani indian bangladeshi sri lankan asl sign`);
   const HONORIFICS = words(`Dr Dr. Doctor Mr Mr. Mrs Mrs. Ms Ms. Miss Mx Mx. Nurse Prof Prof. Rev Rev. Fr Fr. Sr Sr.`);
   const CREDENTIALS = words(`MD DO NP PA PA-C RN LPN BSN MSN DNP APRN CRNP CNP ARNP PharmD RPh CPhT MSW LCSW RD RDN PhD PsyD DDS DMD DPM FNP ANP AGNP ACNP PMHNP CNM CNS`);
 
@@ -525,6 +540,8 @@
   const GEO_SUFFIX_SET = setOf(GEO_SUFFIXES);
   const ORG_PREFIX_SET = setOf(ORG_PREFIXES);
   const PLACE_PREFIX_SET = setOf(PLACE_PREFIXES);
+  const GREETING_SET = setOf(GREETINGS);
+  const LANGUAGE_SET = setOf(LANGUAGES);
   // Number words for written-out ages (ninety-two year old).
   const ONES_WORDS = words(`one two three four five six seven eight nine`);
   const CA_PROVINCES = { ON: 'Ontario', QC: 'Quebec', BC: 'British Columbia', AB: 'Alberta', MB: 'Manitoba', SK: 'Saskatchewan', NS: 'Nova Scotia', NB: 'New Brunswick', PE: 'Prince Edward Island', NL: 'Newfoundland' };
@@ -560,7 +577,7 @@
     FIRST_SET, LAST_SET, CITY_SET, RELATION_SET, HONORIFIC_SET, CREDENTIAL_SET,
     ORG_SUFFIX_SET, ORG_NAMEWORDS, ORG_NAMEWORD_SET, STATE_ABBR_SET, STATE_NAME_SET, CA_PROVINCES,
     GEO_SUFFIXES, GEO_SUFFIX_SET, PLACE_PREFIXES, PLACE_PREFIX_SET, ONES_WORDS, ORG_PREFIXES, ORG_PREFIX_SET,
-    NICKNAMES, EPONYM_FOLLOW, LOCAL_ORGS, LOCAL_ORG_SET,
+    NICKNAMES, EPONYM_FOLLOW, LOCAL_ORGS, LOCAL_ORG_SET, GREETINGS, GREETING_SET, LANGUAGES, LANGUAGE_SET,
     nicknamesOf: (w) => NICKNAMES[w.toLowerCase()] || [],
     isFirstName: (w) => FIRST_SET.has(w.toLowerCase()) || FIRST_SET.has(fold(w)) || B.F2.has(keyOf(w)) || B.F1.has(keyOf(w)),
     isSurname: (w) => LAST_SET.has(w.toLowerCase()) || LAST_SET.has(fold(w)) || B.S2.has(keyOf(w)) || B.S1.has(keyOf(w)),

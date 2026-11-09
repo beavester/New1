@@ -1058,3 +1058,363 @@ test('round 9 classes: MRN before a colon, seven-digit phone with extension, "fr
   const names = (t) => D.lexiconSpans(t, cfg()).map((s) => s.text);
   assert.deepEqual(names('records from Keytruda trial; from home today; from Pharmacy; from Mercy Hospital'), ['Mercy Hospital']);
 });
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Round 10 classes (fictitious strings written for these tests, not the measured case strings)
+// ---------------------------------------------------------------------------------------------------------------------
+const detect = (t, census) => D.detectText(t, { cfg: cfg(), census: census || null }).map((s) => `${s.type}=${s.text}`);
+const lonely = (t) => { const r = D.processTable({ headers: ['Comments'], rows: [[t]] }, { seed: 3 }); return r.rows[0][0]; };
+test('r10 name finishing: a found name absorbs an unknown given name or surname beside it; eponyms, drugs and organisations stay', () => {
+  assert.ok(detect('Ride share: Odilon Tremblay dropped by volunteer').includes('NAME_OTHER=Odilon Tremblay'));
+  assert.ok(detect('Volunteer drove Quennel Nakashima home after tx').includes('NAME_OTHER=Quennel Nakashima'));
+  assert.ok(detect('Pump returned for Ji-woon Baek this morning').includes('NAME_OTHER=Ji-woon Baek'));
+  noneOf(lonely('SW met with Tavrel Desjardins and his wife today.'), ['Tavrel', 'Desjardins']);
+  assert.deepEqual(detect('Lee Silverman voice program; Bell\'s palsy; Graves disease; Hodgkin lymphoma'), []);
+  assert.deepEqual(detect('Dr. Patel Keytruda today'), ['NAME_PROVIDER=Patel']);
+  assert.deepEqual(detect('records from Okafor Pharmacy'), ['ORG=Okafor Pharmacy']);
+  // a census surname with someone else's given name in front of it is a relative: both hidden, the patient keeps a code
+  const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Baek, Min-seo', '40017733', 'Sister Ji-woon Baek drove her in.']] }, { seed: 3 });
+  noneOf(r.rows[0][2], ['Ji-woon', 'Baek']);
+});
+test('r10 greetings: a greeting is never a surname; the name after it is the writer or the person addressed', () => {
+  assert.deepEqual(detect('Hello, Wanjiru Kamau here. Need a refill.'), ['NAME_OTHER=Wanjiru Kamau']);
+  assert.deepEqual(detect('Bonjour, Aurelie Tessier. Is my chair booked?'), ['NAME_OTHER=Aurelie Tessier']);
+  assert.ok(detect('Hi, this is Tavrel Desjardins, calling about my port').includes('NAME_OTHER=Tavrel Desjardins'));
+  assert.deepEqual(detect('Hi Team, labs are back. Hello, Everyone.'), []);
+  const out = lonely('Hola, Maribel Quispe here. Thanks, Maribel');
+  noneOf(out, ['Maribel', 'Quispe']); assert.ok(out.startsWith('Hola, '), out);
+});
+test('r10 name cells carrying identifiers: the bracketed or labelled record number is the MRN and the given name is matched in lower case', () => {
+  const r = D.processTable({ headers: ['Pt Name / MRN', 'Cmnt'], rows: [['Ferreira, Anselmo [4417203]', 'pt late.'], ['Ferreira, Anselmo [4417203]', 'anselmo c/o nausea, ferreira family aware']] }, { seed: 3 });
+  noneOf(r.rows.map((x) => x.join(' | ')).join('\n').toLowerCase(), ['anselmo', '4417203']);
+  const reg = D.createRegistry();
+  D.processTable({ headers: ['Patient', 'Notes'], rows: [['Ito, Kenji (MRN 5521)', 'Kenji tolerated well']] }, { seed: 3, registry: reg });
+  assert.ok(reg.entities[0].mrns.has('5521'), [...reg.entities[0].mrns].join());
+  assert.ok(reg.entities[0].names.has('Ito, Kenji'), [...reg.entities[0].names].join());
+  // a lower-case given name that is an ordinary word stays outside the patient's own capitalised mentions
+  const w = D.processTable({ headers: ['Patient Name', 'Comments'], rows: [['Lindqvist, Faith', 'keep faith in plan; Faith tolerated']] }, { seed: 3 });
+  assert.ok(w.rows[0][1].includes('keep faith in plan'), w.rows[0][1]);
+});
+test('r10 census variants: hyphen- and space-collapsed given names, the longer half, and a preferred-name column', () => {
+  const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Park, Ji-Hoon', '40015521', 'jihoon tolerated well. Ji Hoon wife called; Hoon slept.']] }, { seed: 3 });
+  noneOf(r.rows[0][2].toLowerCase(), ['jihoon', 'ji hoon', 'hoon']);
+  const p = D.processTable({ headers: ['Last', 'First', 'Pref Name', 'MRN', 'Comments'], rows: [['Okonjo', 'Adaeze', 'Daisy', '7110042', 'Daisy reports fatigue. Daisy Okonjo to return.'], ['Vance', 'Bartholomew', 'Bart', '7110043', 'Bart prefers aisle seat.']] }, { seed: 3 });
+  noneOf(p.rows.map((x) => x.join(' | ')).join('\n'), ['Daisy', 'Okonjo', 'Adaeze', 'Bart ', 'Bartholomew']);
+  // the preferred-name cell shows the patient's made-up first name, not a surname
+  assert.equal(p.rows[0][2], p.rows[0][1]);
+  // a preferred-name column before the legal name never becomes the census name
+  const reg = D.createRegistry();
+  D.processTable({ headers: ['Preferred Name', 'Patient Name', 'Comments'], rows: [['Bea', 'Szymanski, Beatrix', 'Bea here']] }, { seed: 3, registry: reg });
+  assert.ok(reg.entities[0].names.has('Szymanski, Beatrix'), [...reg.entities[0].names].join());
+});
+test('r10 lower-case names with no patient list: after a patient label (comma allowed), a relation word, or before "is the pt"', () => {
+  noneOf(lonely('93F, longtime pt, ofelia marchetti, here for Prolia'), ['ofelia', 'marchetti']);
+  noneOf(lonely('pt quispe, wilmer 91yo here w/ son'), ['quispe', 'wilmer']);
+  noneOf(lonely('soledad is the pt, daughter is Ines'), ['soledad', 'Ines']);
+  noneOf(lonely('spoke w pts daughter imelda ferreyra re ride'), ['imelda', 'ferreyra']);
+  const keep = 'pt, nausea improved; pt alert, oriented; son at bedside, wife will drive; mom was in ED';
+  assert.equal(lonely(keep), keep);
+});
+test('r10 word-name propagation: a word-name given name named in full is the same person before a person verb or a possessive', () => {
+  const out = textOut('Faith Okonkwo tolerated Ocrevus well.\nFaith states she will return with her sister. Faith\'s ride is set.\nWill call tomorrow. Grace period for copay applies. Hope to resume.');
+  noneOf(out, ['Faith', 'Okonkwo']);
+  for (const k of ['Will call tomorrow', 'Grace period for copay', 'Hope to resume']) assert.ok(out.includes(k), k + ' lost: ' + out);
+  // a new section is a new note: the word-name is not carried over
+  const two = textOut('Pt Faith Okonkwo here for C2.\n===\nFaith in the plan is high.');
+  assert.ok(two.includes('Faith in the plan'), two);
+});
+test('r10 file names and handles: name parts split at underscores and dots are replaced, the rest of the file name stays', () => {
+  const out = lonely('Scanned: nakashima_quennel_ct.pdf for Pt Quennel Nakashima; see lab_results_2026.pdf and pre_chemo v2.1');
+  noneOf(out.toLowerCase(), ['nakashima', 'quennel']);
+  for (const k of ['_ct.pdf', 'lab_results_2026.pdf', 'pre_chemo v2.1']) assert.ok(out.includes(k), k + ' lost: ' + out);
+  noneOf(lonely('Outside path report okafor_harriet_path.pdf uploaded').toLowerCase(), ['okafor', 'harriet']);
+  // a census name inside a file name is found too (an underscore is a separator)
+  const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Delacroix, Odette', '40019911', 'CT in media: DELACROIX_ODETTE_CT.pdf, MRN_40019911']] }, { seed: 3 });
+  noneOf(r.rows[0][2].toLowerCase(), ['delacroix', 'odette', '40019911']);
+});
+test('r10 dates: the second date of a dash range, a day of the month tied to a visit becomes [date]; counts, doses and scores stay', () => {
+  const r = (t) => rules(t).filter((x) => x.startsWith('DATE='));
+  assert.deepEqual(r('Herceptin weekly 10/14-11/18 then'), ['DATE=10/14', 'DATE=11/18']);
+  assert.deepEqual(r('window 10/14 - 11/18 only'), ['DATE=10/14', 'DATE=11/18']);
+  assert.deepEqual(r('missed Thu the 12th; appt is the 22nd; booked for the 9th; back on the 30th'), ['DATE=12th', 'DATE=22nd', 'DATE=9th', 'DATE=30th']);
+  assert.deepEqual(r('days 1-3, dose 1/2, fatigue 6/10, cycle 3/6, the 2nd cycle, this is the 3rd time, she is the 4th child, the 99th percentile'), []);
+  const out = lonely('Pt missed Thu the 12th, appt is the 22nd. Neuropathy grade 2, pain 6/10, dose 1/2.');
+  noneOf(out, ['12th', '22nd']); assert.ok(out.includes('[date]') && out.includes('pain 6/10') && out.includes('dose 1/2'), out);
+});
+test('r10 input normalisation: zero-width characters, Unicode spaces, combining accents and curly quotes do not hide a name', () => {
+  const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Okafor, Harriet', '40012277', 'Har\u200Briet called;\u00A0Harriet\u00A0Okafor\u2019s son aware']], }, { seed: 3 });
+  noneOf(r.rows[0][2], ['Harriet', 'Har\u200Briet', 'Okafor']);
+  const c = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Ruiz, Joaqu\u00EDn', '40012288', 'Joaqui\u0301n tolerated']] }, { seed: 3 });
+  noneOf(c.rows[0][2].normalize('NFC'), ['Joaqu\u00EDn']);
+  const doc = D.parseTextDocument('Pt\u00A0Harriet\u200B Okafor\u2028MRN 40012277');
+  assert.equal(doc.rows.length, 2);
+  assert.ok(!/[\u00A0\u200B\u2028]/.test(doc.rows.map((x) => x[3]).join('')));
+  assert.equal(D.normalizeText('O\u2019Brien \u201CBea\u201D'), 'O\'Brien "Bea"');
+});
+test('r10 safeCell: spreadsheet formula prefixes are neutralised, other values untouched', () => {
+  for (const v of ['=SUM(A1)', '+1', '-2', '@x', '\tx', '\rx']) assert.equal(D.safeCell(v), "'" + v);
+  for (const v of ['Smith', '', 'a=b', 5, -5, null, undefined, true]) assert.equal(D.safeCell(v), v);
+  const d = new Date(2026, 0, 2); assert.equal(D.safeCell(d), d);
+});
+test('r10 languages: a language or nationality beside interpreter/speaks is not a person', () => {
+  assert.equal(lonely('Pt prefers Portuguese interpreter. Interpreter (Somali) used. Speaks Haitian Creole.'), 'Pt prefers Portuguese interpreter. Interpreter (Somali) used. Speaks Haitian Creole.');
+  noneOf(lonely('Daughter Mary French called'), ['Mary', 'French']);
+});
+test('r10 robustness: odd inputs never throw, ragged rows are processed, long pathological text stays fast', () => {
+  assert.doesNotThrow(() => D.processTable(null));
+  assert.doesNotThrow(() => D.processTable({ headers: ['A'], rows: [null, 'x', 7, [{}], [new Date('x')]] }, { columns: 'bad' }));
+  assert.doesNotThrow(() => D.parseTextDocument(null));
+  assert.doesNotThrow(() => D.processTable({ headers: ['Name', 'Notes'], rows: [['Smith, John', 'x']] }, { columns: [{ role: 'zzz' }, null] }));
+  // a cell beyond the headers is still read
+  const r = D.processTable({ headers: ['Patient Name'], rows: [['Smith, Jonah', 'Called Jonah Smith at 716-555-0101']] }, { seed: 3 });
+  noneOf(r.rows[0].join(' | '), ['Jonah', 'Smith', '716-555-0101']);
+  for (const s of ['-'.repeat(30000), '.'.repeat(30000), ' '.repeat(30000), 'Ab-'.repeat(10000), '\n'.repeat(30000), 'on the 1st '.repeat(3000)]) {
+    const t0 = Date.now();
+    D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Doe, Jane', '12345678', s]] }, { seed: 3 });
+    D.parseTextDocument(s);
+    assert.ok(Date.now() - t0 < 4000, `slow on ${JSON.stringify(s.slice(0, 6))}: ${Date.now() - t0}ms`);
+  }
+});
+test('r10 follow-ups: "wife is <lower-case name>", a month that is a given name before a surname, a word-name given name in a file name', () => {
+  noneOf(lonely('wife is ingrid lundqvist, she drives'), ['ingrid', 'lundqvist']);
+  assert.equal(lonely('wife is aware; son is coming at noon'), 'wife is aware; son is coming at noon');
+  noneOf(lonely('June Castellanos here for C4. June\'s husband waited.'), ['June', 'Castellanos']);
+  const month = lonely('Next infusion in June, labs June 5.');
+  assert.ok(month.includes('in June,'), month);
+  noneOf(lonely('Uploaded abernathy_hope_mri.pdf to media.').toLowerCase(), ['abernathy', 'hope']);
+});
+test('r10 follow-ups: an attention line, a month-name subject, a number written after a name, "Last, First" before a found given name', () => {
+  noneOf(lonely('Records faxed to Sutter Ridge Onc attn Gwen 555-0196.'), ['Gwen', '555-0196']);
+  assert.ok(lonely('Records faxed attn Billing today.').includes('attn Billing'));
+  noneOf(lonely('April called back, she will come Monday.'), ['April']);
+  assert.ok(lonely('May call back. Restart in June.').includes('Restart in June'));
+  noneOf(lonely('Chairs: 1) Okafor, Harriet 44102 2) O\'Sullivan-Nwankwo, Bertram 44187.'), ['44102', '44187', 'Okafor', 'Harriet', 'Sullivan', 'Nwankwo', 'Bertram']);
+  assert.ok(lonely('Pt Harriet Okafor 10000 units heparin').includes('10000 units heparin'));
+});
+test('r10 fail-safe: a cell that cannot be read is blanked and reported, and the self-check then refuses the file', () => {
+  const r = D.processTable({ headers: ['Patient Name', 'Comments'], rows: [['Doe, Jane', { toString() { throw new Error('unreadable'); } }], ['Doe, Jane', ['Called Jane Doe']]] }, { seed: 1 });
+  assert.equal(r.rows[0][1], '');
+  noneOf(r.rows[1].join(' | '), ['Jane', 'Doe']);
+  assert.ok(Array.isArray(r.errors));
+  assert.doesNotThrow(() => D.selfCheck(null));
+  assert.ok(D.selfCheck(null).hits.length >= 1);
+  const forced = Object.assign({}, r, { errors: [{ row: 0, col: 1, header: 'Comments', message: 'x' }] });
+  assert.ok(D.selfCheck(forced).hits.some((h) => h.type === 'ERROR'));
+});
+test('r10 screenshot tolerance: a misread relation word, a garbled "-in-law", a town after a street or apartment, an age column after a record number', () => {
+  assert.equal(D.normalizeOcrText('6013875 92   orandson Edmund 555-0136; daughfer Priya'), '6013875 92   grandson Edmund 555-0136; daughter Priya');
+  assert.equal(D.normalizeOcrText('Hydration running, sister aware'), 'Hydration running, sister aware');
+  noneOf(textOut('1000 Dubinski, Wieslaw 8830446 08/01/1951 %bn-in-law Tadeusz drives'), ['Tadeusz', 'Dubinski', 'Wieslaw']);
+  noneOf(textOut('Pt moved to 18 Harrowgate Ln, Milbrook -\nupdate demographics.'), ['Harrowgate', 'Milbrook']);
+  noneOf(textOut('Lives 2290 Hollister ve Apt 14, Rosemead; van drop-off'), ['Rosemead']);
+  const age = textOut('Ashworth, Percival   6013875 92   grandson Edmund 555-0136\nVenkataraman, Lakshmi 8106533 71 daughter Priyanka');
+  noneOf(age, [' 92 ', 'Edmund']); assert.ok(age.includes(' 71 '), age);
+  assert.ok(textOut('Bag 40012345 95 mg given').includes('95 mg given'));
+});
+
+// ---------------------------------------------------------------- integration hardening (made-up strings)
+test('integration: whitespace runs never make the name/record split, the column classifier or the pasted-text parser slow', () => {
+  for (const s of ['x' + ' '.repeat(20000) + 'x', 'x' + '\t'.repeat(20000) + 'x', 'Quennell, Ottoline' + '\n'.repeat(20000) + 'x', ', '.repeat(20000), ','.repeat(20000)]) {
+    let t0 = Date.now();
+    D.classifyColumns(['Patient Name', 'Comments'], [[s, s]]);
+    D.buildCensus(['Patient Name', 'MRN', 'Comments'], [[s, '00418327', 'x']], [{ header: 'Patient Name', index: 0, role: 'patient_name' }, { header: 'MRN', index: 1, role: 'mrn' }, { header: 'Comments', index: 2, role: 'text' }], { registry: D.createRegistry() });
+    assert.ok(Date.now() - t0 < 1500, `classify/census slow on ${JSON.stringify(s.slice(0, 8))}: ${Date.now() - t0}ms`);
+    t0 = Date.now(); D.parseTextDocument(s);
+    assert.ok(Date.now() - t0 < 1500, `parseTextDocument slow on ${JSON.stringify(s.slice(0, 8))}: ${Date.now() - t0}ms`);
+  }
+  // the split still reads a birthdate or record number at the end of a name cell
+  const cols = D.classifyColumns(['Patient'], [['Quennell, Ottoline   /   05.19.1949'], ['Ambrose-Pike, Lorcan (MRN 4471)']]);
+  assert.equal(cols[0].role, 'patient_name');
+  const c = D.buildCensus(['Patient'], [['Quennell, Ottoline / 05.19.1949'], ['Ambrose-Pike, Lorcan (MRN 4471)']], cols, { registry: D.createRegistry() });
+  const ps = [...c.patients.values()];
+  assert.ok(ps.some((p) => [...p.names].includes('Quennell, Ottoline') && p.dob), JSON.stringify(ps.map((p) => [...p.names])));
+  assert.ok(ps.some((p) => [...p.mrns].includes('4471')));
+});
+test('integration: header cells are protected like data cells, the self-check reads them, and ordinary column labels stay as they are', () => {
+  const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments re Quennell, Ottoline 41832795'], rows: [['Quennell, Ottoline', '41832795', 'called re: labs']] }, { seed: 1 });
+  noneOf(r.headers.join(' | '), ['Quennell', 'Ottoline', '41832795']);
+  assert.equal(D.selfCheck(r).hits.length, 0);
+  const kv = D.processTable({ headers: ['Patient', 'Quennell, Ottoline'], rows: [['MRN', '00418327'], ['Phone', '716-555-0199'], ['Comments', 'Quennell called re: labs']] }, { seed: 1 });
+  noneOf(JSON.stringify([kv.headers, kv.rows]), ['Quennell', 'Ottoline', '716-555-0199']);
+  const title = D.processTable({ headers: ['Patient: Quennell, Ottoline', 'MRN: 00418327', 'DOB: 7/4/1950', 'Attending: Wolfsbane, Meyer MD'], rows: [['Appt', 'Chair', 'Drug', 'Notes'], ['11/10/2026', '4', 'Keytruda', 'tolerated well']] }, { seed: 1 });
+  noneOf(title.headers.join(' | '), ['Quennell', 'Ottoline', '00418327', '7/4/1950', 'Wolfsbane']);
+  // a header the detector did not change but that names a census patient still blocks the download
+  const forged = Object.assign({}, r, { headers: ['Quennell notes'].concat(r.headers.slice(1)) });
+  assert.ok(D.selfCheck(forged).hits.some((h) => h.row === -1 && /Quennell/.test(h.text)));
+  assert.equal(D.selfCheck(forged, { headers: false }).hits.filter((h) => h.row === -1).length, 0);
+  // the protected header is mapped to its role for Restore identities
+  assert.ok(r.mapping.meta.columns.some((c) => c.output && c.output === r.headers[2]));
+  const labels = ['Patient Name', 'Med Rec #', 'Med Rec No', 'Nursing Note', 'Emerg Contact Name', 'Last Infusion', 'Referring Practice Phone', 'Financial Class', 'Driver Name', 'Visitor Names', 'Group Name', 'Attending Provider', 'Appt Date', 'Hope Lodge', 'Will Call', 'Mercy Hospital Referrals', 'Primary RN', 'Spouse Name'];
+  const lr = D.processTable({ headers: labels, rows: [labels.map(() => 'x')] }, { seed: 1 });
+  assert.deepEqual(lr.headers.slice(0, labels.length), labels);
+});
+test('integration: a patient whose surname is also a credential (Do, Pa, Md) never breaks a note that names another doctor', () => {
+  for (const [name, note, cred] of [['Do, Brittany', 'f/u with Hamblin, Kavita DO', 'DO'], ['Pa, Henrietta', 'seen by Jones PA today', 'PA'], ['Md, Rosalind', 'per Lee MD', 'MD']]) {
+    const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [[name, '30400100', note], [name, '30400100', `${name.split(', ')[1]} ${name.split(',')[0]} called`]] }, { seed: 1 });
+    assert.deepEqual(r.errors, [], note);
+    assert.ok(r.rows[0][2].includes(cred), r.rows[0][2]);
+    noneOf(r.rows[1][2], [name.split(', ')[1]]);
+    assert.equal(D.selfCheck(r).hits.length, 0, JSON.stringify(D.selfCheck(r).hits));
+  }
+  const p = D.parseName('DO'); assert.equal(typeof p.first, 'string'); assert.equal(typeof p.last, 'string');
+  const q = D.parseName(',,,'); assert.equal(q.last, ''); assert.doesNotThrow(() => D.nameVariants(q));
+});
+test('integration: made-up organizations never carry a patient name word; made-up phones and numbers never carry a census record number', () => {
+  // every fake organization of the pool, as a patient surname: whichever organization is drawn, it is never one of them
+  const L = require('../src/lexicon.js');
+  const words = [...new Set(L.FAKE_ORGS.map((o) => o.split(' ')[0]))];
+  const rows = words.map((w, i) => [`${w}, Tobiah`, String(30500100 + i), i === 0 ? 'Infusion at Great Lakes Regional Oncology Partners, then Kenmore Mercy Hospital, then Sisters Hospital' : 'ok']);
+  const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows }, { seed: 4 });
+  const orgs = r.details[0].cells[0].replacements.filter((x) => x.type === 'ORG').map((x) => x.replacement);
+  assert.ok(orgs.length >= 1, JSON.stringify(r.details[0].cells[0].replacements));
+  orgs.forEach((o) => words.forEach((w) => assert.ok(!o.split(/\s+/).includes(w), `${o} carries patient surname ${w}`)));
+  assert.equal(D.selfCheck(r).hits.length, 0, JSON.stringify(D.selfCheck(r).hits.slice(0, 3)));
+  // record numbers shaped like the digits a fake phone carries (010xxxx): no fake phone or number reproduces one
+  const mrns = []; for (let k = 0; k < 400; k++) mrns.push('0010' + String(k * 23 % 10000).padStart(4, '0'));
+  const prow = mrns.map((m, i) => [`Okonkwo${String.fromCharCode(97 + (i % 26))}${String.fromCharCode(97 + Math.floor(i / 26) % 26)}, Ines`, m, `call ${700 + (i % 200)}-${600 + (i % 300)}-${String(1000 + i).slice(-4)} or ${300 + i % 600}-${4000 + i}`]);
+  const pr = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: prow }, { seed: 9 });
+  const keys = new Set(mrns.map((m) => m.replace(/^0+/, '')));
+  pr.rows.forEach((row) => { const d = String(row[2]).replace(/\D/g, ''); for (let i = 0; i < d.length; i++) for (let len = 5; len <= 8 && i + len <= d.length; len++) if (d[i] !== '0') assert.ok(!keys.has(d.slice(i, i + len)), `fake number ${row[2]} carries a census MRN`); });
+  assert.equal(D.selfCheck(pr).hits.length, 0, JSON.stringify(D.selfCheck(pr).hits.slice(0, 3)));
+});
+test('integration: a lower-case given name that is an ordinary word is the patient in their own row when a person verb follows', () => {
+  const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['ZHAO, YAN R', '030956724', 'yan requests chair 12'], ['ZHAO, YAN R', '030956724', 'pt may need yan sign'], ['LUND, WILL', '030956725', 'will call back tomorrow']] }, { seed: 2 });
+  noneOf(r.rows[0][2], ['yan']);
+  assert.equal(r.rows[2][2], 'will call back tomorrow');
+  assert.equal(D.selfCheck(r).hits.filter((h) => h.row === 0).length, 0);
+});
+test('integration: malformed options and odd values are normalised, never an internal error; a short row keeps its audit column in place', () => {
+  const t = { headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Quennell, Ottoline', '41832795', 'Ottoline called 716-555-0199']] };
+  for (const c of [{ extraPatterns: ['(', { regex: '[' }, null] }, { denylist: 'abc' }, { surrogate: { shiftRange: ['a', null] } }, { manual: { '0:2': { add: [{ start: -5, end: 1e9 }, null], remove: 'x' } } }, { manual: { '0:2': { add: [{ start: 3, end: 9, type: 'BOGUS' }] } } }, { registry: {} }, { seed: 'abc' }, { surrogate: { shiftRange: [365, 30] } }]) {
+    const r = D.processTable(t, c);
+    assert.deepEqual(r.errors, [], JSON.stringify(c));
+    noneOf(r.rows[0].join(' | '), ['Quennell', 'Ottoline', '41832795', '716-555-0199']);
+  }
+  assert.deepEqual(D.compileConfig(D.defaultConfig({ surrogate: { shiftRange: [365, 30] } })).surrogate.shiftRange, [30, 365]);
+  const big = D.processTable({ headers: ['Chair'], rows: [[BigInt(42)]] }, { seed: 1 });
+  assert.equal(typeof big.rows[0][0], 'string');
+  const rag = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Quennell, Ottoline', '41832795', 'ok'], ['Quennell, Ottoline']] }, { seed: 1 });
+  const ai = rag.headers.indexOf('DeID Audit');
+  assert.ok(ai > 0 && rag.rows.every((row) => /^P\d+/.test(String(row[ai]))), JSON.stringify(rag.rows));
+  // a row that cannot be read at all fails the whole run closed: every cell blank, the error reported, the self-check refuses it
+  const rp = Proxy.revocable([], {}); rp.revoke();
+  const bad = D.processTable({ headers: ['Comments'], rows: [['Quennell called'], rp.proxy] }, { seed: 1 });
+  assert.ok(bad.errors.length >= 1 && bad.rows.length === 2 && bad.rows.every((row) => row.every((v) => v === '')));
+  assert.ok(D.selfCheck(bad).hits.some((h) => h.type === 'ERROR'));
+});
+
+// ---------------------------------------------------------------- second bulletproofing pass (b5)
+// a session that knows a patient list, then free text that names none of its patients on the line itself
+const B5_LIST = [['De La Cruz, Rosario', '00418331', ''], ['Hill, Rose', '00418332', ''], ['Pryce, Austin', '00418333', ''], ['Moss, Hunter', '00418334', ''],
+  ['Mbeki-Larsson, Nomvula', '00663381', ''], ['Ortiz-Delgado, Marisela', '00418335', ''], ['Okonkwo, Chidi', '00418336', ''], ['Szczepański, Wojciech', '00418337', ''],
+  ['Tanaka, Kenji', '00418338', ''], ['Sato, Aiko', '00418339', ''], ['Reyes, Lourdes', '00418340', ''], ['Marsh, Regina', '00418341', ''], ['Smith, John', '00418342', '']];
+const b5Registry = () => { const reg = D.createRegistry(); D.buildCensus(['Patient Name', 'MRN', 'DOB'], B5_LIST, [{ header: 'Patient Name', index: 0, role: 'patient_name' }, { header: 'MRN', index: 1, role: 'mrn' }, { header: 'DOB', index: 2, role: 'dob' }], { registry: reg }); return reg; };
+const b5Text = (text, reg) => { const t = D.parseTextDocument(text); const r = D.processTable({ headers: t.headers, rows: t.rows }, { columns: t.columns, registry: reg || b5Registry(), seed: 7 }); const li = r.headers.indexOf('Line'); return { out: r.rows.map((row) => D.cellToString(row[li])).join('\n'), res: r }; };
+// the self-check on text as written (unprotected): what it must flag
+const b5Raw = (text, reg) => { const r = b5Text('x', reg).res; return D.selfCheck({ rows: [[text]], headers: ['Line'], census: r.census, cfg: r.cfg, details: [{ row: 0, cells: [] }] }, { kind: 'text' }).hits.map((h) => h.text.toLowerCase()); };
+const b5Has = (out, w) => new RegExp(`(?<![A-Za-z])${w}(?![A-Za-z])`, 'i').test(out);
+
+test('b5 dates in file names: an underscore separates; a compact date only inside a file name', () => {
+  for (const [t, d] of [['scan_2026-11-04.pdf uploaded', '2026-11-04'], ['IMG_20261104_0932.jpg attached', '20261104'], ['consent_11-04-2026.pdf', '11-04-2026'], ['labs_11.04.26.pdf', '11.04.26'], ['consent-11042026.pdf', '11042026'], ['scan_OKONKWO_Nov-04-2026.pdf', 'Nov-04-2026']]) assert.ok(rules(t).includes('DATE=' + d), `${t}: ${rules(t)}`);
+  assert.ok(!rules('MRN 20261104 checked').some((x) => x.startsWith('DATE')), 'an 8-digit number outside a file name is not a date');
+  assert.ok(!rules('lot_20261399.pdf').some((x) => x.startsWith('DATE')), 'month 13 is not a date');
+  const out = b5Text('scan_2026-11-04.pdf and IMG_20261104_0932.jpg').out;
+  assert.ok(!/2026-11-04|20261104/.test(out), out);
+});
+test('b5 the end of a date range moves with its start, and crossing a month writes the month', () => {
+  for (const t of ['Venofer slots Nov 24-26', 'Venofer slots Nov 24–26, 10a + 11a', 'Venofer slots Dec 3 to 5', 'Venofer slots 11/24-26']) {
+    const out = b5Text(t, D.createRegistry()).out;
+    const m = out.match(/(?:([A-Z][a-z]{2}) (\d{1,2})|(\d{1,2})\/(\d{1,2}))(?:-|–| to )(?:([A-Z][a-z]{2}) |(\d{1,2})\/)?(\d{1,2})/);
+    assert.ok(m, `${t} -> ${out}`);
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const m1 = m[1] ? MON.indexOf(m[1]) : +m[3] - 1, d1 = +(m[2] || m[4]);
+    const m2 = m[5] ? MON.indexOf(m[5]) : m[6] ? +m[6] - 1 : m1, d2 = +m[7];
+    const span = Math.round((new Date(2026, m2 + (m2 < m1 ? 12 : 0), d2) - new Date(2026, m1, d1)) / 864e5);
+    assert.equal(span, 2, `${t} -> ${out}: the range must still be two days long`);
+    assert.ok(!/(?:Nov 24|Dec 3|11\/24)\b/.test(out), `${t} -> ${out}: start not shifted`);
+  }
+  assert.ok(!rules('days 1-3 of cycle; pain 2/10-3').some((x) => x.startsWith('DATE')), 'ranges of days, scores stay');
+});
+test('b5 a drawn date offset never leaves a date without a year almost where it was', () => {
+  for (let seed = 1; seed <= 400; seed++) {
+    const r = D.processTable({ headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Quennell, Orsolya', '00418327', 'seen 11/24']] }, { seed });
+    const o = Math.abs(r.details[0].offset), k = o % 365;
+    assert.ok(o >= 30 && o <= 365 && Math.min(k, 365 - k) >= 30, `seed ${seed}: offset ${r.details[0].offset}`);
+  }
+});
+test('b5 a listed patient\'s given name: any case when it is not an ordinary word, in a person slot when it is', () => {
+  for (const [t, w] of [['rosario (de la cruz) asked about parking validation', 'rosario'], ['called rosario re parking', 'rosario'], ['pt rose called', 'rose'], ['pt austin here early', 'austin'], ['hunter called back', 'hunter'],
+    ['pt marisela called, wants earlier slot', 'marisela'], ['kenji called back', 'kenji'], ['spoke w/ aiko re labs', 'aiko'], ['lourdes called re ride', 'lourdes'], ['left vm for regina', 'regina'], ['Pt Austin here early', 'austin']]) {
+    assert.ok(!b5Has(b5Text(t).out, w), `${t} -> ${b5Text(t).out}`);
+    assert.ok(b5Raw(t).includes(w), `self-check must flag ${w} in "${t}": ${b5Raw(t)}`);
+  }
+  // ordinary words stay, in the output and in the check
+  for (const t of ['BP rose to 150/90 post infusion', 'pt will call back', 'Hunter syndrome history', 'grace period for copay']) { assert.equal(b5Text(t).out, t); assert.deepEqual(b5Raw(t), [], t); }
+  // a given name of exactly one listed patient on a line naming no one else is that patient: the patient's own made-up name
+  const reg = b5Registry();
+  const r = b5Text('Aiko gets Prolia.', reg);
+  const sato = reg.entities.find((e) => [...e.names].includes('Sato, Aiko'));
+  assert.ok(sato && sato.fakeFirst && r.out.startsWith(sato.fakeFirst + ' '), `${r.out} / ${sato && sato.fakeFirst}`);
+});
+test('b5 a two-part surname run together or in CamelCase is the patient (file names, glued words)', () => {
+  for (const [t, w] of [['scanned consent -> Consent_MbekiLarsson_N_2026-11-04.pdf uploaded', 'mbekilarsson'], ['OrtizDelgado chart reviewed', 'ortizdelgado'], ['saved ConsentMbekiLarsson.pdf today', 'mbekilarsson'], ['ConsentOrtizDelgado_2026.pdf', 'ortizdelgado']]) {
+    const out = b5Text(t).out.toLowerCase();
+    assert.ok(!out.includes(w) && !out.includes('larsson') && !out.includes('delgado'), `${t} -> ${out}`);
+    assert.ok(b5Raw(t).some((h) => h.replace(/[^a-z]/g, '').includes(w.slice(0, 5))), `self-check must flag ${t}: ${b5Raw(t)}`);
+  }
+});
+test('b5 a listed surname misspelled by one letter or one swap is the patient; ordinary and real names stay', () => {
+  for (const [t, w] of [['Okonkow C. lab draw from port', 'okonkow'], ['Okonkwoo C. lab draw from port', 'okonkwoo'], ['Szczepanksi here for Entyvio', 'szczepanksi'], ['Okonkow, Chidi lab draw', 'okonkow']]) {
+    const out = b5Text(t).out; assert.ok(!b5Has(out, w), `${t} -> ${out}`);
+    assert.ok(!/\bC\.\s/.test(out) || !/^Okonk/.test(out), out);
+    assert.ok(b5Raw(t).some((h) => h.includes(w)), `self-check must flag ${w}: ${b5Raw(t)}`);
+  }
+  // "Okonkow C." keeps the shape surname + initial, with the patient's made-up surname and made-up initial
+  const reg = b5Registry(); const out = b5Text('Okonkow C. lab draw', reg).out; const e = reg.entities.find((x) => [...x.names].includes('Okonkwo, Chidi'));
+  assert.equal(out, `${e.fakeLast} ${e.fakeFirst[0]}. lab draw`);
+  // the registry links the misspelling to the listed patient (same given name); two real surnames stay two people
+  const reg2 = D.createRegistry();
+  const a = reg2.resolve({ name: 'Okonkwo, Chidi', mrn: '00418336' });
+  assert.equal(reg2.resolve({ name: 'Okonkow, Chidi' }), a);
+  assert.notEqual(reg2.resolve({ name: 'Okonkwo, Chika' }), a);
+  const s1 = reg2.resolve({ name: 'Smith, John', mrn: '1234567' }); assert.notEqual(reg2.resolve({ name: 'Smyth, John' }), s1);
+  // an ordinary word one letter from a listed surname is left alone
+  const reg3 = D.createRegistry(); D.buildCensus(['Patient Name'], [['Gardens, Ann']], [{ header: 'Patient Name', index: 0, role: 'patient_name' }], { registry: reg3 });
+  assert.equal(b5Text('Garden visit today', reg3).out, 'Garden visit today');
+});
+test('b5 with no patient list, a lower-case given name in a contact or relative slot is a name', () => {
+  for (const [t, w] of [['spoke w/ evangelina re: copay assistance grant', 'evangelina'], ['talked to evangelina re copay', 'evangelina'], ['left vm for evangelina', 'evangelina'], ['evangelina called back', 'evangelina'], ['per dtr (marguerite), ok', 'marguerite']]) {
+    const out = b5Text(t, D.createRegistry()).out; assert.ok(!b5Has(out, w), `${t} -> ${out}`);
+  }
+  // a verb after a relation word in a lower-case note is not a name
+  assert.ok(/mom fell at home/.test(b5Text('per dtr (marguerite), mom fell at home 11/2, ok', D.createRegistry()).out));
+  assert.ok(!/Hendrik|Berg/.test(b5Text('Hendrik vd Berg chair 2 after 1pm.', D.createRegistry()).out));
+});
+test('b5 a column of "First Last" names under an unknown header is the name column when no other is', () => {
+  const roles = (h, rows) => D.classifyColumns(h, rows).map((c) => c.role);
+  assert.deepEqual(roles(['Booked For', 'Chair', 'Regimen'], [['Ottilie Wolstenholme', '4', 'Keytruda'], ['Lucan Featherby', '5', 'Herceptin'], ['Bartosz Szczepanik', '6', 'Entyvio']]), ['patient_name', 'keep', 'keep']);
+  assert.deepEqual(roles(['Unit', 'Chair'], [['Short Stay', '4'], ['Short Stay', '5'], ['Med Onc', '6']]), ['keep', 'keep']);
+  assert.deepEqual(roles(['Patient Name', 'MRN', 'Contact'], [['Smith, John', '00412345', 'Avery Thistlewood'], ['Doe, Jane', '00412346', 'Marlowe Quenneville']]), ['patient_name', 'mrn', 'keep']);
+  assert.equal(roles(['Scheduled By', 'Chair'], [['Ottilie Wolstenholme', '4'], ['Bartosz Szczepanik', '6'], ['Imani Oyelaran', '6']])[0] === 'patient_name', false, 'a staff header is never the patient column');
+});
+test('b5 the census scan finds exactly what the alternation regex found', () => {
+  const reg = b5Registry();
+  const census = D.buildCensus(['Patient Name', 'MRN', 'DOB', 'Comments'], [['Okonkwo, Chidi', '00418336', '3/4/1951', 'x'], ['Hill, Rose', '00418332', '', 'y']], [{ header: 'Patient Name', index: 0, role: 'patient_name' }, { header: 'MRN', index: 1, role: 'mrn' }, { header: 'DOB', index: 2, role: 'dob' }, { header: 'Comments', index: 3, role: 'text' }], { registry: reg });
+  const keys = [...census.lookup.keys()].sort((a, b) => b.length - a.length);
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const viaRegex = Object.assign({}, census, { scan: null, regex: new RegExp(`(?<![A-Za-z0-9])(?:${keys.map(esc).join('|')})(?![A-Za-z0-9])`, 'gi') });
+  const texts = ['Okonkwo, Chidi seen; OKONKWO C. called; chidi okonkwo_00418336.pdf', 'Rose Hill and Hill, Rose; MRN 0041 8336; 03/04/1951 and 3/4/51', 'De La Cruz, Rosario + Sato, Aiko + kenji tanaka; Szczepański', 'aOkonkwo Okonkwob Okonkwo1 _Okonkwo_'];
+  for (const t of texts) for (const rp of [null, census.rowPatient[0], census.rowPatient[1]]) {
+    const strip = (sp) => sp.filter((x) => !x.fuzzy).map((x) => `${x.start}-${x.end}:${x.type}:${x.entity || ''}`).join(' ');
+    assert.equal(strip(D.censusSpans(t, census, rp, null)), strip(D.censusSpans(t, viaRegex, rp, null)), t);
+  }
+});
+test('b5 a count after a range is not a day; Restore identities brings back file-name dates and range ends', () => {
+  for (const t of ['Venofer slots Dec 3 to 5 cycles', 'Jan 5 to 7 doses', 'Nov 3 to 5 infusions', '11/24-26 doses']) assert.ok(!rules(t).some((x) => /^DATE=(?:5|7|26)$/.test(x)), `${t}: ${rules(t)}`);
+  assert.ok(rules('11/24-26 slots').includes('DATE=26'), 'a noun that also follows a date does not stop the range');
+  const t = { headers: ['Patient Name', 'MRN', 'Comments'], rows: [['Quennell, Orsolya', '00418327', 'IMG_20261104_0932.jpg; slots Nov 24-26; also 11/24-26 and Dec 3 to 5']] };
+  const r = D.processTable(t, { seed: 5 });
+  assert.ok(!/20261104|Nov 24|11\/24/.test(r.rows[0][2]), r.rows[0][2]);
+  const back = D.reidentify({ headers: r.headers, rows: r.rows }, r.mapping);
+  assert.match(back.rows[0][2], /^IMG_20261104_0932\.jpg; slots Nov 24-26; also 11\/24-26 and Dec 3 to (?:Dec )?5$/);
+});
