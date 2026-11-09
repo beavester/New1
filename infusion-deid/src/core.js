@@ -3736,17 +3736,61 @@
     const pickFirst = (sex) => pick(sex === 'f' ? LEX.FAKE_FIRST_F : sex === 'm' ? LEX.FAKE_FIRST_M : LEX.FAKE_FIRST, 'first');
     const FEMALE_CUE = /^(?:wife|mother|mom|mum|mama|daughter|sister|aunt|niece|grandmother|grandma|granny|granddaughter|girlfriend|fiancee|fiancée|stepmother|stepdaughter|godmother|stepsister|dtr|dghtr|dau|sis|gma|gdaughter|granddtr|ex-wife|daughter-in-law|mother-in-law|sister-in-law|mrs|ms|miss)$/i;
     const MALE_CUE = /^(?:husband|father|dad|papa|son|brother|uncle|nephew|grandfather|grandpa|grandson|boyfriend|fiance|fiancé|stepfather|stepson|godfather|stepbrother|hus|husb|bro|gpa|gson|ex-husband|son-in-law|father-in-law|brother-in-law|mr)$/i;
-    const sexOf = (first, before, after) => {
-      const prev = ((before || '').match(/([A-Za-z][A-Za-z\-']*)\.?[\s:,(]*$/) || [])[1];
-      // "Thu (daughter)", "Linh, her daughter"
-      const next = ((after || '').match(/^\s*(?:\(|,)\s*(?:pt['’]?s\s+|patient['’]?s\s+|her\s+|his\s+|the\s+)?([A-Za-z][A-Za-z\-]*)/) || [])[1];
-      for (const x of [prev, next]) {
-        const w = x ? x.replace(/['’]s$/, '') : '';
-        if (w && FEMALE_CUE.test(w)) return 'f';
-        if (w && MALE_CUE.test(w)) return 'm';
+    const cueSex = (x) => { const w = x ? x.replace(/['’]s$/, '') : ''; return !w ? null : FEMALE_CUE.test(w) ? 'f' : MALE_CUE.test(w) ? 'm' : null; };
+    // short forms inherit the sex of their full name when every full name that has one agrees (Jen of Jennifer, Mike of
+    // Michael; Pat of Patricia and Patrick says nothing)
+    let nickSexMap = null, nickFormSet = null;
+    const nickData = () => {
+      if (nickSexMap) return;
+      nickSexMap = new Map(); nickFormSet = new Set();
+      const nameSex = LEX.NAME_SEX || new Map(), seen = new Map();
+      for (const formal of Object.keys(LEX.NICKNAMES || {})) {
+        const fk = formal.toLowerCase(), sx = LEX.FAKE_FEMALE.has(fk) ? 'f' : LEX.FAKE_MALE.has(fk) ? 'm' : nameSex.get(fk) || null;
+        for (const n of LEX.NICKNAMES[formal]) { const nk = String(n).toLowerCase(); if (nk === fk) continue; nickFormSet.add(nk); if (sx) seen.set(nk, seen.has(nk) && seen.get(nk) !== sx ? 'x' : sx); }
       }
-      const k = String(first || '').toLowerCase();
-      return LEX.FAKE_FEMALE.has(k) ? 'f' : LEX.FAKE_MALE.has(k) ? 'm' : null;
+      seen.forEach((sx, nk) => { if (sx !== 'x') nickSexMap.set(nk, sx); });
+    };
+    const isNickForm = (k) => { nickData(); return nickFormSet.has(k); };
+    // the sex a real first name is given to: the pools' own lists, the generated SSA table (at least 90% one sex), a short form
+    const nameSexOf = (first) => {
+      const k = String(first || '').toLowerCase().replace(/[^a-z'’\-]/g, '');
+      if (!k) return null;
+      if (LEX.FAKE_FEMALE.has(k)) return 'f';
+      if (LEX.FAKE_MALE.has(k)) return 'm';
+      const t = LEX.NAME_SEX && LEX.NAME_SEX.get(k);
+      if (t) return t;
+      nickData();
+      return nickSexMap.get(k) || null;
+    };
+    // The sex of a first name, so a daughter is not given a man's name. In order: a kin word or honorific right beside the
+    // name ("wife Sam", "Thu (daughter)", "Linh, her daughter", "Mrs."); the real name itself; a kin word elsewhere in the
+    // clause that is said of the name ("April is her daughter", "daughter is named April"); a pronoun that takes the name up
+    // ("Spoke w/ Jordan, she will call back"). A kin word in the possessive ("her husband's sister") is someone else's.
+    const sexOf = (first, before, after) => {
+      before = before || ''; after = after || '';
+      // the word before: a kin word, or an honorific with or without its period (a period after any other word ends a sentence)
+      const pv = before.match(/([A-Za-z][A-Za-z\-']*)(\.?)[\s:,(]*$/);
+      const prev = pv && (!pv[2] || /^(?:mr|mrs|ms|miss)$/i.test(pv[1])) ? pv[1] : null;
+      // "Thu (daughter)", "Linh, her daughter"
+      const next = (after.match(/^\s*(?:\(|,)\s*(?:pt['’]?s\s+|patient['’]?s\s+|her\s+|his\s+|the\s+)?([A-Za-z][A-Za-z\-]*)/) || [])[1];
+      const nextParen = /^\s*\(/.test(after);
+      for (const x of [prev, nextParen ? next : null]) { const sx = cueSex(x); if (sx) return sx; }
+      // "X is her daughter", "X was the patient's oldest son": the first kin word after the determiner, not a possessive
+      // ("X is her husband's sister" is a sister)
+      const am = after.match(/^\s*(?:is|was)\s+(?:also\s+)?(?:(?:the\s+)?(?:pt|patient)['’]?s|her|his|their|my|the|a)\s+([^.,;!?\n()]{0,40})/i);
+      if (am) for (const w of am[1].split(/\s+/).filter(Boolean).slice(0, 4)) { if (/^[A-Z][a-z]/.test(w)) break; if (/['’]s$/i.test(w)) continue; const sx = cueSex(w.replace(/[^A-Za-z\-]/g, '')); if (sx) return sx; }
+      // "her daughter is named X", "son's name is X"
+      const bm = before.match(/([A-Za-z][A-Za-z\-]*)(?:['’]s\s+name)?\s+(?:is|was|named|called|is\s+named|name\s+is|is\s+called)\s*:?\s*$/i);
+      if (bm) { const sx = cueSex(bm[1]); if (sx) return sx; }
+      const own = nameSexOf(first);
+      // ("Maria, husband at bedside": after a comma the kin word may be the next person, so the name itself is asked first)
+      if (own) return own;
+      if (!nextParen && cueSex(next)) return cueSex(next);
+      // a pronoun right after the clause the name is in, when the clause is not about the patient
+      const clause = before.split(/[.;!?\n]/).pop();
+      const pm = after.match(/^(?:\s+[A-Za-z\/']+){0,3}\s*(?:[,;.\-–]|\band\b|\bbut\b|\bwho\b)\s*(she|he)\b/i);
+      if (pm && !/^\s*(?:pt|patient|she|he)\b/i.test(clause) && !/\b(?:she|he|her|his|pt|patient)\b/i.test(clause)) return pm[1].toLowerCase() === 'she' ? 'f' : 'm';
+      return null;
     };
     const pickLast = () => pick(LEX.FAKE_LAST, 'last');
     const randDigits = (n) => { let s = ''; for (let i = 0; i < n; i++) s += Math.floor(rng() * 10); return s; };
@@ -3889,7 +3933,9 @@
         const mids = parsedEntity && parsedEntity.middle ? parsedEntity.middle.toLowerCase().split(/\s+/) : [];
         const first = /^[A-Z]\.?$/.test(parsed.first) ? info.fakeFirst[0] + '.' : info.fakeFirst;
         const last = /^[A-Z]\.?$/.test(parsed.last) ? info.fakeLast[0] + (parsed.last.endsWith('.') ? '.' : '') : info.fakeLast; // Svetlana P. → Zane D.
-        if (parsedEntity && parsedEntity.first && lowFirst === parsedEntity.first.toLowerCase() && mids.includes(lowLast)) out = info.fakeFirst; // "Mary Catherine": a two-word given name
+        const flat = (x) => String(x || '').toLowerCase().replace(/[^a-z]/g, '');
+        if (parsedEntity && parsedEntity.last && /[\s.]/.test(parsedEntity.last.trim()) && flat(parsed.first + parsed.middle + parsed.last) === flat(parsedEntity.last)) out = info.fakeLast; // "van der Berg" alone: the whole surname
+        else if (parsedEntity && parsedEntity.first && lowFirst === parsedEntity.first.toLowerCase() && mids.includes(lowLast)) out = info.fakeFirst; // "Mary Catherine": a two-word given name
         else if (parsedEntity && lowFirst === parsedEntity.last.toLowerCase() && /^[A-Z]\.?$/.test(parsed.last)) out = `${info.fakeLast} ${info.fakeFirst[0]}${parsed.last.endsWith('.') ? '.' : ''}`; // "Castellane W."
         else if (parsedEntity && lowFirst === parsedEntity.last.toLowerCase()) out = `${info.fakeLast} ${info.fakeFirst}`; // "TRAN THI HONG": surname first, no comma
         else out = `${first} ${last}`;
@@ -3910,7 +3956,11 @@
     // that is both (Terry, Jose) is read as a given name, since a surname alone in a note nearly always carries an honorific.
     const KIN = /^(?:son|daughter|wife|husband|spouse|partner|mother|father|mom|dad|mum|mama|papa|sister|brother|grandson|granddaughter|grandmother|grandfather|grandma|grandpa|granny|aunt|uncle|niece|nephew|cousin|friend|neighbor|neighbour|fiance|fiancee|fiancé|fiancée|boyfriend|girlfriend|roommate|housemate|companion|caregiver|stepson|stepdaughter|stepmother|stepfather|godmother|godfather|dtr|dghtr|dau|hus|husb|bro|sis|gma|gpa|gson|gdaughter|granddtr|grandchild|twin|ex-wife|ex-husband|son-in-law|daughter-in-law|mother-in-law|father-in-law|sister-in-law|brother-in-law|stepbrother|stepsister|child|kid|baby|sibling|parent|coworker)$/i;
     const CALL_BEFORE = /(?:^|[^A-Za-z])(?:called|calling|call|phoned|texted|messaged|emailed|spoke|speaking|talked|talking|met|lvm|vm|voicemail|message|msg|hi|hello|dear|thanks|thank you|asked|told|informed|notified|updated)(?:\s+(?:with|to|for|from|w\/))?\s*[:,]?\s*$/i;
-    const HONORIFIC_BEFORE = /(?:^|[^A-Za-z])(?:mr|mrs|ms|miss|mx|dr|doctor|prof|rev|fr|sr|nurse)\.?\s*$/i;
+    const HONORIFIC_BEFORE = /(?:^|[^A-Za-z])(?:mr|mrs|ms|miss|mx|dr|doctor|prof|rev|fr|sr)\.?\s*$/i;
+    // staff are named by first name after their role ("RN Tasha", "nurse Kim", "pharmacist Jen")
+    const STAFF_BEFORE = /(?:^|[^A-Za-z])(?:rn|lpn|cna|pca|ma|nurse|tech|pharmacist|scheduler|secretary|receptionist|navigator|coordinator|aide|interpreter|driver|charge)\.?\s*$/i;
+    // a word people are called by: a short form (Jen, Mike) or a name more common as a first name than as a surname
+    const isGivenFirst = (k) => isNickForm(k) || !!(LEX.NAME_GIVEN && LEX.NAME_GIVEN.has(k));
     const lonePartIsFirst = (tok, before, after, cred, preferLast) => {
       if (cred || HONORIFIC_BEFORE.test(before)) return false;
       const prev = (before.match(/([A-Za-z][A-Za-z\-']*)[\s:,(]*$/) || [])[1];
@@ -3919,15 +3969,64 @@
       if (nextKin && /^[\s,]*\(/.test(after) && KIN.test(nextKin)) return true; // "Thu (daughter)"
       if (nextKin && /^\s*,\s*/.test(after) && KIN.test(nextKin)) return true; // "Linh, her daughter"
       if (CALL_BEFORE.test(before)) return true;
-      if (preferLast) return false; // a provider named alone ("per Nguyen", "f/u w/ Patel") is named by surname
       const k = tok.toLowerCase();
       const curF = LEX.FIRST_SET.has(k), curL = LEX.LAST_SET.has(k);
+      if (STAFF_BEFORE.test(before)) return isGivenFirst(k) || LEX.isFirstName(tok) || !LEX.isSurname(tok);
+      // a provider named alone ("per Nguyen", "f/u w/ Patel") is named by surname, unless the word is what people are called
+      // by ("Per Jen in pharmacy")
+      if (preferLast) return isGivenFirst(k) && !(curL && !curF);
+      // an informal mention ("Kim ok'd", "spoke w/ Maria"): a first name whenever the word is used as one
+      if (isGivenFirst(k)) return true;
       if (curF !== curL) return curF;
       const B = LEX.BIG || {}, f2 = !!(B.F2 && B.F2.has(k)), s2 = !!(B.S2 && B.S2.has(k));
       if (f2 !== s2) return f2;
       const f = LEX.isFirstName(tok), l = LEX.isSurname(tok);
       if (f !== l) return f;
       return f; // both: a given name; neither: a surname
+    };
+    // A surname of several words (van der Berg, de la Cruz, St. Clair, Mc Allister, O' Malley, al-Harbi) is ONE surname and
+    // gets one made-up surname: its particles are neither kept (they narrow down the real name) nor replaced one by one.
+    // A lower-case particle before a name always belongs to the surname. A capitalised one does when it follows another
+    // name part or an honorific, or leads another particle ("Van der Berg"); a capitalised first word that is itself a
+    // first name ("Van Morrison", "Ben Carson") is left as a first name, and so is the Vietnamese middle name Van.
+    const PART_ANY = /^(?:de|van|von|der|den|vd|la|le|los|las|del|della|da|di|du|dos|das|do|st|ste|mc|mac|o|bin|ibn|bint|binti|ben|al|el|ter|ten|zu|af)$/i;
+    const PART_CAP = /^(?:de|van|von|der|den|vd|la|los|las|del|della|di|du|dos|das|st|ste|mc|mac|o|ter|ten|zu|af)$/i;
+    const VIET_SURNAME = /^(?:nguyen|tran|le|pham|huynh|hoang|phan|vu|vo|dang|bui|do|ho|ngo|duong|ly|truong|dinh|lam|trinh)$/i;
+    const bareParticle = (t) => String(t).replace(/[.'’]+$/, '');
+    const particleAt = (parts, j, runStart, afterHonorific) => {
+      const t = parts[j], bare = bareParticle(t);
+      if (j >= parts.length - 1 || /^[A-Z]\.?$/.test(t) || !PART_ANY.test(bare)) return false; // (a middle initial "O." is not O')
+      if (t === t.toLowerCase()) return true;
+      if (!PART_CAP.test(bare)) return false;
+      if (j > runStart) return true;
+      if (j + 2 < parts.length && PART_ANY.test(bareParticle(parts[j + 1])) && !/^[A-Z]\.?$/.test(parts[j + 1])) return true;
+      if (j === 0) return afterHonorific || !(LEX.FIRST_SET.has(bare.toLowerCase()) || (LEX.BIG && LEX.BIG.F2 && LEX.BIG.F2.has(bare.toLowerCase())));
+      return !(/^van$/i.test(bare) && VIET_SURNAME.test(parts[0]));
+    };
+    const nameUnits = (parts, afterHonorific) => {
+      const units = [];
+      for (let i = 0; i < parts.length;) {
+        let j = i;
+        while (particleAt(parts, j, i, afterHonorific)) j++;
+        units.push({ t: parts.slice(i, j + 1).join(' '), sur: j > i });
+        i = j + 1;
+      }
+      return units;
+    };
+    // one made-up surname for a whole multi-part surname: the surname's own entry first, then a fake its last word already
+    // has (a relative "de la Cruz" of a patient Cruz shares the patient's made-up surname), else a new one, recorded as
+    // written so the key restores "Van der Berg" and not its lower-case form
+    const surnameUnit = (written) => {
+      const low = written.toLowerCase();
+      const key = low.replace(/[.,]/g, '').replace(/['’]\s+/g, "'").replace(/\s+/g, ' ').trim();
+      const core = key.split(/[\s\-]+/).pop();
+      const sk = `NAME|${key}`;
+      let fake = tokenMap.get(key) || tokenMap.get(low) || (stringMap.has(sk) ? stringMap.get(sk).Surrogate : null);
+      // the last word already has a made-up value of its own (a patient or provider "Cruz"): that value stands for "Cruz"
+      // alone in the key, so the particles stay as written around it and the text still restores word for word
+      if (!fake && core.length > 1 && tokenMap.has(core)) { const cut = written.length - (written.match(/[A-Za-z'’]+$/) || [''])[0].length; return written.slice(0, cut) + matchCase(written.slice(cut), tokenMap.get(core)); }
+      if (!fake) { fake = pickLast(); stringMap.set(sk, { Type: 'NAME', Original: written, Surrogate: fake }); }
+      return matchCase(written, fake);
     };
     // Third-party names: consistent per token, in the shape written (Last, First stays Last, First; initials stay initials).
     const renderOtherName = (origText, before, after, preferLast) => {
@@ -3948,7 +4047,8 @@
         if (/^[a-z]$/.test(k)) return t; // initial
         if (/^(?:[A-Z]\.){2,3}$|^(?:[A-Z]\.){1,2}[A-Z]$/.test(t)) return fakeInitials(t); // J.R.
         if (t === t.toLowerCase() && NAME_PARTICLE.test(k)) return t; // van der, de la, bin: particles stay as written
-        const pm = t.match(/^((?:al|el|ad|ar|as|ash|at|az|an|bin|ibn|ben|bint|abu|ould)-)(.+)$/); if (pm && !tokenMap.has(k)) return pm[1] + tok(pm[2], asFirst); // al-Harbi
+        if (/^(?:al|el|ad|ar|as|ash|at|az|an|bin|ibn|ben|bint|abu|ould)-./i.test(t) && !tokenMap.has(k)) return surnameUnit(t); // al-Harbi: one surname
+        if (!asFirst && /\s/.test(t) && PART_ANY.test(bareParticle(t.split(/\s+/)[0])) && !tokenMap.has(k)) return surnameUnit(t); // "van der Merwe, Pieter"
         // Haddad-Khalil: each half on its own, so the half shared with a patient keeps that patient's fake surname
         if (k.includes('-') && !tokenMap.has(k)) return k.split('-').map((h, i) => tok(t.split('-')[i] || h, false)).join('-');
         if (!tokenMap.has(k)) tokenMap.set(k, asFirst ? pickFirst(sexOf(t, before, after)) : pickLast());
@@ -3957,7 +4057,10 @@
       let out;
       if (parsed.format === 'last_first') out = `${tok(parsed.last, false)}, ${tok(parsed.first, true)}${parsed.middle ? ' ' + parsed.middle.split(' ').map((m) => tok(m, true)).join(' ') : ''}`;
       else if (parsed.format === 'single') out = tok(parsed.last, lonePartIsFirst(parsed.last.replace(/[.,]/g, ''), before, after, parsed.credentials, preferLast));
-      else out = [tok(parsed.first, true), ...(parsed.middle ? parsed.middle.split(' ').map((m) => tok(m, true)) : []), tok(parsed.last, false)].join(' ');
+      else {
+        const units = nameUnits([parsed.first, ...(parsed.middle ? parsed.middle.split(' ').filter(Boolean) : []), parsed.last], HONORIFIC_BEFORE.test(before));
+        out = units.length === 1 ? surnameUnit(units[0].t) : units.map((u, i) => (u.sur ? surnameUnit(u.t) : tok(u.t, i < units.length - 1))).join(' ');
+      }
       return out + cred;
     };
 
@@ -3999,7 +4102,9 @@
       const tail = (base.match(ORG_TAIL) || [''])[0];
       const head = tail ? base.slice(0, base.length - tail.length) : base;
       let out;
-      if (tail && /[A-Za-z]/.test(head)) out = stem() + tail;
+      const saint = head.match(/^\s*(St\.?|Ste\.?|Saint|Sainte)\s+[A-Z][A-Za-z]+(['’]s?)?\s*$/);
+      if (saint && (tail || kind === 'church')) out = `${saint[1]} ${pick(LEX.FAKE_SAINTS)}${saint[2] || ''}${tail || (poss ? '' : ' Church')}`; // St. Mary's Hospital stays a saint's hospital
+      else if (tail && /[A-Za-z]/.test(head)) out = stem() + tail;
       else out = pick(LEX.FAKE_ORG_POOLS[kind] || LEX.FAKE_ORG_POOLS.unknown, () => `${stem()} ${ORG_DEFAULT_TAIL[kind] || ORG_DEFAULT_TAIL.unknown}`);
       if (/^[A-Z]{2,6}$/.test(base.trim())) {
         out = out.split(/[\s\-]+/).filter((w) => w && !/^(?:and|of|the|&)$/i.test(w)).map((w) => w[0].toUpperCase()).join('');
@@ -4007,6 +4112,67 @@
       }
       return out + poss;
     };
+
+    // A place. The span's own words and the words after it say what kind of place it is:
+    //  - the next word names an organization ("St. Joseph's church", "Lincoln school"): a made-up name of that kind, without
+    //    the kind word, which the text already has;
+    //  - a town with its state ("Rochester MN", "Buffalo, NY"): a made-up town, the state kept as written (a state is not
+    //    an identifier), and the town alone ("Rochester") keeps the same made-up town;
+    //  - a town of two words keeps an ordinary first or last word (North, Fort, Falls, County) around the made-up one.
+    const KIND_AFTER = /^(?:['’]s)?\s+(church|parish|chapel|cathedral|temple|synagogue|mosque|school|elementary|academy|college|university|pharmacy|hospital|clinic|market|supermarket|grocery|plaza|mall|nursing|rehab|manor)\b/i;
+    const fakeCity = (city) => {
+      const words = city.trim().split(/\s+/);
+      const keepPre = words.length >= 2 && LEX.CITY_KEEP_PREFIX.has(words[0].replace(/\.$/, '').toLowerCase()) ? words[0] : '';
+      const keepSuf = !keepPre && words.length >= 2 && LEX.CITY_KEEP_SUFFIX.has(words[words.length - 1].toLowerCase()) ? words[words.length - 1] : '';
+      // (the kept word is part of the stored value, so the key restores "North Dover" to "North Tonawanda" whole)
+      return stringSurrogate('LOCATION', city.trim(), () => `${keepPre ? keepPre + ' ' : ''}${pick(LEX.FAKE_CITIES)}${keepSuf ? ' ' + keepSuf : ''}`);
+    };
+    // the state a town was written with: a two-letter code (upper case, or any case in a lower-case note) or a state name,
+    // peeled off the end so a town of two words keeps both ("Niagara Falls NY")
+    const splitState = (orig) => {
+      const m = orig.match(/^(.*[A-Za-z.])(,?\s+)([A-Za-z]+\s[A-Za-z]+|[A-Za-z]+)(\.?)$/);
+      if (!m) return null;
+      for (const cand of [m, orig.match(/^(.*[A-Za-z.])(,?\s+)([A-Za-z]+)(\.?)$/)]) {
+        if (!cand || !/[A-Za-z]{3}/.test(cand[1])) continue;
+        const st = cand[3];
+        const isState = st.length === 2 ? (LEX.STATE_ABBR_SET.has(st) || (orig === orig.toLowerCase() && LEX.STATE_ABBR_SET.has(st.toUpperCase()))) : LEX.STATE_NAME_SET.has(st.toLowerCase());
+        if (isState && !LEX.STATE_NAME_SET.has(`${cand[1]} ${st}`.toLowerCase())) return cand;
+      }
+      return null;
+    };
+    const fakePlace = (orig, before, after) => {
+      const ka = after.match(KIND_AFTER);
+      if (ka && !/\s(?:of|in|at|near)$/i.test(orig)) return stringSurrogate('LOCATION', orig, () => {
+        const saint = orig.match(/^\s*(St\.?|Ste\.?|Saint|Sainte)\s+[A-Z][A-Za-z]+\s*$/);
+        if (saint && /^(?:church|parish|chapel|cathedral|school|elementary|academy|college|university|hospital)$/i.test(ka[1])) return `${saint[1]} ${pick(LEX.FAKE_SAINTS)}`;
+        return stem();
+      });
+      const sm = splitState(orig);
+      if (sm) return fakeCity(sm[1]) + sm[2] + sm[3] + sm[4];
+      return fakeCity(orig);
+    };
+    // A lone name that the sentence uses as a street ("lives on Mosher", "PCP at Lifetime Health on Mosher", "corner of
+    // Mosher and Main", "on Mosher Ave" with the suffix outside the span) gets a street name, not a person's surname. Only
+    // with a place cue in the clause, and never for a word already replaced as a person in this session.
+    const STREET_CLAUSE = /\b(?:lives?|living|lived|resides?|residing|stays?|staying|moved|house|home|apartment|apt|located|office|pharmacy|store|clinic|pcp|church|school|shop|block|at)\b[^,;:]*\s(?:on|off)\s+$/i;
+    const STREET_CORNER = /\b(?:corner|intersection)\s+of\s+(?:[A-Z][A-Za-z]+\s+(?:and|&)\s+)?$/i;
+    const STREET_SUFFIX_AFTER = /^\s+(?:Ave|Avenue|Rd|Road|Blvd|Boulevard|Ln|Lane|Pkwy|Parkway|Hwy|Highway|Street)\b/;
+    const usedAsStreet = (orig, before, after) => {
+      if (!/^[A-Z][A-Za-z'’\-]+$/.test(orig) || tokenMap.has(orig.toLowerCase())) return false;
+      if (STREET_SUFFIX_AFTER.test(after) && !HONORIFIC_BEFORE.test(before)) return true;
+      // a house number right before it ("lives at 88 Hertel.")
+      // (same line; a clock time "at 0900" is not a house number, and "Lester, her son" after one is a person)
+      const hn = before.match(/(?:^|\b(?:at|to|from|lives?|address|addr|home|also|and)[ \t:]+)(\d{1,5})[ \t]+$/i);
+      if (hn && !/^[0-2]\d[0-5]\d$/.test(hn[1]) && /^[ \t]*(?:$|[.;)\n]|,?[ \t]*(?:near|in|apt|unit)\b)/i.test(after)) return true;
+      if (/^['’]s?\b/.test(after) || !/^\s*(?:$|[.,;)\n]|(?:near|by|across|in|next|behind|past|and|&|between|off|at)\b)/i.test(after)) return false;
+      const clause = before.split(/[.;!?\n]/).pop();
+      return STREET_CLAUSE.test(clause) || STREET_CORNER.test(clause);
+    };
+    // a street written as one bare word is restored by that word alone, so it is never an ordinary word (a later "Pleasant
+    // and cooperative" must not come back as the real street): Hillside, Fairview, Glenwood, not Pleasant or Market
+    let bareStreets = null;
+    const pickBareStreet = () => pick(bareStreets || (bareStreets = LEX.FAKE_STREETS.filter((x) => !LEX.isEnglishWord(x) && !LEX.isDictWord(x))));
+    const fakeStreetName = (orig) => matchCase(orig, stringSurrogate('ADDRESS', orig, pickBareStreet));
 
     return {
       collisions,
@@ -4018,8 +4184,8 @@
         const orig = text.slice(span.start, span.end);
         const mode = cfg.surrogate.patients;
         // the words around the span (a kin word before a lone name, "works at" before an organization)
-        const ctxBefore = () => text.slice(Math.max(0, span.start - 48), span.start);
-        const ctxAfter = () => text.slice(span.end, span.end + 32);
+        const ctxBefore = () => text.slice(Math.max(0, span.start - 96), span.start);
+        const ctxAfter = () => text.slice(span.end, span.end + 64);
         switch (span.type) {
           case 'NAME_PATIENT': {
             if (span.entity && span.fragment) { const info = ensurePatient(span.entity); if (mode === 'code') return span.fragment === 'cont' ? '' : info.code; return span.fragment === 'cont' ? '' : matchCase(orig, span.fragment === 'first' ? info.fakeFirst : info.fakeLast); } // a piece of a word broken by a narrow column
@@ -4027,6 +4193,7 @@
             const lf = span.entity && span.lastFirst && span.lastFirst.len === orig.length ? span.lastFirst : null;
             if (lf) { const info = ensurePatient(span.entity); if (mode === 'code') return info.code; const tail = orig.slice(lf.tailAt); return matchCase(orig.slice(0, lf.lastLen), info.fakeLast) + orig.slice(lf.lastLen, lf.tailAt) + (lf.initial ? info.fakeFirst[0].toUpperCase() + (tail.endsWith('.') ? '.' : '') : matchCase(tail, info.fakeFirst)); }
             if (span.entity) { const info = ensurePatient(span.entity); const p = census.patient ? census.patient(span.entity) : census.patients.get(span.entity); return renderName(orig, p && p.parsed, info, mode); }
+            if (usedAsStreet(orig, ctxBefore(), ctxAfter())) return fakeStreetName(orig);
             return renderOtherName(orig, ctxBefore(), ctxAfter());
           }
           case 'NAME_PROVIDER': {
@@ -4036,6 +4203,7 @@
           }
           case 'NAME_OTHER': {
             if (/^[A-Z]\.?\s?[A-Z]\.?(?:\s?[A-Z]\.?)?$/.test(orig) && (orig.includes('.') || span.initials)) return fakeInitials(orig);
+            if (usedAsStreet(orig, ctxBefore(), ctxAfter())) return fakeStreetName(orig);
             return renderOtherName(orig, ctxBefore(), ctxAfter());
           }
           case 'MRN': { if (span.entity) return ensurePatient(span.entity).code; return fakeDigits('MRN', orig); }
@@ -4064,10 +4232,10 @@
             .replace(/\b(?:ninety|one[-\s]hundred)(?:(?:[-\s]|\s+and\s+)(?:one|two|three|four|five|six|seven|eight|nine))?/i, '90+');
           case 'ADDRESS': return matchCase(orig, stringSurrogate('ADDRESS', orig, () => {
             if (/\bbox\b/i.test(orig)) return orig.replace(/\d+(?!.*\d)/, () => String(Math.floor(rng() * 9000) + 1000)).replace(/^(?:RR|R\.R\.|Rural\s+Route|HC)\s*\d+/i, (m) => m.replace(/\d+/, () => String(Math.floor(rng() * 9) + 1)));
-            if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${(Math.floor(rng() * 880) + 120)} ${pick(LEX.FAKE_STREETS)} Rd`; const suf = (orig.match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway)\.?(?=\W*$|\s)/) || [])[1] || (/^\d/.test(orig) ? 'St' : 'Rd'); return `${/^\d/.test(orig) ? (Math.floor(rng() * 880) + 120) + ' ' : ''}${pick(LEX.FAKE_STREETS)} ${suf}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; })); // stored as made, written in the case of each mention
+            if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${(Math.floor(rng() * 880) + 120)} ${pick(LEX.FAKE_STREETS)} Rd`; const suf = (orig.replace(/^\s*(?:\d+[A-Za-z]?\s+)?(?:[NSEW]\.?\s+)?[A-Za-z'’\-]+/, '').match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway|Terrace|Circle|Trail|Highway|Row|Square|Sq|Loop|Pike|Turnpike|Tpke|Alley|Crescent)\b/i) || [])[1] || ''; return `${/^\d/.test(orig) ? (Math.floor(rng() * 880) + 120) + ' ' : ''}${suf || /^\d/.test(orig) ? pick(LEX.FAKE_STREETS) : pickBareStreet()}${suf ? ' ' + suf : ''}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; })); // stored as made, written in the case of each mention
           case 'ZIP': return orig.replace(/\d{5}(-\d{4})?/, (z) => zip3(z));
           case 'ORG': return matchCase(orig, stringSurrogate('ORG', orig, () => fakeOrg(orig, ctxBefore(), ctxAfter()))); // the case of this mention (TOPS, tops)
-          case 'LOCATION': return matchCase(orig, stringSurrogate('LOCATION', orig, () => pick(LEX.FAKE_CITIES)));
+          case 'LOCATION': return matchCase(orig, fakePlace(orig, ctxBefore(), ctxAfter()));
         }
         return '[redacted]';
       },
