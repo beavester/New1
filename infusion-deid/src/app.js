@@ -700,6 +700,9 @@
   // spread within its own part only.
   async function processInParts(item, cfg, live, progress) {
     const headers = item.table.headers, rows = item.table.rows, total = rows.length;
+    // the made-up words the session had handed out before this input: only these can collide with a real name of this input
+    // in the sense the verdict reports (a later part meeting a made-up name of an earlier part of the same file is not that)
+    const priorFakes = new Set(cfg.registry.taken || []);
     const columns = cfg.columns.length === headers.length ? cfg.columns.map((c, i) => ({ header: DeID.cellToString(headers[i]), index: i, role: c.role })) : DeID.classifyColumns(headers, rows);
     // the fixed cost of a call: a census of no rows still builds the look-up of every patient the session knows
     const fixedNow = () => { const t0 = performance.now(); DeID.buildCensus(headers, [], columns, { registry: cfg.registry }); return performance.now() - t0; };
@@ -742,11 +745,15 @@
       try { checked = await checkInto(m, res, item.kind, a, total, live, progress, false); } catch (e) { throw new Error(`the check of the result could not run (${(e && e.message) || e})`); }
       if (!checked) return null;
       const c = res.census;
-      lite.push({ offset: a, rows: res.rows, details: res.details, stats: res.stats, headers: res.headers, columns: res.columns, cfg: lite.length ? null : res.cfg, registry: res.registry,
+      lite.push({ offset: a, rows: res.rows, details: res.details, stats: res.stats, headers: res.headers, columns: res.columns, cfg: lite.length ? null : res.cfg, registry: res.registry, surrogateCollisions: res.surrogateCollisions || [],
         census: { patients: c.patients, providers: c.providers, rowPatient: c.rowPatient, rowExtra: c.rowExtra, nameCols: c.nameCols, mrnCols: c.mrnCols, dobCols: c.dobCols, acctCols: c.acctCols, phoneCols: c.phoneCols, provCols: c.provCols } });
       a = b;
     }
     const result = mergeParts(lite, cfg.registry, inferred);
+    // the unexplained words are read again over the whole input: what counts as the file's own vocabulary (a word in the notes
+    // of several patients) must not depend on where the parts were cut
+    result.residue = DeID.residueTokens(result, { manual: cfg.manual });
+    result.surrogateCollisions = result.surrogateCollisions.filter((w) => priorFakes.has(w));
     return { result, leak: m.finish(result.census.patients.size) };
   }
   // One result for the page out of the parts: rows, details and per-row census entries in order (rows renumbered),
@@ -770,7 +777,8 @@
     const known = new Map();
     registry.entities.forEach((e) => { if (!patients.has(e.id) && (e.names.size || e.mrns.size)) known.set(e.id, { key: e.id, entity: e, rows: [], known: true, names: new Set(e.names), mrns: new Set(e.mrns) }); });
     const census = Object.assign({}, last.census, { patients, known, providers, rowPatient, rowExtra, patient: (k) => patients.get(k) || known.get(k) || null });
-    return { headers: first.headers, rows, columns: first.columns, census, details, stats, mapping: null, cfg: Object.assign({}, first.cfg, { inferredMrnPattern: inferred || first.cfg.inferredMrnPattern }), registry: last.registry || registry, parts: parts.map((p) => ({ offset: p.offset, rows: p.rows.length })) };
+    const surrogateCollisions = [...new Set(parts.flatMap((p) => p.surrogateCollisions || []))];
+    return { headers: first.headers, rows, columns: first.columns, census, details, stats, mapping: null, cfg: Object.assign({}, first.cfg, { inferredMrnPattern: inferred || first.cfg.inferredMrnPattern }), registry: last.registry || registry, parts: parts.map((p) => ({ offset: p.offset, rows: p.rows.length })), surrogateCollisions };
   }
 
   // ------------------------------------------------------------ self-check (pure, in core.js): over-sensitive scan of the output
@@ -895,6 +903,7 @@
       item.result = result; item.leak = leak; item.release = release; item.error = null;
       if (!session.mrnPattern && result.cfg.inferredMrnPattern) session.mrnPattern = result.cfg.inferredMrnPattern;
       item.linkedBy = computeLinks(item, before);
+      applyResidue(item);
       item.flagged = result.details.filter(isFlagged).length;
       item.regStamp = registryStamp();
       item.resultKey = resultKey(item);
@@ -918,7 +927,44 @@
       try { await processItem(it, { noHeal: true }); } finally { if (it.gen === g) it.running = false; }
     }
   }
-  const isFlagged = (d) => !!d.lowOcr || d.cells.some((c) => c.spans.some(isUncertain));
+  // Unexplained words (core: residueTokens): words left in the protected text that no list, shape or replacement explains.
+  // Each cell keeps what the core found (residueAll) and what is still open (residue): a word the reviewer called fine is
+  // closed for this input (item.residueOk, by word), and stays closed over later runs of it. An input with open words cannot
+  // be green and its lines need a look.
+  const RESIDUE_WHY = {
+    'hidden-elsewhere': 'the same word, or one a letter off, was replaced as a name or place elsewhere in this input',
+    'listed-name': 'it is in the name lists, and was left only because the words around it read like a drug or a dose',
+    'unknown-caps': 'a word in capitals that is in no word list and is not used across several patients here',
+    'unknown-cap': 'a capitalised word that is in no word list',
+    'unknown-lower': 'a word that is in no word list',
+  };
+  function applyResidue(item) {
+    const ok = item.residueOk instanceof Set ? item.residueOk : (item.residueOk = new Set());
+    const open = [], words = new Map(), rows = new Set(); let dismissed = 0;
+    ((item.result && item.result.details) || []).forEach((d) => (d.cells || []).forEach((c) => {
+      if (!Array.isArray(c.residueAll)) c.residueAll = Array.isArray(c.residue) ? c.residue : [];
+      c.residue = c.residueAll.filter((x) => !ok.has(String(x.text).toLowerCase()));
+      dismissed += c.residueAll.length - c.residue.length;
+      c.residue.forEach((x) => {
+        open.push({ row: d.row, col: c.col, x }); rows.add(d.row);
+        const k = String(x.text).toLowerCase(); const w = words.get(k); if (w) w.count++; else words.set(k, { text: x.text, why: x.why, count: 1 });
+      });
+    }));
+    item.residue = { open, words: [...words.values()], rows: rows.size, dismissed };
+    return item.residue;
+  }
+  const residueOpen = (item) => (item && item.result && item.residue ? item.residue.open : []);
+  // a real name in this input that an earlier input of the session already printed as a made-up name (core: Surrogator)
+  const collisionsOf = (item) => (item && item.result && Array.isArray(item.result.surrogateCollisions) ? item.result.surrogateCollisions : []);
+  const collisionWords = (item) => collisionsOf(item).slice(0, 6).map((w) => `"${esc(String(w).charAt(0).toUpperCase() + String(w).slice(1))}"`).join(', ') + (collisionsOf(item).length > 6 ? ', …' : '');
+  // the line every verdict carries when there are any; `printed` when the self-check found such a name in this output
+  const collisionNote = (item, printed) => {
+    const n = collisionsOf(item).length; if (!n) return '';
+    return printed
+      ? `<div style="margin-top:6px"><b>Why:</b> an earlier input of this session was given ${collisionWords(item)} as ${n === 1 ? 'a made-up name' : 'made-up names'}, and this input has a real person with ${n === 1 ? 'that name' : 'those names'}. Where the earlier patient appears again here, the made-up name is printed, and in this file it reads as the real person. It cannot be fixed by editing: start a new session and protect all the files together (or this one first), so no made-up name is taken from a name in them.</div>`
+      : `<div class="small muted" style="margin-top:6px">${plural(n, 'made-up name', 'made-up names')} an earlier input of this session was given (${collisionWords(item)}) ${n === 1 ? 'is' : 'are'} also ${n === 1 ? 'a real name' : 'real names'} in this input. The real ${n === 1 ? 'name is' : 'names are'} replaced here, so nothing in this output is exposed; but the earlier protected file shows ${n === 1 ? 'that name' : 'those names'} on someone else. If the files will be read together, start a new session and protect them together.</div>`;
+  };
+  const isFlagged = (d) => !!d.lowOcr || d.cells.some((c) => c.spans.some(isUncertain) || (Array.isArray(c.residue) && c.residue.length > 0));
   const certainCount = (item) => item.result.details.reduce((n, d) => n + d.cells.reduce((m, c) => m + c.spans.filter((sp) => !isUncertain(sp)).length, 0), 0);
   function runDeid(item, resetPage) {
     if (typeof item === 'boolean' || item == null) { resetPage = item; item = state.current; }
@@ -1022,7 +1068,11 @@
   const isAmber = (item) => !!item && !!item.result && !!item.leak && !item.error && !isRed(item) && (checkedAgainst(item) === 0 || noOwnPatients(item));
   // Review required: text or a screenshot with no patient list (names found by rules alone), or source words that survived
   // the protection and are not ordinary words. Downloads then need a person to say they looked, for this exact result.
-  const needsReview = (item) => !!item && !!item.result && !item.error && !isRed(item) && (isAmber(item) || surviving(item).length > 0);
+  // The same holds for words left in the output that nothing explains: such a result cannot be green. (A made-up name of an
+  // earlier input that is a real name here is shown on every verdict but asks for no review by itself: measured on made-up
+  // schedules it happens in every second file of a session, and a review asked for every time is a review nobody does. It
+  // blocks when it matters: when that made-up name is printed in this output, the self-check reports it and the verdict is red.)
+  const needsReview = (item) => !!item && !!item.result && !item.error && !isRed(item) && (isAmber(item) || surviving(item).length > 0 || residueOpen(item).length > 0);
   const reviewed = (item) => !!item && !!item.resultKey && item.ackKey === item.resultKey;
   // Why an input may not be downloaded right now ('' when it may). Every export path asks this itself.
   function blockReason(it, override) {
@@ -1084,15 +1134,18 @@
       const words = surviving(item);
       const why = [isAmber(item) ? `no patient list, so names were found by rules only (paste today's schedule under <span class="lnk" data-roster="1">Patient list</span> to make the check real)${item.kind === 'image' ? '; the check covers only the text that could be read' : ''}` : '',
         words.length ? `${plural(words.length, 'word from the source survived', 'words from the source survived')} that ${words.length === 1 ? 'is' : 'are'} not an ordinary or medical word: ${words.slice(0, 12).map((w) => `<span class="lnk" data-word="${esc(w.text)}">${esc(w.text)}</span>${w.count > 1 ? ` ×${w.count}` : ''}`).join(', ')}${words.length > 12 ? ', …' : ''}. If any is a name or place, mark it in the review below` : ''].filter(Boolean);
+      const res = item.residue || { open: [], words: [], rows: 0 };
+      if (res.open.length) why.push(`<b>${plural(res.open.length, 'unexplained word', 'unexplained words')} on ${plural(res.rows, 'line', 'lines')}</b>: left in the protected text, and neither an ordinary or medical word nor something the tool replaced, so it could be a name the tool did not recognise: ${res.words.slice(0, 12).map((w) => `<span class="lnk" data-resword="${esc(w.text)}" title="${esc(RESIDUE_WHY[w.why] || '')}">${esc(w.text)}</span>${w.count > 1 ? ` ×${w.count}` : ''}`).join(', ')}${res.words.length > 12 ? ', …' : ''}. Each is outlined in the "After" column below: press "Hide: it is a name" or "It is fine"`);
       const done = reviewed(item);
-      $('verdictBody').innerHTML = `<div class="verdict amber"><b>Review required</b> – ${why.join('; and ')}.${item.flagged > 0 ? ` ${plural(item.flagged, 'line is', 'lines are')} flagged below.` : ''}<div style="margin-top:8px">${done ? '<span class="ok">Reviewed. Downloads are on for this result.</span>' : '<button id="ackReview" class="secondary">I have reviewed this</button> <span class="small muted">Downloads stay off until then. A new run needs a new review.</span>'}</div></div>`;
+      $('verdictBody').innerHTML = `<div class="verdict amber"><b>Review required</b> – ${why.join('; and ')}.${item.flagged > 0 ? ` ${plural(item.flagged, 'line is', 'lines are')} flagged below.` : ''}${collisionNote(item, false)}<div style="margin-top:8px">${done ? '<span class="ok">Reviewed. Downloads are on for this result.</span>' : '<button id="ackReview" class="secondary">I have reviewed this</button> <span class="small muted">Downloads stay off until then. A new run needs a new review.</span>'}</div></div>`;
       $('verdictBody').querySelectorAll('[data-roster]').forEach((a) => a.addEventListener('click', openRoster));
       $('verdictBody').querySelectorAll('[data-word]').forEach((a) => a.addEventListener('click', () => { $('reviewFilter').value = 'all'; $('reviewSearch').value = a.dataset.word; state.page = 1; renderReview(item); $('reviewCard').scrollIntoView({ block: 'start' }); }));
+      $('verdictBody').querySelectorAll('[data-resword]').forEach((a) => a.addEventListener('click', () => { $('reviewFilter').value = 'residue'; $('reviewSearch').value = a.dataset.resword; state.page = 1; renderReview(item); $('reviewCard').scrollIntoView({ block: 'start' }); }));
       const ack = $('ackReview'); if (ack) ack.addEventListener('click', () => { item.ackKey = item.resultKey; item.viewedReview = true; renderVerdict(item); });
       $('verdictActions').classList.toggle('hidden', isGated(item) || !done);
       $('toReview').textContent = item.flagged > 0 ? `${plural(item.flagged, 'line needs', 'lines need')} a look first` : 'Nothing needs a look';
     } else if (!isRed(item)) {
-      $('verdictBody').innerHTML = `<div class="verdict ok"><b>Release check passed:</b> none of your ${plural(n, "patient's", "patients'")} names, nicknames, initials, MRNs, phone numbers, account numbers or birthdates appear in the output, in any spacing or spelling the page can predict.${item.kind === 'image' ? ' (from the text we could read)' : ''}${L.providerHits.length ? `<div class="small muted" style="margin-top:6px">${plural(L.providerHits.length, 'staff name still appears', 'staff names still appear')}; staff names are not patient identifiers but you may want to look.</div>` : ''}${L.coincidences.length ? `<div class="small muted" style="margin-top:6px">${plural(L.coincidences.length, 'shifted date', 'shifted dates')} in other patients' rows happen to equal a birthdate in the file (row ${L.coincidences.map((c) => c.row + 1).slice(0, 5).join(', ')}); nothing links them to that patient.</div>` : ''}</div>`;
+      $('verdictBody').innerHTML = `<div class="verdict ok"><b>Release check passed:</b> none of your ${plural(n, "patient's", "patients'")} names, nicknames, initials, MRNs, phone numbers, account numbers or birthdates appear in the output, in any spacing or spelling the page can predict.${item.kind === 'image' ? ' (from the text we could read)' : ''}${L.providerHits.length ? `<div class="small muted" style="margin-top:6px">${plural(L.providerHits.length, 'staff name still appears', 'staff names still appear')}; staff names are not patient identifiers but you may want to look.</div>` : ''}${L.coincidences.length ? `<div class="small muted" style="margin-top:6px">${plural(L.coincidences.length, 'shifted date', 'shifted dates')} in other patients' rows happen to equal a birthdate in the file (row ${L.coincidences.map((c) => c.row + 1).slice(0, 5).join(', ')}); nothing links them to that patient.</div>` : ''}${collisionNote(item, false)}</div>`;
       const gated = isGated(item);
       $('verdictActions').classList.toggle('hidden', gated);
       $('toReview').textContent = item.flagged > 0 ? `${plural(item.flagged, 'line needs', 'lines need')} a look first` : 'Nothing needs a look';
@@ -1102,7 +1155,10 @@
       const list = allHits.slice(0, 50).map((h, i) => h.kind === 'unnamed' ? `<li>Row ${h.row + 1}: the patient's name could not be read, only the record number. Check the line and add the name as patient info if it is there. <span class="lnk" data-show="${i}">Show</span></li>` : `<li>${h.row >= 0 ? `Row ${h.row + 1}, ${esc(h.header)}` : esc(h.header || 'Column heading')}: "${esc(h.text)}" (${TYPE_UI[h.type] || h.type}) <span class="lnk" data-show="${i}">Show</span></li>`).join('');
       const head = others.length ? `${plural(others.length, 'patient identifier still appears', 'patient identifiers still appear')} in the output.` : '';
       const head2 = unnamed.length ? ` ${plural(unnamed.length, "patient's name", "patients' names")} could not be read, so the check cannot vouch for ${unnamed.length === 1 ? 'it' : 'them'}.` : '';
-      $('verdictBody').innerHTML = `<div class="verdict bad"><b>Blocked:</b> ${head}${head2} Fix this below before downloading.<ul>${list}</ul>${$('optOverride').checked ? '<div class="small warn" style="margin-top:6px">Compliance override is on: downloads are allowed and the run summary records it.</div>' : ''}</div>`;
+      // a hit that is a made-up name of an earlier input, real in this one: say so, the list alone reads as a plain leak
+      const collSet = new Set(collisionsOf(item)); const isColl = (h) => { const ws = String(h.text || '').toLowerCase().match(/[\p{L}'’\-]+/gu) || []; return ws.length > 0 && ws.every((w) => collSet.has(w)); };
+      const collPrinted = collSet.size > 0 && others.some(isColl);
+      $('verdictBody').innerHTML = `<div class="verdict bad"><b>Blocked:</b> ${head}${head2} Fix this below before downloading.<ul>${list}</ul>${collisionNote(item, collPrinted)}${$('optOverride').checked ? '<div class="small warn" style="margin-top:6px">Compliance override is on: downloads are allowed and the run summary records it.</div>' : ''}</div>`;
       $('verdictActions').classList.add('hidden');
       $('verdictBody').querySelectorAll('[data-show]').forEach((a) => a.addEventListener('click', () => { const h = allHits[+a.dataset.show]; $('reviewFilter').value = 'all'; $('reviewSearch').value = h.kind === 'unnamed' ? '' : h.text; state.page = 1; renderReview(item); const td = $('reviewTable').querySelector(`td[data-row="${h.row}"]`); if (td) td.scrollIntoView({ block: 'center' }); }));
     }
@@ -1142,10 +1198,44 @@
     out += esc(text.slice(p));
     return out;
   }
+  // The "After" cell: the protected text, with each open unexplained word outlined and its two actions beside it. Not a
+  // <mark>: the click handler of the "Before" highlights must never take these.
+  function afterHtml(d, c) {
+    const out = String(c.output == null ? '' : c.output);
+    const res = (Array.isArray(c.residue) ? c.residue : []).filter((x) => x.outStart >= 0 && x.outEnd <= out.length && out.slice(x.outStart, x.outEnd) === x.text).sort((a, b) => a.outStart - b.outStart);
+    if (!res.length) return esc(out);
+    let html = '', p = 0;
+    res.forEach((x) => {
+      if (x.outStart < p) return;
+      html += esc(out.slice(p, x.outStart));
+      html += `<span class="resid" title="Unexplained: ${esc(RESIDUE_WHY[x.why] || 'the tool could not tell what this word is')}">${esc(x.text)}</span><span class="residact"><button type="button" class="mini" data-res-hide="${esc(x.text)}" title="Replace this word everywhere in this input, as a name">Hide: it is a name</button><button type="button" class="mini" data-res-ok="${esc(x.text)}" title="An ordinary word, an abbreviation or a product: leave it, and stop asking about it in this input">It is fine</button></span>`;
+      p = x.outEnd;
+    });
+    return html + esc(out.slice(p));
+  }
+  // "Hide: it is a name": the word is marked by hand, as a name, at every place it stands in the free text of this input (the
+  // same manual mark as "Hide selected text"), and the input is protected again.
+  function hideResidueWord(item, word) {
+    const esc2 = String(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let re; try { re = new RegExp(`(?<![\\p{L}\\p{M}\\d])${esc2}(?![\\p{L}\\p{M}\\d])`, 'giu'); } catch (e) { return 0; }
+    let n = 0;
+    item.result.details.forEach((d) => d.cells.forEach((c) => {
+      const key = `${d.row}:${c.col}`; let m; re.lastIndex = 0;
+      while ((m = re.exec(c.original))) {
+        const s = m.index, e = s + m[0].length;
+        if (c.spans.some((sp) => sp.start < e && s < sp.end)) continue; // already replaced there
+        const man = item.manual[key] = item.manual[key] || { remove: [], add: [] };
+        man.remove = man.remove.filter((r) => !(r[0] < e && s < r[1]));
+        if (!man.add.some((a) => a.start === s && a.end === e)) { man.add.push({ start: s, end: e, type: 'NAME_OTHER' }); n++; }
+      }
+    }));
+    return n;
+  }
   function filteredDetails(item) {
     const f = $('reviewFilter').value, q = $('reviewSearch').value.trim().toLowerCase();
     return item.result.details.filter((d) => d.cells.length).filter((d) => {
       if (f === 'model') return isFlagged(d);
+      if (f === 'residue') return d.cells.some((c) => Array.isArray(c.residue) && c.residue.length > 0);
       if (f === 'certain') return !isFlagged(d) && d.cells.some((c) => c.spans.length);
       if (f === 'none') return d.cells.every((c) => !c.spans.length);
       if (f === 'manual') return d.cells.some((c) => item.manual[`${d.row}:${c.col}`]);
@@ -1156,7 +1246,7 @@
     const list = filteredDetails(item);
     const shown = list.slice(0, state.page * PAGE);
     const certain = certainCount(item);
-    $('reviewHeading').textContent = item.flagged > 0 ? `${item.flagged} line${item.flagged === 1 ? '' : 's'} need${item.flagged === 1 ? 's' : ''} a look: a name found from a word clue alone, or text the screenshot reader was unsure of. The other ${certain} replacements are certain.` : `Nothing needs a look. ${certain} replacement${certain === 1 ? '' : 's'} came from the patient list or a fixed rule. You can still browse every line.`;
+    $('reviewHeading').textContent = item.flagged > 0 ? `${item.flagged} line${item.flagged === 1 ? '' : 's'} need${item.flagged === 1 ? 's' : ''} a look: a name found from a word clue alone, a word left in the text that the tool could not explain, or text the screenshot reader was unsure of. The other ${certain} replacements are certain.` : `Nothing needs a look. ${certain} replacement${certain === 1 ? '' : 's'} came from the patient list or a fixed rule. You can still browse every line.`;
     $('reviewInfo').textContent = `${shown.length} of ${list.length} lines shown`;
     $('morePages').style.display = shown.length < list.length ? '' : 'none';
     const t = $('reviewTable');
@@ -1164,7 +1254,7 @@
     shown.forEach((d) => d.cells.forEach((c, i) => {
       const key = `${d.row}:${c.col}`;
       const ent = d.patientCode ? item.result.registry.entities.find((e) => e.code === d.patientCode) : null;
-      rows.push(`<tr>${i === 0 ? `<td rowspan="${d.cells.length}">${d.row + 1}${d.lowOcr ? '<br><span class="pill warn">Unclear in screenshot — check</span>' : ''}</td><td rowspan="${d.cells.length}">${esc(d.patientCode || '–')}${ent && ent.fakeLast ? `<br><span class="small muted">${esc(ent.fakeLast)}, ${esc(ent.fakeFirst)}</span>` : ''}</td>` : ''}<td class="muted">${esc(c.header)}</td><td class="cell" data-row="${d.row}" data-col="${c.col}">${highlight(item, Object.assign({ row: d.row }, c))}</td><td class="cell muted">${esc(c.output)}</td></tr>`);
+      rows.push(`<tr>${i === 0 ? `<td rowspan="${d.cells.length}">${d.row + 1}${d.lowOcr ? '<br><span class="pill warn">Unclear in screenshot — check</span>' : ''}</td><td rowspan="${d.cells.length}">${esc(d.patientCode || '–')}${ent && ent.fakeLast ? `<br><span class="small muted">${esc(ent.fakeLast)}, ${esc(ent.fakeFirst)}</span>` : ''}</td>` : ''}<td class="muted">${esc(c.header)}</td><td class="cell" data-row="${d.row}" data-col="${c.col}">${highlight(item, Object.assign({ row: d.row }, c))}</td><td class="cell muted">${afterHtml(d, c)}</td></tr>`);
       if (item.noteKey === key) rows.push(`<tr class="rownote"><td colspan="5" class="bad">This is the patient's own identifier. It cannot be un-hidden: the self-check would fail.</td></tr>`);
       if (item.learn && item.learn.key === key) rows.push(`<tr class="rownote"><td colspan="5"><label><input type="checkbox" id="learnBox"> Always treat "${esc(item.learn.text)}" this way on this computer</label></td></tr>`);
     }));
@@ -1189,6 +1279,15 @@
   $('reviewTable').addEventListener('click', (e) => {
     markViewed();
     const item = state.current; if (!item || !item.result) return;
+    const hideBtn = e.target.closest('[data-res-hide]'), okBtn = e.target.closest('[data-res-ok]');
+    if (hideBtn) { item.noteKey = null; item.learn = null; if (hideResidueWord(item, hideBtn.dataset.resHide)) runDeid(item, false); return; }
+    if (okBtn) {
+      // nothing in the output changes, so nothing is run again: the word is closed for this input and the page is redrawn
+      (item.residueOk instanceof Set ? item.residueOk : (item.residueOk = new Set())).add(String(okBtn.dataset.resOk).toLowerCase());
+      applyResidue(item); item.flagged = item.result.details.filter(isFlagged).length;
+      renderVerdict(item); renderSummary(item); renderReview(item); renderSession();
+      return;
+    }
     const m = e.target.closest('mark'); if (!m) return;
     const cell = m.closest('.cell'); const key = `${cell.dataset.row}:${cell.dataset.col}`;
     if (m.dataset.entity && !m.dataset.rem) { item.noteKey = key; renderReview(item); return; } // the patient's own identifier stays hidden
@@ -1357,6 +1456,8 @@
       `Input ${item.n} of ${session.items.length}: ${kind}, ${s.rows} rows, ${r.headers.length} columns`,
       `Release profile: ${$('optDates').value === 'shift' ? 'research pseudonymization (dates shifted per patient, intervals kept). This is NOT HIPAA Safe Harbor: shifted dates are still dates.' : 'HIPAA Safe Harbor rules applied by the tool (every date removed; birth year only below age 90; ages 90+ grouped; ZIP to 3 digits, restricted areas to 000). Safe Harbor also requires that you have no actual knowledge the rest could identify someone.'}`,
       `Release scan (independent of the detectors): ${releaseIds(item).length} identifier-column values found in the output; ${surviving(item).length} unrecognised source words survived${needsReview(item) ? `; review ${reviewed(item) ? 'done' : 'NOT done'}` : ''}`,
+      `Unexplained words left in the free text (not an ordinary or medical word, not replaced): ${residueOpen(item).length} open on ${item.residue ? item.residue.rows : 0} lines; ${item.residue ? item.residue.dismissed : 0} marked as fine by the reviewer`,
+      `Made-up names of an earlier input that are real names in this input: ${collisionsOf(item).length}`,
       `Self-check: ${self}`, `Self-check overridden: ${L.hits.length && $('optOverride').checked ? 'yes' : 'no'}`,
       `Patients in this input: ${r.census.patients.size}; patients in the session: ${session.registry.size}; on the patient list: ${session.roster.ids.size}; checked against: ${checkedAgainst(item)}; providers: ${r.census.providers.size}`, '',
       // the headings as they were written to the protected file, never the input's: a heading can hold patient information
