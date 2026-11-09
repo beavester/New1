@@ -1474,3 +1474,13 @@ test('registry transaction: checkpoint() restores the registry exactly after a r
   D.processTable({ headers: ['Patient', 'MRN'], rows: [['Bly, Ian', '7654321']] }, { registry: R });
   assert.equal(R.entities[1].code, 'P002', 'codes continue from the restored state');
 });
+
+test('nicknames and reused word-names: (Paddy), goes by, "Will will return", "Pt May Tran"; ordinary uses stay', () => {
+  const run = (t) => D.processTable({ headers: ['Comments'], rows: [[t]] }, {}).rows[0][0];
+  const a = run('Pt Patrick (Paddy) Ó Briain, goes by Paddy. Brentuximab 1.8 mg/kg. Paddy asked about hair loss.');
+  assert.ok(!/Paddy|Patrick|Briain/.test(a), a);
+  const b = run('Pt Will Ferris here for day 2. Neulasta OnPro applied R arm, Will will return Thurs if fever.');
+  assert.ok(!/\bWill\b|Ferris/.test(b), b);
+  const c = run('Pt May Tran ok.'); assert.ok(!/\bMay\b|Tran/.test(c), c);
+  for (const t of ['Will call if fever. May need dose reduction.', 'Pt prefers Portuguese interpreter.', 'Rituximab (Truxima) given.', 'Seen by Home Health Aide (Hospice).']) assert.equal(run(t), t);
+});

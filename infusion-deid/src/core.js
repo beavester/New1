@@ -2773,6 +2773,44 @@
         if (free(m.index, m.index + m[0].length)) add.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
       }
     }
+    // nicknames: "Patrick (Paddy) Ó Briain", "goes by Paddy", "known as Bibi"; then every later use of that nickname, and a
+    // first name already found as a name in this text when it reappears as a word that is also a name ("Will will return")
+    const nameSpans = spans.filter((sp) => /^NAME/.test(sp.type)).concat(add.filter((x) => /^NAME/.test(x.type)));
+    const nicks = new Set();
+    const nickOfNear = new Set();
+    nameSpans.forEach((sp) => (text.slice(sp.start, sp.end).match(/\p{Lu}[\p{Ll}'’]+/gu) || []).forEach((w) => { try { LEX.nicknamesOf(w).forEach((n) => nickOfNear.add(n.toLowerCase())); } catch (e) {} }));
+    (text.match(/\b\p{Lu}[\p{Ll}'’]+(?=\s+\()/gu) || []).forEach((w) => { if (LEX.isFirstName(w)) { try { LEX.nicknamesOf(w).forEach((n) => nickOfNear.add(n.toLowerCase())); } catch (e) {} } });
+    const nickOk = (w) => LEX.isFirstName(w) || !LEX.isDictWord(w) || nickOfNear.has(w.toLowerCase());
+    const NICK_PAREN = /\((\p{Lu}[\p{Ll}'’]{1,14})\)/gu;
+    while ((m = NICK_PAREN.exec(text))) {
+      const a = m.index + 1, b = a + m[1].length;
+      const near = nameSpans.some((sp) => (sp.end <= m.index && m.index - sp.end <= 2) || (sp.start >= m.index + m[0].length && sp.start - (m.index + m[0].length) <= 2) || (sp.start <= m.index && sp.end >= b));
+      if (near && !LEX.isClinical(m[1]) && nickOk(m[1]) && !/^(?:Mom|Dad|Son|Wife|Husband|Spouse|Daughter|Sister|Brother|Aunt|Uncle|Pt|Patient|Self|Hcp|Poa|Guardian|Rn|Md|Np|Pa)$/i.test(m[1])) { nicks.add(m[1]); if (free(a, b)) add.push({ start: a, end: b, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); }
+    }
+    const NICK_CUE = /\b(?:goes\s+by|go(?:es)?\s+by|known\s+as|a\.?k\.?a\.?|nick-?named|prefers\s+to\s+be\s+called|likes\s+to\s+be\s+called|call\s+(?:him|her|them)|calls\s+(?:him|her)self)\s+["“']?(\p{Lu}[\p{Ll}'’]{1,14})/gu;
+    while ((m = NICK_CUE.exec(text))) {
+      if (LEX.isClinical(m[1]) || !nickOk(m[1])) continue;
+      const a = m.index + m[0].length - m[1].length; nicks.add(m[1]);
+      if (free(a, a + m[1].length)) add.push({ start: a, end: a + m[1].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
+    const firstNames = new Set();
+    nameSpans.forEach((sp) => { const w = (text.slice(sp.start, sp.end).match(/^\p{Lu}[\p{Ll}'’]+/u) || [])[0]; if (w && w.length >= 3 && LEX.isFirstName(w)) firstNames.add(w); });
+    if (nicks.size || firstNames.size) {
+      for (const t of toks) {
+        if (!t.word || !free(t.start, t.end)) continue;
+        if (nicks.has(t.core)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
+        if (!firstNames.has(t.core)) continue;
+        const nx = text.slice(t.end, t.end + 24);
+        if (/^\s+(?:will|would|is|was|has|had|can|could|should|says|said|reports|reported|called|asked|wants|states|stated|denies|tolerated|returns|returned|arrived|left|declined|agreed|feels|felt)\b/.test(nx) || /^['’]s\b/.test(nx)) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+      }
+    }
+    // "Pt May Tran": a first name that is also a word, between a patient cue and a name already found, is part of the name
+    for (const sp of nameSpans) {
+      const lead = text.slice(Math.max(0, sp.start - 40), sp.start).match(/\b(?:Pt|Pat|Patient|Mr|Mrs|Ms|Miss|Mx)\.?:?\s+(\p{Lu}[\p{Ll}'’]+)\s$/u);
+      if (!lead || !LEX.isFirstName(lead[1])) continue;
+      const a = sp.start - 1 - lead[1].length;
+      if (free(a, a + lead[1].length)) add.push({ start: a, end: a + lead[1].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
     // an age of 90 or more said in words around it: "mom is 97 now", "she turned 93", "will be 91 next week"
     const AGE_SAID = /\b(?:is|turned|turns|will\s+be|was)\s+(9\d|1[01]\d)(?=\s+(?:now|today|this|next|last|years?|yrs?|y\.?o\.?|year[-\s]old)\b|\s*(?:[.,;!]|$))/gi;
     while ((m = AGE_SAID.exec(text))) {
@@ -3228,7 +3266,7 @@
             .replace(/\b(?:ninety|one[-\s]hundred)(?:(?:[-\s]|\s+and\s+)(?:one|two|three|four|five|six|seven|eight|nine))?/i, '90+');
           case 'ADDRESS': return stringSurrogate('ADDRESS', orig, () => {
             if (/\bbox\b/i.test(orig)) return orig.replace(/\d+(?!.*\d)/, () => String(Math.floor(rng() * 9000) + 1000)).replace(/^(?:RR|R\.R\.|Rural\s+Route|HC)\s*\d+/i, (m) => m.replace(/\d+/, () => String(Math.floor(rng() * 9) + 1)));
-            if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${Math.floor(rng() * 900 + 100)} ${pick(LEX.FAKE_LAST)} Rd`; const suf = (orig.match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway)\.?(?=\W*$|\s)/) || [])[1] || (/^\d/.test(orig) ? 'St' : 'Rd'); return `${/^\d/.test(orig) ? Math.floor(rng() * 900 + 100) + ' ' : ''}${pick(LEX.FAKE_LAST)} ${suf}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; });
+            if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${(Math.floor(rng() * 880) + 120)} ${pick(LEX.FAKE_LAST)} Rd`; const suf = (orig.match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway)\.?(?=\W*$|\s)/) || [])[1] || (/^\d/.test(orig) ? 'St' : 'Rd'); return `${/^\d/.test(orig) ? (Math.floor(rng() * 880) + 120) + ' ' : ''}${pick(LEX.FAKE_LAST)} ${suf}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; });
           case 'ZIP': return orig.replace(/\d{5}(-\d{4})?/, (z) => zip3(z));
           case 'ORG': return stringSurrogate('ORG', orig, () => pick(LEX.FAKE_ORGS));
           case 'LOCATION': return stringSurrogate('LOCATION', orig, () => pick(LEX.FAKE_CITIES));

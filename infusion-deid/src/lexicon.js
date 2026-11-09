@@ -216,6 +216,7 @@
     Macrobid Diflucan Vfend Noxafil Cresemba Mycamine Cancidas Eraxis Valtrex
     Zovirax Famvir Tamiflu Paxlovid Veklury Prednisone Medrol Solu-Medrol
     Solu-Cortef Kenalog Depo-Medrol Celestone Florinef Dexamethasone Dexa Decadron
+    Demerol Meperidine Cimzia Dilaudid Hydromorphone Toradol Ketorolac Phenergan Promethazine Narcan Naloxone Vyvgart Rystiggo Ilaris Kineret Skyrizi Omvoh Tremfya Cosentyx Taltz Humira Enbrel Claritin Zyrtec
     Port Port-a-Cath Portacath PICC Hickman Groshong Broviac Huber PowerPort
     Mediport Infusaport BardPort Smart Port Vortex Xcela Dignity Titanium
     Epic Hyperspace Beacon Cadence Prelude Haiku Canto
