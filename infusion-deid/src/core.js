@@ -907,6 +907,12 @@
       // a day and month after a visit word ("Appt 11/11", "RTC 3/4")
       const VISIT_DM = /\b(?:appt|appointment|visit|seen|due|scheduled|sched|return|rtc|f\/u|follow[- ]?up)\b\.?:?\s+(\d{1,2}\/\d{1,2})(?![\/\d])/gi;
       while ((pm = VISIT_DM.exec(text))) { const v = pm[1], a = pm.index + pm[0].length - v.length; const [mo, da] = v.split('/').map(Number); if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) pushId(a, a + v.length, 'DATE'); }
+      // a run-together day and month: "4Nov", "18Nov26"
+      const DMON = /\b(\d{1,2})(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(\d{2}|\d{4})?\b/g;
+      while ((pm = DMON.exec(text))) { if (+pm[1] >= 1 && +pm[1] <= 31) pushId(pm.index, pm.index + pm[0].length, 'DATE'); }
+      // an address written in lower case after an address cue: "new addr 1207 w magnolia st, apt 3, fresno ca 93705"
+      const ADDR_LC = /\b(?:addr|address|lives\s+at|living\s+at|staying\s+at|moved\s+to|new\s+home|home\s+at|located\s+at)\b[\s:.,]*(\d{1,6}\s+(?:[nsew]\.?\s+)?(?:[a-z][a-z'’\-]*\s+){1,3}(?:st|street|ave|avenue|rd|road|blvd|dr|drive|ln|lane|ct|court|way|pl|place|pkwy|ter|cir|hwy)\b\.?(?:,?\s*(?:apt|apartment|unit|ste|suite|#)\.?\s*#?[a-z]?\d+[a-z]?)?(?:,?\s+[a-z][a-z'’\-]*(?:\s[a-z][a-z'’\-]*)?,?\s+[a-z]{2}\s+\d{5}(?:-\d{4})?)?)/gi;
+      while ((pm = ADDR_LC.exec(text))) { const v = pm[1], a = pm.index + pm[0].length - v.length; pushId(a, a + v.length, 'ADDRESS'); }
       const ALNUM = /\b[A-Z]{1,4}\d{7,12}\b(?!\s*(?:mg|mcg|ml|units?|iu)\b)/g;
       while ((pm = ALNUM.exec(text))) pushId(pm.index, pm.index + pm[0].length, 'ID_OTHER');
     }
@@ -2836,7 +2842,8 @@
     for (let i = 0; i < toks.length - 1; i++) {
       const t = toks[i]; if (!t.word || !free(t.start, t.end)) continue;
       const nx = text.slice(t.end, t.end + 30);
-      if (t.cap && t.core.length >= 3 && LEX.isFirstName(t.core) && !DRUG_STEM.test(t.core) && /^\s+(?:to\s+(?:pick|drive|bring|take|come|stay|call|help|sign)|says|said|reports|reported|states|stated|wants|wanted|asks|asked|called|calls|denies|denied|agrees|agreed|declines|declined|feels|felt|tolerated|arrived|requests|requested|prefers|confirmed|confirms|texted|emailed|phoned)\b/.test(nx)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
+      const pv = toks[i - 1]; const inPhrase = pv && pv.word && pv.cap && /^\s$/.test(text.slice(pv.end, t.start)) && (LEX.isDictWord(pv.core) || LEX.isClinical(pv.core));
+      if (t.cap && !inPhrase && t.core.length >= 3 && LEX.isFirstName(t.core) && !DRUG_STEM.test(t.core) && /^\s+(?:to\s+(?:pick|drive|bring|take|come|stay|call|help|sign)|says|said|reports|reported|states|stated|wants|wanted|asks|asked|called|calls|denies|denied|agrees|agreed|declines|declined|feels|felt|tolerated|arrived|requests|requested|prefers|confirmed|confirms|texted|emailed|phoned|asking|brought|brings|visited|visits|came|comes|drove|drives|picked|signed|stayed|left\s+a)\b/.test(nx)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
       if (/^[\p{Ll}]/u.test(t.core) && t.core.length >= 3 && LEX.isFirstName(t.core) && !LEX.isEnglishWord(t.core) && /^\s*(?:#|:|at|cell|ph|phone|tel)?\s*\(?\d{3}\)?[\s.\-]?\d{3,4}/i.test(nx)) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
     }
     // "Pt May Tran": a first name that is also a word, between a patient cue and a name already found, is part of the name
@@ -2863,6 +2870,7 @@
     for (let i = 1; i < toks.length; i++) {
       const t = toks[i], p = toks[i - 1];
       if (!t.word || !t.cap || !p.word || !/^(?:from|in|to|near|outside|toward|towards)$/i.test(p.core) || !free(t.start, t.end)) continue;
+      { const n = toks[i + 1]; if (n && n.word && n.cap && /^\s$/.test(text.slice(t.end, n.start)) && /^\p{Lu}\p{Ll}{2,}$/u.test(t.core) && /^\p{Lu}\p{Ll}{2,}$/u.test(n.core) && /^(?:from|in|near|outside)$/i.test(p.core) && (LEX.CITY_SET.has(`${t.core} ${n.core}`.toLowerCase()) || (![t.core, n.core].some((w) => LEX.isClinical(w) || STRICT_SKIP.test(w) || LEX.ORG_NAMEWORD_SET.has(w.toLowerCase()) || LEX.ORG_SUFFIX_SET.has(w.toLowerCase()) || LEX.GEO_SUFFIX_SET.has(w.toLowerCase()) || monthIndex(w)) && [t.core, n.core].some((w) => !LEX.isDictWord(w) || LEX.isFirstName(w) || LEX.isSurname(w)) && /^\s*(?:[,.;:)]|$|\s+(?:in|on|at|for|by|this|today|yesterday|last|next|and|to|with)\b)/.test(text.slice(n.end, n.end + 12)))) && free(t.start, n.end)) { add.push({ start: t.start, end: n.end, type: 'LOCATION', source: 'strict', conf: 0.5 }); continue; } }
       if (!/^\p{Lu}\p{Ll}{2,}(?:[\s\-]\p{Lu}\p{Ll}+)?$/u.test(t.core)) continue;
       if (!LEX.CITY_SET.has(t.core.toLowerCase()) && (LEX.isDictWord(t.core) || LEX.isClinical(t.core) || STRICT_SKIP.test(t.core) || DRUG_STEM.test(t.core) || /^[A-Z]{2,}$/.test(t.core) || monthIndex(t.core))) continue;
       if (LEX.isClinical(t.core) && !/^(?:from|near|outside)$/i.test(p.core)) continue;

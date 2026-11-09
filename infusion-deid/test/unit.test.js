@@ -1513,3 +1513,10 @@ test('round 15 patterns: address with direction and unit, (555)-012-9944, a brac
   for (const t of ['Plt 88 next 2/3 of dose', 'cycle 3/4 given; rtc 2 wk']) assert.equal(run(t), t);
   assert.equal(D.classifyColumns(['Prov Last', 'Prov First'], [['Okafor', 'Lena']]).map((c) => c.role).join(' '), 'provider provider');
 });
+
+test('round 16 patterns: word-name with a verb, 4Nov, lower-case address after a cue, a two-word town after "from"', () => {
+  const run = (t) => D.processTable({ headers: ['Comments'], rows: [[t]] }, {}).rows[0][0];
+  const cases = [['prochlorperazine PRN. Faith asking about hospice info.', 'Faith'], ['Last Retacrit 4Nov.', '4Nov'], ['new addr 1207 w magnolia st, apt 3, fresno ca 93705. update', 'magnolia'], ['van from Eau Claire, in wheelchair.', 'Claire']];
+  for (const [t, gone] of cases) assert.ok(!run(t).includes(gone), `${t} -> ${run(t)}`);
+  for (const t of ['Hope is good. Faith in treatment strong.', 'seen in Main Lobby today', 'referred from Home Health, ok', 'transfer from Infusion Center.']) assert.equal(run(t), t);
+});
