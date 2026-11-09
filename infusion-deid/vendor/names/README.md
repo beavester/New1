@@ -10,5 +10,6 @@ None of this is patient data. Keep the raw files here so the build is reproducib
 | `first-all.txt` | 19,947 first names, many countries | `smashew/NameDatabases`, public domain (Unlicense) |
 | `surnames-us.txt` | 88,799 US surnames | `smashew/NameDatabases`, public domain (Unlicense) |
 | `english-20k.txt` | 20,000 most common English words | `first20hours/google-10000-english`, derived from the Google Web Trillion Word Corpus; permitted for educational, personal and research use. Used only to mark names that are also ordinary words so they need a cue. Replace with another word list if this tool is ever sold. |
+| `english-words.txt` | 274,937 English words (lower case) | `an-array-of-english-words` 2.0.0, MIT (licence in `ENGLISH-WORDS-LICENSE`). Compiled into `src/dict.js` as a Bloom filter by `tools/build-dict.js`; used by the strict pass to tell ordinary and medical words from names. |
 
 Not used: `MatthiasWinkelmann/firstname-database` (46k names, GFDL licence, which would attach to the build).

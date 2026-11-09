@@ -92,9 +92,12 @@ test('whole-table processing: structured columns, census, surrogates, mapping, a
 });
 test('manual overrides add and remove spans', () => {
   const headers = ['Patient Name', 'MRN', 'Comments']; const rows = [['Doe, Jane', '10000001', 'Grace noted good tolerance. Vanterpool called.']];
-  const r1 = D.processTable({ headers, rows }, {});
+  const r1 = D.processTable({ headers, rows }, { strict: false });
   assert.equal(r1.details[0].cells[0].spans.length, 0);
-  const r2 = D.processTable({ headers, rows }, { manual: { '0:2': { add: [{ start: 28, end: 38, type: 'NAME_OTHER' }] } } });
+  // the strict pass (on by default) removes the unknown surname by itself
+  const r0 = D.processTable({ headers, rows }, {});
+  assert.ok(!r0.rows[0][2].includes('Vanterpool') && r0.rows[0][2].includes('Grace noted'), r0.rows[0][2]);
+  const r2 = D.processTable({ headers, rows }, { strict: false, manual: { '0:2': { add: [{ start: 28, end: 38, type: 'NAME_OTHER' }] } } });
   assert.equal(r2.details[0].cells[0].spans[0].text, 'Vanterpool');
   assert.ok(!r2.details[0].cells[0].output.includes('Vanterpool'));
 });
@@ -1417,4 +1420,21 @@ test('b5 a count after a range is not a day; Restore identities brings back file
   assert.ok(!/20261104|Nov 24|11\/24/.test(r.rows[0][2]), r.rows[0][2]);
   const back = D.reidentify({ headers: r.headers, rows: r.rows }, r.mapping);
   assert.match(back.rows[0][2], /^IMG_20261104_0932\.jpg; slots Nov 24-26; also 11\/24-26 and Dec 3 to (?:Dec )?5$/);
+});
+
+test('strict pass: unknown proper nouns are removed; drugs, doses, acronyms, medical words and eponyms stay', () => {
+  const run = (t) => D.processTable({ headers: ['Comments'], rows: [[t]] }, { seed: 1 }).rows[0][0];
+  const gone = [['From: Cormac Ó Briain', ['Cormac', 'Briain']], ['Dr. Yves Ouellet up in Madawaska wanted the dose checked', ['Ouellet', 'Madawaska']],
+    ['Moving to Fall River end of month', ['Fall River']], ['staying in Central Falls. Provided list', ['Central Falls']], ['pt moved to Chelsea MA, zip 02150', ['Chelsea']],
+    ['husband bill at bedside', [' bill ']], ['husband đức says she has mouth sores', ['đức']], ['Hola, Maribel Quispe here.', ['Maribel', 'Quispe']],
+    ['después del Cytoxan el 3 de noviembre', ['3 de noviembre']]];
+  for (const [t, leaks] of gone) { const o = run(t); for (const l of leaks) assert.ok(!o.includes(l), l + ' survived: ' + o); }
+  const keep = ['Pt reports neutropenic fever; mucositis grade 2. Premeds given, Udenyca on-body injector placed. Kadcyla 3.6 mg/kg.',
+    'Reclast once yearly. FOLFIRINOX C3. Neulasta Onpro. Pembrolizumab q3w. Benlysta monthly. Entyvio 300 mg.',
+    'LVEF 58%, DLCO 61%, 2 units PRBC, UPCR 0.4, TSAT 11%. IVIG 2 g/kg over 5 days (CIDP). Stage IIIB.',
+    'Darzalex Faspro wk 9. Lemtrada D3. Methylpred premed. Herzuma charges pending. Acneiform rash grade 2.',
+    'Lee Silverman voice tx referral. Subacute de Quervain thyroiditis. bill insurance; will bill tomorrow.', 'Rose Garden entrance; pt in Bay 3; seen in Main Lobby'];
+  for (const t of keep) assert.equal(run(t), t);
+  const off = D.processTable({ headers: ['Comments'], rows: [['From: Cormac Ó Briain']] }, { strict: false }).rows[0][0];
+  assert.ok(off.includes('Cormac'), 'strict: false keeps the old behaviour');
 });

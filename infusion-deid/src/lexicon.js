@@ -4,9 +4,9 @@
  * Works in browser (window.DeIDLexicon) and Node (module.exports).
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./biglex.js'));
-  else root.DeIDLexicon = factory(root.DeIDBigLex || null);
-})(typeof self !== 'undefined' ? self : this, function (BIG) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./biglex.js'), require('./dict.js'));
+  else root.DeIDLexicon = factory(root.DeIDBigLex || null, root.DeIDDict || null);
+})(typeof self !== 'undefined' ? self : this, function (BIG, DICT) {
   'use strict';
 
   const words = (s) => s.trim().split(/\s+/);
@@ -236,6 +236,25 @@
     Calvert Cockcroft Gault Mosteller Jelliffe Chatelut Haycock Egorin Kelman
     Carbo Cisplat Cis Oxali Gem Vinc Dox Adria Cytox Bleo Iri Irino Topo Etop Pacli Doce Pem Lenal Bortez Dara Ritux Obin
     Bren Niv Pembro Ipi Atezo Durva Avel Cemi Tras Pertuz Cetux Pani Decad Benadryl Zofran Ativan Pepcid
+    Darzalex Faspro Tepezza Xolair Lemtrada Herzuma Ogivri Kanjinti Trazimera Ontruzant Phesgo Hylecta Hycela Mvasi Zirabev
+    Alymsys Vegzelma Riabni Truxima Ruxience Ocrevus Briumvi Kesimpta Tysabri Entyvio Stelara Remicade Inflectra Renflexis
+    Avsola Simponi Actemra Orencia Benlysta Saphnelo Krystexxa Soliris Ultomiris Uplizna Enspryng Vyepti Evenity Leqembi
+    Kisunla Aduhelm Nplate Promacta Reblozyl Adakveo Oxbryta Gamunex Privigen Octagam Gammagard Hizentra Cuvitru Xembify
+    Panzyga Bivigam Flebogamma Asceniv Gammaplex Cinryze Berinert Haegarda Takhzyro Fasenra Nucala Dupixent Tezspire Cinqair
+    Rituxan Gazyva Arzerra Kyprolis Empliciti Sarclisa Talvey Tecvayli Elrexfio Columvi Epkinly Lunsumio Blincyto Besponsa
+    Mylotarg Vyxeos Onureg Inqovi Adcetris Polivy Padcev Trodelvy Enhertu Kadcyla Datroway Elahere Tivdak Zynlonta Blenrep
+    Imjudo Jemperli Zynyz Loqtorzi Tevimbra Opdualag Libtayo Bavencio Imfinzi Tecentriq Opdivo Keytruda Yervoy Kimmtrak
+    Lumoxiti Poteligeo Unituxin Danyelza Rybrevant Lumakras Portrazza Cyramza Zaltrap Vectibix Erbitux Avastin Herceptin
+    Perjeta Abraxane Halaven Ixempra Jevtana Navelbine Doxil Onivyde Zepzelca Cosela Trilaciclib Aliqopa Folotyn Beleodaq
+    Istodax Velcade Treanda Bendeka Belrapzo Vivimusta Marqibo Erwinase Rylaze Oncaspar Asparlas Elzonris Pluvicto Lutathera
+    Xofigo Zoladex Lupron Eligard Firmagon Trelstar Camcevi Faslodex Sandostatin Somatuline Signifor Fensolvi Supprelin
+    Feraheme Injectafer Venofer Monoferric Infed Ferrlecit Retacrit Aranesp Procrit Epogen Mircera Udenyca Ziextenzo Fulphila
+    Nyvepria Fylnetra Stimufend Rolvedon Ryzneuta Neupogen Zarxio Nivestym Releuko Granix Leukine Mozobil Aphexda Nulibry
+    Methylpred Methylprednisolone Solumedrol Solucortef Hydrocortisone Famotidine Diphenhydramine Acetaminophen Cetirizine
+    Fosaprepitant Aprepitant Palonosetron Granisetron Ondansetron Olanzapine Prochlorperazine Lorazepam Dexamethasone
+    CIDP MMN NMO NMOSD RRMS SPMS PPMS ITP TTP AIHA PNH aHUS HAE CVID SLE PsA GCA PMR AAV GPA EGPA ALS SMA DMD HSCT BMT GVHD
+    CRS ICANS TLS DIC HIT VTE IgG IgA IgM IgE IgG4 Quervain
+    Mesna Leucovorin Levoleucovorin Fusilev Khapzory Amifostine Dexrazoxane Totect Zinecard Glucarpidase Voraxaze Rasburicase
     HOH NKDA NKA NKFA DNR DNI MOLST POLST PMH PSH FHx SHx ROS HPI SOB CHF COPD CAD HTN CKD ESRD GERD OSA AFib CVA TIA DVT BPH SLE
     HLD DM2 T2DM IDDM NIDDM PNA AKI ARF UTI URI BM GI GU HEENT MSK CNS PNS PVD PAD AAA CABG PCI PTCA ICD PPM LVAD
     EGFR ALK ROS1 KRAS NRAS BRAF MET RET NTRK FGFR IDH FLT3 NPM1 TP53 BCR ABL
@@ -563,6 +582,8 @@
   const ambiguousName = (k) => AMBIGUOUS.has(k) || (!strongName(k) && anyTier(k) && B.EN.has(k));
   return {
     BIG: B, isEnglishWord,
+    // the 275k-word dictionary (Bloom filter): ordinary and medical words, plus simple inflections
+    isDictWord: (w) => { if (!DICT) return false; const k = fold(w); if (DICT.has(k)) return true; const stems = [k.replace(/'s$/, ''), k.replace(/s$/, ''), k.replace(/es$/, ''), k.replace(/ed$/, ''), k.replace(/ed$/, 'e'), k.replace(/ing$/, ''), k.replace(/ing$/, 'e'), k.replace(/ly$/, '')]; return stems.some((x) => x !== k && x.length >= 3 && DICT.has(x)); },
     // strong: safe to tag on its own (curated lists, Census >= 1000 bearers, SSA top-1000 names)
     isStrongName: (w) => strongName(keyOf(w)),
     isCuratedName: (w) => { const k = String(w).toLowerCase(); return FIRST_SET.has(k) || LAST_SET.has(k) || FIRST_SET.has(fold(w)) || LAST_SET.has(fold(w)); },

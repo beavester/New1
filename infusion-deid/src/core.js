@@ -157,7 +157,7 @@
     { role: 'patient_name', re: /\b(?:nick\s*name|nickname|preferred\s*(?:name|nm)|goes\s*by|alias|aka|known\s*as|pref\s*name)\b/i },
     { role: 'patient_name', re: /\b(pt|patient)?\s*(name|full name|pt name|patient name|last,? first|legal name)\b/i, not: /provider|physician|attending|md|\bdr\b|nurse|pharmacist|chair|regimen|drug|protocol|order|user|entered|signed|location|dept|department|clinic|facility|insurance|plan|study|trial/i },
     { role: 'text', re: /\b(comment|note|notes|instruction|remark|reason|indication|message|description|free\s*text|narrative|sched(uling)?\s*note|appt\s*note|special|alert|question|answer|response|reply|detail)|\b(?:cmnts?|cmts?|rmks?|instr|msg)\b/i },
-    { role: 'date', re: /\b(date|appt|appointment|scheduled|sched|dos|visit|start|end|due|due date|next|last|time stamp|timestamp|created|updated|entered on|ordered on)\b/i, not: /time\s*$/i },
+    { role: 'date', re: /\b(date|dt|appt|appointment|scheduled|sched|dos|visit|start|end|due|due date|next|last|time stamp|timestamp|created|updated|entered on|ordered on|hookup|hook-up|connect|disconnect|admit|admitted|discharge|discharged|infused on|given on)\b/i, not: /time\s*$/i },
   ];
 
   const NICK_HEADER = /\b(?:nick\s*name|nickname|preferred\s*(?:name|nm)|goes\s*by|alias|aka|known\s*as|pref\.?\s*(?:name|nm))\b/i;
@@ -224,7 +224,9 @@
       }
       const vals = sample.map((r) => r[ci]).filter((v) => v != null && v !== '');
       const n = vals.length || 1;
-      const dateLike = vals.filter((v) => isDate(v) || looksLikeDate(cellToString(v))).length / n;
+      const PLACEHOLDER = /^\s*(?:-+|—|–|n\/?a|na|none|tbd|tba|pending|\?+|x|\.)\s*$/i;
+      const realVals = vals.filter((v) => !PLACEHOLDER.test(cellToString(v)));
+      const dateLike = realVals.length ? realVals.filter((v) => isDate(v) || looksLikeDate(cellToString(v))).length / realVals.length : 0;
       const strs = vals.map(cellToString);
       const avgLen = strs.reduce((a, s) => a + s.length, 0) / n;
       const spacey = strs.filter((s) => /\s/.test(s.trim())).length / n;
@@ -881,6 +883,8 @@
     const push = (m, type, extra) => spans.push(Object.assign({ start: m.index, end: m.index + m[0].length, type, source: 'rule', text: m[0] }, extra || {}));
     const run = (re, type, filter) => { re.lastIndex = 0; let m; while ((m = re.exec(text))) { if (!filter || filter(m)) push(m, type); if (m[0].length === 0) re.lastIndex++; } };
 
+    // Spanish / French / Portuguese / Italian day-month dates ("3 de noviembre", "12 novembre 2026", "le 4 mars")
+    run(/\b\d{1,2}(?:\s+de)?\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|sept?iembre|octubre|noviembre|diciembre|janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre|janeiro|fevereiro|mar[cç]o|maio|junho|julho|setembro|outubro|novembro|dezembro|gennaio|febbraio|aprile|maggio|giugno|luglio|settembre|ottobre|dicembre)(?:\s+(?:de\s+)?\d{4})?\b/gi, 'DATE');
     run(RULES.EMAIL, 'EMAIL'); run(RULES.URL, 'URL'); run(RULES.IP, 'IP'); run(RULES.SSN, 'SSN');
     { RULES.SSN_LAST4.lastIndex = 0; let sm; while ((sm = RULES.SSN_LAST4.exec(text))) { const st = sm.index + sm[0].length - 4; spans.push({ start: st, end: st + 4, type: 'ID_OTHER', source: 'rule', text: sm[1] }); } }
     { RULES.INSURANCE_ID.lastIndex = 0; let im; while ((im = RULES.INSURANCE_ID.exec(text))) { const st = im.index + im[0].lastIndexOf(im[1]); spans.push({ start: st, end: st + im[1].length, type: 'ID_OTHER', source: 'rule', text: im[1] }); } }
@@ -1598,7 +1602,7 @@
       // ... and a second lower-case word that is a surname of any tier, not an ordinary word ("spoke w pts son bao nguyen re")
       const lcSecond = nx && nx.word && !used[j + 1] && !lc.nlAfter && /^[a-z][a-z'’\-]{2,}$/.test(nx.core) && (inLex(nx) ? (LEX.isStrongName(nx.core) || !LEX.isEnglishWord(nx.core)) : (LEX.isFirstName(lc.core) && nx.core.length >= 4 && !LEX.isEnglishWord(nx.core) && /[aeiouy]/.test(nx.core) && !FIN_DRUG.test(nx.core) && !NONNAME_END.test(nx.core))) && !COMMON_LOWER.has(nx.core) && !LEX.isClinical(nx.core) && !isRel(nx) && !isCred(nx) && !LEX.LANGUAGE_SET.has(nx.core) && !monthIndex(nx.core) && !(allow && allow.has(nx.core));
       const lcHopOk = hops === 0 || (hops === 1 && toks[i + 1].word && /^(?:is|was|named)$/i.test(toks[i + 1].core) && (lcSecond || LEX.isFirstName(lc.core))); // "wife is ingrid lundqvist"
-      if (lcHopOk && lc.word && /^[a-z][a-z'’\-]{2,}$/.test(lc.core) && !used[j] && !LEX.isClinical(lc.core) && !isRel(lc) && !isCred(lc) && !(allow && allow.has(lc.core.toLowerCase())) && (LEX.isFirstName(lc.core) || (!LEX.isEnglishWord(lc.core) && (personCtx || lcSecond))) && !COMMON_LOWER.has(lc.core) && !/^(says|said|states|called|calls|will|would|can|cannot|also|here|there|was|were|has|had|who|that|this|with|from|and|but|not|per|via|aka|dob|mrn|pt|pts|vomited|vomiting|fell|falls|coughing|complains|denies|reports|requests)$/i.test(lc.core)) {
+      if (lcHopOk && lc.word && (/^[a-z][a-z'’\-]{2,}$/.test(lc.core) || (/^\p{Ll}[\p{Ll}\p{M}'’\-]{1,}$/u.test(lc.core) && /[^\x00-\x7F]/.test(lc.core) && personCtx)) && !used[j] && !LEX.isClinical(lc.core) && !isRel(lc) && !isCred(lc) && !(allow && allow.has(lc.core.toLowerCase())) && (LEX.isFirstName(lc.core) || (!LEX.isEnglishWord(lc.core) && (personCtx || lcSecond))) && (!COMMON_LOWER.has(lc.core) || (LEX.isFirstName(lc.core) && personCtx && hops === 0)) && !/^(says|said|states|called|calls|will|would|can|cannot|also|here|there|was|were|has|had|who|that|this|with|from|and|but|not|per|via|aka|dob|mrn|pt|pts|vomited|vomiting|fell|falls|coughing|complains|denies|reports|requests)$/i.test(lc.core)) {
         addRun(j, lcSecond ? j + 2 : j + 1, 'NAME_OTHER', 'cue:relation', 0.6);
       }
     }
@@ -2678,6 +2682,80 @@
     (manual.add || []).forEach((a) => { if (!(a.end > a.start && a.end <= text.length)) return; res = res.filter((s) => s.end <= a.start || s.start >= a.end); res.push({ start: a.start, end: a.end, type: a.type || 'NAME_OTHER', source: 'manual', conf: 1, text: text.slice(a.start, a.end), manual: true }); });
     return res.sort((x, y) => x.start - y.start);
   }
+  // ---------------------------------------------------------------------
+  // Strict pass: an unrecognised proper noun is treated as an identifier.
+  // A capitalised word that no rule claimed and that is not an ordinary or medical word (275k-word dictionary, clinical
+  // allowlist, drug-name stems, medical word endings, a dose right after it) is replaced; so is a lower-case word that is
+  // a name of any tier and not a dictionary word. Errs toward removal: an unknown brand or place name is lost rather than
+  // a real name kept. Flagged as uncertain so the review list shows every one.
+  // ---------------------------------------------------------------------
+  const DRUG_STEM = /(?:mab|nib|lib|cept|platin|taxel|rubicin|mycin|micin|cillin|floxacin|conazole|azole|vir|zomib|lisib|parib|ciclib|rafenib|statin|olol|pril|sartan|azepam|zolam|oxetine|tidine|prazole|cycline|dronate|semide|thiazide|plase|grastim|poetin|tecan|gliptin|gliflozin|glutide|tide|methasone|olone|sonide|tropin|caine|dipine|terol|lukast|relin|rolimus|uracil|abine|arabine|ribine|trexate|ifen|trozole|lutamide|mustine|phamide|sulfan|carbazine|tepa|bicin|parin|xaban|gatran|grel|setron|pitant|zumab|ximab|tuzumab|leucel|cabtagene|tinib|degib|stat|kinase|mide|feron|leukin|kin)$/i;
+  const MED_MORPH = /(?:itis|osis|emia|aemia|penia|penic|cytosis|opathy|pathic|ectomy|otomy|ostomy|plasty|scopy|scopic|graphy|gram|ology|ologic|ological|ologist|oma|omas|algia|uria|plegia|paresis|trophy|trophic|genic|genesis|lytic|lysis|emic|cytic|cyte|cytes|blast|blastic|phylaxis|phylactic|tropic|stasis|megaly|rrhea|rrhage|pnea|ptosis|sclerosis|thermia|tensive|vascular|cardial|dermal|venous|cranial|thoracic|renal|hepatic|pulmonary|myeloid|lymphoid|neoplastic|metastatic|cellular|ocular|ectasia|edema|oedema|iform|form|oid|openia|ectomies|otic)$/i;
+  const DOSE_AFTER = /^\s*(?:\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|gm|units?|u|iu|ml|mL|l|meq|mmol|mg\/m2|mg\/kg|mcg\/kg|%)\b|(?:sq|sc|iv|im|po|ivpb|subq|subcut|infusion|injection|tablet|tab|cap|patch)\b|\d+(?:\.\d+)?\s*mg\/)/i;
+  const STRICT_SKIP = /^(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight|yesterday|epic|mychart|cerner|snapboard|haiku|canto|rover|beacon|teams|zoom|portal|pyxis|omnicell|alaris|baxter|cadd|powerport|portacath|mediport|picc|huber|onpro|neulasta|pt|pts|dr|mr|mrs|ms|rn|lpn|np|pa|md|do|ok|okay|vit|diff|prbc|ffp|plt|plts|hgb|hct|wbc|anc|alc|inr|ptt|bmp|cmp|lft|lfts|tsh|psa|cea|ldh|egfr|upcr|tsat|dlco|lvef|ivig|scig|cidp|fmla|gcsf|csf|ecog|kps|nivo|ipi|pembro|atezo|durva|dara|ritux|obin|carbo|cis|oxali|gem|pacli|doce|methylpred|solumedrol|benadryl|tylenol|zofran|emend|decadron|pepcid|ativan|compazine|reglan|neupogen|udenyca|ziextenzo|fulphila|nyvepria|zarxio|granix|retacrit|aranesp|procrit|epogen|venofer|injectafer|feraheme|monoferric|infed|reclast|zometa|xgeva|prolia|evenity)$/i;
+  const TOWN_WORD = /^(?:Falls|River|Rapids|Springs|Heights|Beach|Lake|Lakes|Valley|Hills|Grove|Bay|Harbor|Harbour|Point|Junction|Creek|Bluffs|Village|City|Ridge|Mills|Station|Landing|Shores|Forge|Ferry|Hollow|Glen|Crossing|Plains|Corners|Port|Haven|Vista|Woods|Meadows|Falls|Bend|Rock|Mountain|Island|Cove|Park)$/;
+  function strictSpans(text, spans, cfg) {
+    const toks = tokenize(text); if (!toks.length) return spans;
+    const covered = (t) => spans.some((sp) => sp.start < t.end && t.start < sp.end);
+    const ordinary = (t) => {
+      const w = t.core, lw = w.toLowerCase();
+      if (LEX.isEnglishWord(w) || LEX.isDictWord(w) || LEX.isClinical(w)) return true;
+      const parts = w.split(/[-'’]/).filter(Boolean);
+      if (parts.length > 1 && parts.every((x) => x.length < 3 || LEX.isDictWord(x) || LEX.isEnglishWord(x) || LEX.isClinical(x))) return true;
+      if (DRUG_STEM.test(lw) || MED_MORPH.test(lw)) return true;
+      if (DOSE_AFTER.test(text.slice(t.fullEnd, t.fullEnd + 24))) return true;
+      if ((LEX.GREETING_SET && LEX.GREETING_SET.has(lw)) || /^(?:hola|bonjour|bonsoir|salut|ciao|namaste|shalom|salaam|salam|marhaba|konnichiwa|annyeong|xin|chao|ola|oi|hallo|hej|buenos|buenas|gracias|merci|obrigado|obrigada|grazie|danke)$/i.test(w)) return true;
+      { const nx = (text.slice(t.fullEnd).match(/^\s+([A-Za-z]+)/) || [])[1]; if (nx && (MED_MORPH.test(nx) || LEX.isClinical(nx)) && /^(?:de|von|van|la|le)$/i.test((text.slice(Math.max(0, t.start - 4), t.start).match(/([A-Za-z]+)\s*$/) || [])[1] || '')) return true; }
+      if (STRICT_SKIP.test(w) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || monthIndex(w) || relWord(w)) return true;
+      if (LEX.CREDENTIAL_SET.has(lw) || LEX.HONORIFIC_SET.has(lw.replace(/\.$/, '')) || LEX.STATE_ABBR_SET.has(w) || LEX.STATE_NAME_SET.has(lw)) return true;
+      if (LEX.ORG_SUFFIX_SET.has(lw) || LEX.ORG_NAMEWORD_SET.has(lw) || LEX.ORG_PREFIX_SET.has(lw) || LEX.GEO_SUFFIX_SET.has(lw)) return true;
+      if (cfg.allowSet && cfg.allowSet.has(lw)) return true;
+      // a word followed by a regimen/dose context is a drug or product ("Darzalex Faspro wk 9", "Lemtrada D3", "Herzuma charges")
+      if (/^\s*(?:C\d+(?:D\d+)?|D\d+|wk\s*\d|week\s*\d|cycle|dose|doses|infusion|infusions|premed|premeds|charges?|load(?:ing)?|maint(?:enance)?|q\d+\s*w(?:ee)?ks?|qw|weekly|monthly|biweekly|induction|reload|faspro|hycela|sc\b|iv\b|subq|\/[a-z]|-[a-z]+\s+(?:wk|c\d|d\d))/i.test(text.slice(t.fullEnd, t.fullEnd + 18))) return true;
+      if (/(?:\b(?:start|starting|started|continue|continued|hold|held|resume|resumed|on|off|switch(?:ed)?\s+to|premed(?:icate)?\s+with|given|infuse|infused|due\s+for|move\s+my|approved\s+for|auth\s+for|refill)\s+)$/i.test(text.slice(Math.max(0, t.start - 24), t.start)) && !LEX.isFirstName(w)) return true;
+      // "Lee Silverman voice treatment": a name-like word before a program/eponym word is clinical
+      if ((text.slice(t.fullEnd).match(/^\s+([A-Za-z]+)/) || [])[1] && LEX.EPONYM_FOLLOW.has(text.slice(t.fullEnd).match(/^\s+([A-Za-z]+)/)[1].toLowerCase())) return true;
+      return false;
+    };
+    const add = [];
+    // a town named with ordinary words and a place word after a place cue ("moving to Fall River", "in Central Falls",
+    // "from Cedar Rapids", "near Glens Falls NY")
+    for (let i = 0; i + 2 < toks.length; i++) {
+      const p = toks[i], a = toks[i + 1], b = toks[i + 2];
+      if (!p.word || !/^(?:in|from|to|near|outside|towards|toward|at)$/i.test(p.core)) continue;
+      if (!a.word || !a.cap || !b.word || !(b.cap || /^[A-Z]{2}$/.test(b.core)) || covered(a) || covered(b)) continue;
+      const stateNext = b.allcaps === false && /^[A-Z]{2}$/.test(b.core) && LEX.STATE_ABBR_SET.has(b.core);
+      const stateAfter = /^[A-Z]{2}$/.test(b.raw.replace(/[.,;]$/, '')) && LEX.STATE_ABBR_SET.has(b.raw.replace(/[.,;]$/, ''));
+      if (stateAfter && a.cap && !LEX.isClinical(a.core) && !LEX.ORG_SUFFIX_SET.has(a.core.toLowerCase())) { add.push({ start: a.start, end: b.start + 2, type: 'LOCATION', source: 'strict', conf: 0.5 }); continue; }
+      if (!(LEX.GEO_SUFFIX_SET.has(b.core.toLowerCase()) || TOWN_WORD.test(b.core)) || (LEX.isClinical(a.core) && !/^(?:north|south|east|west|central|upper|lower|old|new|grand|great|little|big|long|high|main)$/i.test(a.core)) || LEX.ORG_SUFFIX_SET.has(a.core.toLowerCase()) || LEX.ORG_SUFFIX_SET.has(b.core.toLowerCase())) continue;
+      if (!/^\s+$/.test(text.slice(a.end, b.start))) continue;
+      add.push({ start: a.start, end: b.end, type: 'LOCATION', source: 'strict', conf: 0.5 });
+    }
+    const inAdd = (t) => add.some((x) => x.start <= t.start && x.end >= t.end);
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i];
+      if (!t.word || !/^\p{L}[\p{L}\p{M}'’\-]*$/u.test(t.core) || inAdd(t)) continue;
+      const len = LEX.fold(t.core).replace(/[^a-z]/g, '').length;
+      if (len < 3 || covered(t)) continue;
+      // an ALL-CAPS word counts only when it is a known name (THOMPSON), never as an unknown acronym (LVEF, PRBC, IIIB)
+      const capLike = t.cap || (t.allcaps && len >= 4 && (LEX.isFirstName(t.core) || LEX.isSurname(t.core))) || /^\p{Lu}[\p{Ll}\p{M}]+(?:-\p{L}[\p{Ll}\p{M}]+)+$/u.test(t.core);
+      const lower = /^[\p{Ll}][\p{Ll}\p{M}'’\-]*$/u.test(t.core);
+      let cand = false;
+      if (capLike) cand = !ordinary(t);
+      else if (lower && len >= 4) cand = (LEX.isFirstName(t.core) || LEX.isSurname(t.core)) && !ordinary(t);
+      if (!cand) continue;
+      const prev = toks[i - 1];
+      const placeCue = prev && prev.word && /^(?:in|from|to|near|at|outside|towards|toward)$/i.test(prev.core) && !LEX.isFirstName(t.core);
+      const last = add[add.length - 1];
+      // join with the previous strict token when only a space or a one-letter particle sits between (Cormac Ó Briain)
+      if (last && /^\s+(?:\p{L}\.?\s+)?$/u.test(text.slice(last.end, t.start)) && last.type === (placeCue ? 'LOCATION' : last.type)) { last.end = t.end; continue; }
+      add.push({ start: t.start, end: t.end, type: placeCue || LEX.CITY_SET.has(t.core.toLowerCase()) ? 'LOCATION' : 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
+    if (!add.length) return spans;
+    add.forEach((x) => { x.text = text.slice(x.start, x.end); });
+    return spans.concat(add).sort((a, b) => a.start - b.start);
+  }
+
   function detectTextCore(text, ctx) {
     if (!text) return [];
     const cfg = ctx.cfg;
@@ -2734,6 +2812,7 @@
     if (cfg.layers.model) out = finishNames(text, out, cfg);
     out = compoundNameParts(text, out, ctx);
     out = numberAfterName(text, out);
+    if (cfg.strict) out = strictSpans(text, out, cfg);
     if (manual && manual.remove) {
       // a removed span must stay removed even if a merged/propagated span re-covers exactly it
       for (const r of manual.remove) { const i = out.findIndex((s) => s.start === r[0] && s.end === r[1] && !s.manual); if (i >= 0) out.splice(i, 1); }
@@ -3710,6 +3789,7 @@
       layers: { census: true, rules: true, model: true, propagate: true },
       surrogate: { patients: 'fake', providers: 'fake', dob: 'drop', ages: '90plus', dateShift: true, shiftRange: [30, 365] },
       deriveAge: true,
+      strict: true,
       auditColumn: true,
       auditDetail: false,
     };
