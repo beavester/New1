@@ -4880,7 +4880,9 @@
       const phoneLike = (t) => /^\d{10}$/.test(t.norm) && (/\d{3}[-.\s]\d{3}[-.\s]\d{4}|\(\d{3}\)/.test(line) || /\b(?:fax|phone|ph|tel|cell|mobile|home|work|call|text|pager)\s*[:#.]?\s*$/i.test(line.slice(Math.max(0, t.index - 12), t.index)));
       // a number labelled as some other identifier (ref, SN, member/insurance ID, DL, auth, claim, CSN, account) is not the
       // patient's record number, so it does not make a patient whose name was "not read"
-      const otherLabel = (t) => !t.labeled && /\b(?:ref|reference|sn|s\/n|serial|member|subscriber|policy|insurance|aetna|bcbs|medicaid|medicare|mbi|id|dl|lic|license|licence|plate|placard|auth|authorization|claim|conf|confirmation|order|lot|ndc|csn|har|acct|account|fin|encounter|group|grp|npi|dea|badge|tracking|invoice|rx)\s*(?:#|no\.?|num\.?|number)?\s*[:#]?\s*$/i.test(line.slice(Math.max(0, t.index - 24), t.index));
+      const otherLabel = (t) => !t.labeled && (/\b(?:ref|reference|sn|s\/n|serial|member|subscriber|policy|insurance|aetna|bcbs|medicaid|medicare|mbi|id|dl|lic|license|licence|plate|placard|auth|authorization|claim|conf|confirmation|order|lot|ndc|csn|har|acct|account|fin|encounter|group|grp|npi|dea|badge|tracking|invoice|rx)\s*(?:#|no\.?|num\.?|number)?\s*[:#]?\s*$/i.test(line.slice(Math.max(0, t.index - 24), t.index))
+        // the payer may be named between the label and the number: "Ins ID: HAP 77810452", "Coverage: Blue Cross 88301442"
+        || /(?<![A-Za-z])(?:ins|insurance|insurer|coverage|payer|payor|plan|carrier|member|subscriber|policy|secondary|primary\s+ins\w*)(?:\s+(?:id|no\.?|#|number))?\s*[:#]\s*(?:[A-Z][A-Za-z&.\-]{1,14}\s+){1,3}(?:(?:id|member|#)\s*[:#]?\s*)?$/i.test(line.slice(Math.max(0, t.index - 60), t.index)));
       return ids.filter((t) => !phoneLike(t) && !phone7(t) && !measured(t) && !otherLabel(t) && !/^\d{4}-\d{2}-\d{2}$/.test(t.raw));
     };
     const lineDates = (line) => ruleSpans(line, { mrnRegex: null, accountRegex: null, extraRegexes: [] }).filter((sp) => (sp.type === 'DATE' || sp.type === 'DOB') && sp.date && sp.date.hasYear && !/^(?:My|my|ord)$/.test(sp.date.kind) && sp.date.y <= thisYear - 1 && sp.date.y >= 1900);
@@ -4948,9 +4950,11 @@
       for (let n = li + 1; n < lines.length && chain.length < 7; n++) {
         // what is left of the wrapped date cell of this record ("026" under "11/16/2") does not start the next record
         if (tileHeads.has(n)) break;
-        const dateRest = DATE_LED.test(lines[li]) && /^\s*\d{1,4}\s/.test(lines[n]) && info[n] && !info[n].ids.length && !info[n].dates.length;
+        // (nor does the time under its date, "07:30" under "11/25/2026"); such a line may carry the record number when no
+        // line of the name has had one yet
+        const dateRest = DATE_LED.test(lines[li]) && /^\s*(?:\d{1,4}|\d{1,2}:\d{2})\s/.test(lines[n]) && info[n] && !info[n].dates.length && !info[n].names.length && (!info[n].ids.length || !chain.some((c) => info[c] && info[c].ids.length));
         if ((TIME_LED.test(lines[n]) || (CELL_LED.test(lines[n]) && info[n] && info[n].ids.length > 0)) && !dateRest && !(aboveRecord && n === li + 1)) break; // the next record line of the grid
-        const N = lead(n) || ((/[A-Za-z]$/.test(acc) && led) ? contLead(n) : null) || (info[li].ids.length ? looseLead(n, acc) : null);
+        const N = (dateRest && info[n].ids.length && !/[-,]$/.test(acc)) ? null : (lead(n) || ((/[A-Za-z]$/.test(acc) && led) ? contLead(n) : null) || (info[li].ids.length ? looseLead(n, acc) : null));
         if (!N) { if (!skipped && /[-,]$/.test(acc) && info[n] && junkLed(lines[n])) { skipped = true; chain.push(n); continue; } break; }
         if (N.cont) acc += N.text; // a word broken mid-way
         else if (/-$/.test(acc)) acc += N.text;
@@ -5044,7 +5048,7 @@
       const pick = ids[0];
       if (pick && (name || pick.labeled || !o.requireNameForMrn)) mrn = pick.norm;
       if (pick && !name) name = wrappedName(line, pick.index, lines[li + 1]);
-      if (pick && !name) { const lm = line.match(/(?<![\w])((?:(?:van|von|de|del|della|der|den|di|da|du|dos|das|la|le|bin|ibn|al|el|st\.?|mc|mac)[ ]+){0,2}[a-z][a-z'’\-]{2,}(?:[ -][a-z][a-z'’\-]{2,})?),[ \t]*([a-z][a-z'’\-]{2,})(?=[ \t]*[(\-–—:|]?[ \t]*\(?[ \t]*(?:mrn|mr#|dob|#)|[ \t]+[a-z]{0,2}\d{6,10}\b)/i); if (lm && !LEX.isEnglishWord(lm[2]) && !LEX.isClinical(lm[2]) && !lm[1].split(/[ -]/).some((w) => LEX.isEnglishWord(w) && !LEX.isSurname(w) && !NAME_PARTICLE.test(w.replace(/\.$/, '')))) name = `${lm[1]}, ${lm[2]}`; }
+      if (pick && !name) { const lm = line.match(/(?<![\w])((?:(?:van|von|de|del|della|der|den|di|da|du|dos|das|la|le|bin|ibn|al|el|st\.?|mc|mac)[ ]+){0,2}[a-z][a-z'’\-]{2,}(?:[ -][a-z][a-z'’\-]{2,})?),[ \t]*([a-z][a-z'’\-]{2,})(?=[ \t]*[(\-–—:|]?[ \t]*\(?[ \t]*(?:mrn|mr#|dob|#)|[ \t]+(?:[~_=*.|\-–—]{1,3}[ \t]+)?[a-z]{0,2}\d{6,10}\b)/i); if (lm && !LEX.isEnglishWord(lm[2]) && !LEX.isClinical(lm[2]) && !lm[1].split(/[ -]/).some((w) => LEX.isEnglishWord(w) && !LEX.isSurname(w) && !NAME_PARTICLE.test(w.replace(/\.$/, '')))) name = `${lm[1]}, ${lm[2]}`; }
       // "First Last" right before its record number or birthdate ("for Rosalind Graves (MRN 66120934)", "PARK MI-SOOK (MRN
       // 8830217)", "Patient Dang Van Minh, DOB 03041951"): that is the line's patient, so the name is not "not read"
       if (!name && (pick || /\b(?:dob|d\.o\.b)\b/i.test(line))) name = firstLastBeforeId(line);
