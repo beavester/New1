@@ -1048,3 +1048,13 @@ test('round 8 classes: worded phones, last-4 SSN wording, check-digit record num
   const dates = (t) => D.ruleSpans(t, cfg()).filter((s) => s.type === 'DATE').map((s) => s.text);
   assert.deepEqual(dates('Pt reports fatigue 6/10. Second dose 11/12.'), ['11/12']);
 });
+
+test('round 9 classes: MRN before a colon, seven-digit phone with extension, "from <Place>", town+ZIP after a comma, alias "or \"Nick\"", credential walk-back stops at words', () => {
+  assert.equal(D.parseTextDocument('Ritwik Chakraborty MRN 9920187: ANC 0.9 today').rows[0][1], '9920187');
+  const r = D.processTable({ headers: ['Comments'], rows: [['PT THOMPSON GARY MRN 6612309 NO SHOW X2. CALLED 5550167 EXT 204 NO ANSWER. OPDIVO ON HOLD UNTIL DR MARTINEZ MD REVIEWS. Pt from Chicopee, 1.5 hr drive; retired firefighter from Dorchester. Lives at 2290 Hollister Ave Apt 14, Rosemead 91770. Fermin Quintanilla - pt goes by Fermin or "Mincho".']] }, { seed: 1 });
+  const out = r.rows[0][0];
+  for (const leak of ['THOMPSON', 'GARY', '6612309', '5550167', 'MARTINEZ', 'Chicopee', 'Dorchester', 'Hollister', 'Rosemead', '91770', 'Fermin', 'Quintanilla', 'Mincho']) assert.ok(!out.includes(leak), leak + ' leaked: ' + out);
+  for (const keep of ['NO SHOW X2', 'OPDIVO ON HOLD UNTIL', 'MD REVIEWS', '1.5 hr drive', 'Spanish'.length ? 'retired firefighter' : '']) assert.ok(out.includes(keep), keep + ' lost: ' + out);
+  const names = (t) => D.lexiconSpans(t, cfg()).map((s) => s.text);
+  assert.deepEqual(names('records from Keytruda trial; from home today; from Pharmacy; from Mercy Hospital'), ['Mercy Hospital']);
+});

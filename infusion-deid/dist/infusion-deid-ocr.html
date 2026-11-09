@@ -1376,14 +1376,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const literal = new Set(); p.names.forEach((nm) => { const pn = parseName(nm); if (pn) [pn.last, ...pn.last.split(/[-\s]+/)].forEach((t) => t && literal.add(t.toLowerCase())); });
       // a short form cut from a long given name ("Finn" of Finnegan, "Bart" of Bartholomew, "Theo" of Theodora): the
       // patient's own rows only, written with a capital, and never an ordinary word
-      const prefixForms = new Set();
+      const prefixForms = new Set(), prefixNeedsCue = new Set();
       [p.parsed, ...[...p.names].map(parseName)].forEach((pn) => {
         const f = pn && pn.first; if (!f || f.length < 7 || !/^[A-Za-z]+$/.test(f)) return;
-        const cut = f.slice(0, 4); const lc = cut.toLowerCase();
-        if (COMMON_LOWER.has(lc) || COMMON_CAP.has(lc) || LEX.isCuratedAmbiguous(cut) || (LEX.isEnglishWord(cut) && !LEX.isFirstName(cut)) || LEX.isClinical(cut) || monthIndex(cut) || LEX.RELATION_SET.has(lc)) return;
-        prefixForms.add(cut[0].toUpperCase() + cut.slice(1).toLowerCase());
+        for (const cutLen of [4, 3]) {
+        const cut = f.slice(0, cutLen); const lc = cut.toLowerCase();
+        if (cutLen === 3 && f.length < 8) continue;
+        const needsCue = cutLen === 3 && LEX.isEnglishWord(cut); // "Dom" of Dominador: only beside a person cue
+        if (COMMON_LOWER.has(lc) || COMMON_CAP.has(lc) || LEX.isCuratedAmbiguous(cut) || (!needsCue && LEX.isEnglishWord(cut) && !LEX.isFirstName(cut)) || LEX.isClinical(cut) || monthIndex(cut) || LEX.RELATION_SET.has(lc)) continue;
+        const form = cut[0].toUpperCase() + cut.slice(1).toLowerCase();
+        prefixForms.add(form); if (needsCue) prefixNeedsCue.add(form);
+        }
       });
-      prefixForms.forEach((v) => { if (!allVariants.has(v) && !lookup.has(v.toLowerCase())) { addVariant(v, 'NAME_PATIENT', p.key, true, true); prefixKeys.add(v.toLowerCase()); } });
+      prefixForms.forEach((v) => { if (!allVariants.has(v) && !lookup.has(v.toLowerCase())) { addVariant(v, 'NAME_PATIENT', p.key, true, true); prefixKeys.add(v.toLowerCase()); if (prefixNeedsCue.has(v)) lookup.get(v.toLowerCase()).needsCue = true; } });
       // an export written all in lower case ("pemberton-yau, odalys"): the given name is matched in lower case in its own rows
       const lowerSource = [...p.names].some((nm) => /[a-z]/.test(nm) && nm === nm.toLowerCase());
       [...allVariants].forEach((v) => {
@@ -1556,7 +1561,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     PHONE_WORDS: /\b(?:(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|\d)[\s\-.,]*){7,}\b/gi,
     // separators tolerate OCR/keyboard spacing: "716 -555- 0177", "716 . 555 . 0177"
     PHONE: /(?<![\d\w\/])(?:\+?1[-.\s]?)?(?:\(\d{3}\)\s?|\d{3}(?:\s*[-.]\s*|\s))\d{3}(?:\s*[-.]\s*|\s)\d{4}(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?(?![\d\w])|(?<![\d\w-])\d{3}[-.]\d{4}(?:\s*(?:x|ext\.?)\s*\d{1,6})?(?![\d\w-])/gi,
-    PHONE_PLAIN: /(?<![\d\w.-])\d{10}(?![\d\w-])(?!\.\d)(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?/gi,
+    PHONE_PLAIN: /(?<![\d\w.-])\d{10}(?![\d\w-])(?!\.\d)(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?|(?<=\b(?:called|call|ph|phone|cell|tel|fax|#)\s{0,3})\d{7}(?![\d\w-])(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?|(?<![\d\w.-])\d{7}(?=\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})/gi,
     // OCR-noisy phone: digits with O/I/l confusions, at least 7 real digits, 3-3-4 shape
     PHONE_OCR: /(?<![\w])\(?[\dOIl]{3}\)?(?:\s*[-.]\s*|\s)[\dOIl]{3}(?:\s*[-.]\s*|\s)[\dOIl]{4}(?![\w])/g,
     AGE: /\b(?:age[d]?\s*:?\s*(9\d|1[0-2]\d)(?![\d\/%-])(?!\.\d)(?!,\d)|(9\d|1[0-2]\d)\s*(?:-|\s)?\s*(?:y\/o|yo|y\.o\.?|yrs?\.?(?:\s*old)?|years?(?:[-\s]old)?|year[-\s]old|yr[-\s]old)(?![A-Za-z])|\b(?:his|her|their)\s+(?:(?:early|mid|late)[-\s])?(9|10)0s\b|\b(?:nonagenarian|centenarian)\b)/gi,
@@ -2226,7 +2231,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       let j = i; const comma = toks[j - 1] && toks[j - 1].raw === ','; if (comma) j--;
       let k = j;
       const nameishB = (t) => isNameish(t, allow) || ((t.cap || t.allcaps) && inLex(t) && !(allow && allow.has(t.core.toLowerCase())));
-      while (k > 0 && k > j - 3 && nameishB(toks[k - 1]) && !used[k - 1] && !isRel(toks[k - 1]) && !(k - 1 < j - 1 && endsSentence(toks[k - 1]))) k--;
+      while (k > 0 && k > j - 3 && nameishB(toks[k - 1]) && !wordNotName(toks[k - 1]) && !used[k - 1] && !isRel(toks[k - 1]) && !(k - 1 < j - 1 && endsSentence(toks[k - 1]))) k--;
       if (k >= j) continue;
       // "Next MD visit", "Infusion Triage RN": a field label or a common word alone before a credential is not a name
       if (k === j - 1 && (FIELD_WORD.test(toks[k].core) || COMMON_CAP.has(toks[k].core.toLowerCase()))) continue;
@@ -2385,6 +2390,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if (toks[j].initial && toks[j].raw.endsWith('.')) while (ej < toks.length && ej - j < 3 && toks[ej].initial && toks[ej].raw.endsWith('.') && !used[ej] && text.slice(toks[ej - 1].fullEnd, toks[ej].start) === '') ej++;
       if (ej === j + 1 && toks[j].initial) continue;
       addRun(j, ej, 'NAME_OTHER', 'cue:alias', 0.7);
+      for (let q = ej; q < Math.min(toks.length - 1, ej + 4); q++) { if (/^["“]$/.test(toks[q].raw) && toks[q + 1].word && toks[q + 1].cap && !used[q + 1] && !LEX.isClinical(toks[q + 1].core) && !wordNotName(toks[q + 1])) { addRun(q + 1, q + 2, 'NAME_OTHER', 'cue:alias', 0.65); break; } }
     }
     // Pass P: a name joined by lower-case particles (Pieter van der Berg, Maria de la Cruz Villanueva, Abdulrahman bin Khalid
     // al-Harbi). "Capitalized particle Capitalized" is a personal name in clinical text; the run extends over the capitalized
@@ -2717,9 +2723,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // "drove in from Chardon"), and "Town 44052" (a town right before its ZIP)
     for (let i = -1; i + 1 < toks.length; i++) {
       const t = i >= 0 ? toks[i] : { word: true, core: '', raw: '', nlAfter: true }, n = toks[i + 1];
-      if (i >= 0 && !t.word && !t.nlAfter) continue;
+      const zipAhead = i + 2 < toks.length && toks[i + 2].num && /^\d{5}$/.test(toks[i + 2].raw);
+      if (i >= 0 && !t.word && !t.nlAfter && !(zipAhead && /^[,;]$/.test(t.raw))) continue;
       if (used[i + 1] || !n.word || !(n.cap || n.allcaps) || n.initial) continue;
-      if (i >= 0 && !t.nlAfter && !/^(to|from|in|near|outside)$/i.test(t.core) && !(i + 2 < toks.length && /^\d{5}$/.test(toks[i + 2].raw || ''))) continue;
+      if (i >= 0 && !t.nlAfter && !/^(to|from|in|near|outside)$/i.test(t.core) && !zipAhead) continue;
       const prev = i > 0 ? toks[i - 1] : null;
       const facilityCue = prev && prev.word && /^(hospital|hosp|clinic|center|centre|ctr|office|practice|pharmacy|institute|inst|group|associates|lab|labs|oncology|hematology|imaging|radiology|dialysis|hospice|rehab|surgery|plant|factory)$/i.test(prev.core) && /^(in|at|near|outside)$/i.test(t.core);
       if (LEX.isClinical(n.core) || (LEX.isEnglishWord(n.core) && !facilityCue && !(LEX.isSurname(n.core) && !LEX.isFirstName(n.core))) || (LEX.isAnchorName(n.core) && !facilityCue) || isRel(n) || isHon(n) || isCred(n) || COMMON_CAP.has(n.core.toLowerCase()) || LEX.ORG_SUFFIX_SET.has(n.core.toLowerCase()) || (allow && allow.has(n.core.toLowerCase()))) continue;
@@ -2774,6 +2781,20 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       for (let q = i + 1; q < e; q++) used[q] = true;
       spans.push({ start: n.start, end: toks[e - 1].end, type: 'LOCATION', source: 'cue:place', conf: 0.55, text: text.slice(n.start, toks[e - 1].end) });
     }
+    // Pass G1c: "from <Place>" with no known name in it
+    for (let i = 0; i + 1 < toks.length; i++) {
+      const t = toks[i], n = toks[i + 1];
+      if (!t.word || !/^from$/i.test(t.core) || used[i + 1] || !n.word || !n.cap || n.initial) continue;
+      if (LEX.isClinical(n.core) || LEX.isEnglishWord(n.core) || LEX.isFirstName(n.core) || LEX.isAnchorName(n.core) || isRel(n) || isHon(n) || isCred(n) || LEX.ORG_SUFFIX_SET.has(n.core.toLowerCase()) || LEX.ORG_NAMEWORD_SET.has(n.core.toLowerCase()) || COMMON_CAP.has(n.core.toLowerCase()) || (allow && allow.has(n.core.toLowerCase()))) continue;
+      const nx = toks[i + 2];
+      const terminated = endsSentence(n) || /[.;,]$/.test(n.raw); // "from Dorchester. Lives at" (the period rides on the token)
+      if (!terminated) {
+        if (nx && nx.word && nx.cap && !LEX.ORG_SUFFIX_SET.has(nx.core.toLowerCase())) continue;
+        if (!(!nx || /^[,.;)]$/.test(nx.raw) || (nx.word && !nx.cap) || nx.num)) continue;
+      }
+      used[i + 1] = true;
+      spans.push({ start: n.start, end: n.end, type: 'LOCATION', source: 'cue:place', conf: 0.5, text: n.core });
+    }
     // Pass E5: a first name right before a phone number ("niece Rosalba 555-0109" when OCR dropped the relation word)
     for (let i = 0; i + 1 < toks.length; i++) {
       const t = toks[i];
@@ -2826,6 +2847,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const own = rowPatientKey && hit.entities.includes(rowPatientKey);
       // a word-name typed in lower case ("grace's husband", "spoke w/ winter") is the patient in their own row when a
       // possessive follows or a contact cue precedes it
+      if (hit.needsCue) {
+        const after = text.slice(m.index + m[0].length), before = text.slice(Math.max(0, m.index - 14), m.index);
+        const cue = /^['’]s\b/.test(after) || /^\s+(?:tolerated|tolerating|reports|reported|states|stated|says|said|arrived|arriving|declined|declines|here|is|was|has|had|called|calls|asked|asks|prefers|wants|requests|requested|denies|denied|agrees|agreed|refused|refuses|will|would|came|left|feels|felt|doing|did|does|needs|needed|ok|okay)\b/i.test(after) || /(?:\bpt|\bpatient|\bw\/|\bwith|\bspoke to|\bcalled|\bre:?|\bper|\btold|\basked)\s*$/i.test(before);
+        if (!cue || !own) continue;
+      }
       const lcOwn = own && !/^[A-Z]/.test(m[0]) && (/^['’]s\b/.test(text.slice(m.index + m[0].length)) || /(?:\bw\/|\bwith|\bspoke to|\bspoke w\/|\bcalled|\bcall|\bre:?|\bper|\btold|\basked|\bpt|\bpatient)\s*$/i.test(text.slice(Math.max(0, m.index - 12), m.index)));
       if (hit.exactCase && !/^[A-Z]/.test(m[0]) && !lcOwn) continue;
       const ownExtra = !own && rowExtraKeys ? rowExtraKeys.find((k) => hit.entities.includes(k)) : null;
@@ -3482,9 +3508,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   // ---------------------------------------------------------------------
   const LINE_NAME_RE = /(?<![\w,])([A-Z][A-Za-z'’\-]+(?:[ -][A-Z][A-Za-z'’\-]+)?),\s*([A-Z][A-Za-z'’\-]+)(?:\s+([A-Z])\b\.?|\s([A-Z][A-Z'’\-]+)(?=\s|$)|\s([A-Z][a-z'’\-]{2,})(?=\s{3,}|\s*$))?(?![\w,])/g;
   const STREET_SUFFIX_WORD = /^(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Pkwy|Parkway|Hwy|Highway|Cir|Circle|Ter|Terrace|Trl|Trail|Pike|Row|Sq|Square|Box)\.?$/i;
-  const LINE_ID_RE = /(?<![\w\/\-.:])(?:MRN\s*[:#]?\s*)?([A-Z]{0,2}[0-9OIlSB]{6,10})(?![\w\/\-:])(?!\.[\w])/g;
+  const LINE_ID_RE = /(?<![\w\/\-.:])(?:MRN\s*[:#]?\s*)?([A-Z]{0,2}[0-9OIlSB]{6,10})(?![\w\/\-])(?!:\d)(?!\.[\w])/g;
   // a labelled MRN may be written with internal spaces or hyphens ("MRN#0041 2345", "MRN: 0041-2345")
-  const LINE_MRN_LABEL_RE = /\b(?:MRN|MR#|Med\s*Rec(?:ord)?\s*(?:No\.?|Num\.?|#)?)\s*[:#]?\s*([A-Z]{0,2}[0-9OIlSB](?:[ \-]?[0-9OIlSB]){5,9})(?![\w\/\-:])(?!\.[\w])/gi;
+  const LINE_MRN_LABEL_RE = /\b(?:MRN|MR#|Med\s*Rec(?:ord)?\s*(?:No\.?|Num\.?|#)?)\s*[:#]?\s*([A-Z]{0,2}[0-9OIlSB](?:[ \-]?[0-9OIlSB]){5,9})(?![\w\/\-])(?!:\d)(?!\.[\w])/gi;
   const LINE_CRED_AFTER = /^\s*,?\s*(?:MD|DO|NP|PA-C|PA|RN|LPN|BSN|MSN|DNP|APRN|CRNP|CNP|ARNP|PharmD|RPh|MSW|LCSW|FNP|ANP|PhD|DDS|DPM)\b/;
   const LINE_PROVIDER_BEFORE = /\b(?:per|dr\.?|doctor|called|call|with|w\/|by|see|seen|spoke|attending|pcp|provider|md|np|rn|onc|oncologist|referred|referral|signed|cc)\s*[:\-]?\s*$/i;
   const LINE_LABEL_BEFORE = /(?:^|\b(?:pt|patient|name|re|regarding|for|contact))\s*[:#\-]?\s*$/i;
