@@ -3199,6 +3199,138 @@
     return spans.concat(add).sort((a, b) => a.start - b.start);
   }
 
+  // ---------------------------------------------------------------------
+  // Places without a cue: a capitalised word or run that is a US city, town or village (src/places.js: ~19k names and
+  // the state each is in, as Bloom filters) is a LOCATION when nothing else explains it better. Runs after the name and
+  // organisation logic and only on text no span has claimed, so "Dr. Jackson" stays a person and "Buffalo General" one
+  // organisation. Many place names are ordinary words, names or clinical terms (Normal, Mobile, Reading, Hope, Port):
+  // those need place context — a state that really has a place of that name ("Normal, IL"), a ZIP, a place preposition
+  // ("lives in Flint"), a site word ("the Reading area", "Canton office"), a bracket with a specialty ("(derm,
+  // Burlington)") or a list beside another place. A word that is neither a dictionary word nor a given name (Akron,
+  // Burlington, Spokane) fires without context, at a confidence that puts the line on the review list.
+  // ---------------------------------------------------------------------
+  let PLACE_DATA;
+  const placeData = () => {
+    if (PLACE_DATA !== undefined) return PLACE_DATA;
+    PLACE_DATA = null;
+    try { PLACE_DATA = (typeof globalThis !== 'undefined' && globalThis.DeIDPlaces) || (typeof self !== 'undefined' && self.DeIDPlaces) || (typeof module === 'object' && typeof require === 'function' ? require('./places.js') : null) || null; } catch (e) { PLACE_DATA = null; }
+    return PLACE_DATA;
+  };
+  // what may follow a place that is also an ordinary word or a given name: the end of the phrase, never a noun it could describe
+  const PLACE_FOLLOW = /^(?:['’]s)?(?:\s*(?:[,.;:)!?\]]|$)|\s+(?:in|on|at|for|by|this|today|yesterday|tomorrow|last|next|and|or|to|with|who|where|but|so|since|until|every|each|weekly|monthly|daily|area|visiting|coming|will|would|is|was|has|had|who|that|x\d|w\/|&|[-–(]|\d)(?![\p{L}]))/u;
+  // an ordinary word after a preposition is a place only when the phrase is about where someone lives, works, travels or is seen ("lives in Reading"; never "tip confirmation in Media")
+  const PLACE_LEFT = /(?<![\p{L}])(?:lives?|living|resides?|residing|moved|moving|relocat\w*|born|raised|grew|stay(?:s|ing|ed)?|visit(?:s|ing|ed)?|based|located|home|house|apartment|apt|condo|cabin|farm|family|sister|brother|son|daughter|mother|father|mom|dad|parents|husband|wife|friends?|kids|children|pcp|office|clinic|hospital|doctor|oncologist|provider|pharmacy|works?|working|worked|job|dr[io]ves?|driving|commut\w*|travel\w*|trips?|fl(?:y|ew|ying|ies)|vacation|originally|retired|comes|came|back|return\w*|pt|patient|is|was|are|were|here|way|town|address)(?:['’]s)?\s+(?:[\p{L}'’\-]+\s+){0,3}(?:in|from|near|outside|around|to|of|toward|towards)\s$/iu;
+  const PLACE_SITE = /^\s+(?:area|region|metro|suburbs?|office|offices|clinic|location|site|campus|branch|satellite|facility|County|Co\.|Township|Twp|Parish)(?![\p{L}])/u;
+  const PLACE_SPECIALTY = /(?<![\p{L}])(?:derm|dermatology|cards|cardiology|cardio|onc|oncology|heme|hem\/onc|hematology|neuro|neurology|gi|gastro|pulm|pulmonology|pulmonary|rheum|rheumatology|endo|endocrine|endocrinology|nephro|nephrology|renal|uro|urology|gyn|ob\/gyn|obgyn|ent|ophtho|ophthalmology|optho|psych|psychiatry|ortho|orthopedics|surgery|surg|surgeon|radiology|rad\s?onc|pcp|primary\s+care|id|pain|palliative|allergy|immunology|hepatology|transplant|podiatry|dental|dentist|pharmacy|office|clinic|campus|site|location|branch|satellite|practice|hospital|lives|home|based|local|outside|area)(?![\p{L}])/i;
+  // countries, regions and peoples that are also the names of US towns: larger than a state, so no identifier on their own
+  const PLACE_COUNTRY = /^(?:england|scotland|ireland|wales|britain|mexico|canada|belgium|norway|denmark|sweden|finland|poland|holland|germany|france|spain|portugal|italy|greece|russia|ukraine|turkey|egypt|lebanon|israel|jordan|syria|iran|iraq|persia|palestine|india|china|japan|korea|vietnam|cuba|peru|chile|brazil|panama|jamaica|trinidad|malta|sudan|samoa|greenland|scandinavia|europe|asia|africa|america|midwest|atlantic|pacific|canadian|yukon|patagonia|darfur|falkland|christmas|easter)$/i;
+  const PLACE_WORDISH_ST = /^(?:OK|IN|OR|ME|HI|DE|PA|MD|ID|MA|MO|OH|AL|AR|GA|LA|MS|MT|NE|VA|WA|CO|CT)$/;
+  function placeSpans(text, spans, cfg) {
+    const PL = placeData(); if (!PL || !text) return spans;
+    const toks = tokenize(text); if (!toks.length) return spans;
+    const capsCell = !/\p{Ll}/u.test(text);
+    const add = [];
+    const free = (a, b) => !spans.some((sp) => sp.start < b && a < sp.end) && !add.some((x) => x.start < b && a < x.end);
+    const eligible = (t) => t && t.word && !t.initial && (t.cap || (capsCell && t.allcaps) || /^(?:Mc|Mac|De|La|Le|Du|O['’])\p{Lu}\p{Ll}+$/u.test(t.core)) && /^\p{L}[\p{L}\p{M}'’\-]*$/u.test(t.core);
+    const isLoc = (sp) => COARSE(sp.type) === 'LOCATION';
+    const stateAbbrOf = (name) => { const l = name.toLowerCase(); for (const k of Object.keys(LEX.US_STATES)) if (String(LEX.US_STATES[k]).toLowerCase() === l) return k; return null; };
+    // a single word that is something else: calendar and clinic vocabulary, roles, organisation and geography words, drugs
+    const otherWord = (t) => {
+      const w = t.core, lw = w.toLowerCase();
+      if (monthIndex(w) || STRICT_SKIP.test(w) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || relWord(w)) return true;
+      if (LEX.CREDENTIAL_SET.has(lw) || LEX.HONORIFIC_SET.has(lw) || LEX.LANGUAGE_SET.has(lw) || /^(?:indian|arab|asian|african|european|american|hispanic|latino|latina|native|pacific|caucasian)$/.test(lw)) return true;
+      if (LEX.ORG_SUFFIX_SET.has(lw) || LEX.ORG_NAMEWORD_SET.has(lw) || LEX.ORG_PREFIX_SET.has(lw) || LEX.GEO_SUFFIX_SET.has(lw)) return true;
+      if (cfg && cfg.allowSet && cfg.allowSet.has(lw)) return true;
+      if (DRUG_STEM.test(lw) || MED_MORPH.test(lw) || DOSE_AFTER.test(text.slice(t.fullEnd, t.fullEnd + 24))) return true;
+      return false;
+    };
+    const cands = [];
+    for (let i = 0; i < toks.length; i++) {
+      if (!eligible(toks[i]) || !free(toks[i].start, toks[i].end)) continue;
+      // the longest run of capitalised words that is a place name ("Port St. Lucie", "Fond du Lac", "Cedar Rapids", "Flint")
+      let e = -1;
+      for (let len = Math.min(PL.maxWords || 4, toks.length - i); len >= 1 && e < 0; len--) {
+        let ok = true;
+        for (let k = i; k < i + len && ok; k++) {
+          const t = toks[k];
+          if (!(eligible(t) || (len >= 3 && k > i && k < i + len - 1 && /^(?:du|de|la|del|of|the|d)$/.test(t.core)))) ok = false;
+          else if (k > i && !/^\.?[ \t]$/.test(text.slice(toks[k - 1].end, t.start))) ok = false;
+          else if (k > i && text[toks[k - 1].end] === '.' && !/^(?:St|Ste|Ft|Mt)$/i.test(toks[k - 1].core)) ok = false;
+        }
+        if (!ok || !free(toks[i].start, toks[i + len - 1].end)) continue;
+        const name = toks.slice(i, i + len).map((t) => t.core).join(' ');
+        if (len === 1 && LEX.fold(name).replace(/[^a-z]/g, '').length < 3) continue;
+        if (PL.has(name)) e = i + len;
+      }
+      if (e < 0) continue;
+      const run = toks.slice(i, e), first = run[0], last = run[run.length - 1];
+      const name = run.map((t) => t.core).join(' '), lname = name.toLowerCase();
+      const a = first.start, b = last.end, single = run.length === 1;
+      // a state on its own is not an identifier, and the existing rules decide "Washington" and "New York"
+      if (LEX.STATE_NAME_SET.has(lname)) { i = e - 1; continue; }
+      const before = text.slice(Math.max(0, a - 48), a), after = text.slice(b, b + 48);
+      const prev = toks[i - 1], next = toks[e];
+      const letters = LEX.fold(name).replace(/[^a-z]/g, '').length;
+      const dictish = (w) => LEX.isDictWord(w) || COMMON_CAP.has(w.toLowerCase()) || !!monthIndex(w);
+      const allDict = run.every((t) => dictish(t.core));
+      const clinical = run.some((t) => LEX.isClinical(t.core));
+      const given = single ? LEX.isFirstName(name) : (LEX.isFirstName(first.core) && !LEX.PLACE_PREFIX_SET.has(first.core.toLowerCase()));
+      const other = single && otherWord(first);
+      const nextWord = next && next.word && /^\s+$/.test(text.slice(last.fullEnd, next.start)) ? next.core : '';
+      // not a place here: an eponym (Lyme disease, Ann Arbor staging), or a people or language (Cherokee Nation, speaks Navajo)
+      const eponym = (!!nextWord && (LEX.EPONYM_FOLLOW.has(nextWord.toLowerCase()) || MED_SUFFIX.test(nextWord) || /^(?:stag(?:e|ing)|scale|score|criteria|classification|categor(?:y|ies)|protocol|regimen|nation|tribe|tribal|indian|language|speaking|speaker|interpreter|descent|heritage)$/i.test(nextWord)))
+        || /(?:\b(?:speaks?|speaking|spoken|language|interpreter|fluent\s+in)[:\s]+)$/i.test(text.slice(Math.max(0, toks[i].start - 24), toks[i].start));
+      const sentenceStart = i === 0 || endsSentence(prev) || /(?:[\n•*]|[.!?]\s)\s*$/.test(before) || /^\s*$/.test(before);
+      const c = { i, e, a, b, name, single, allDict, clinical, given, other, eponym, sentenceStart, letters, end: b, conf: 0, why: '' };
+      // 1. a state that has a place of this name: "Normal, IL", "Rochester MN", "Reading, Pennsylvania"
+      let st = null, stEnd = b, comma = false;
+      { const m = after.match(/^(,?)[ \t]{1,2}([A-Z]{2})(?![\p{L}\d])/u);
+        if (m && LEX.STATE_ABBR_SET.has(m[2]) && LEX.US_STATES[m[2]]) { st = m[2]; stEnd = b + m[0].length; comma = !!m[1]; }
+        else { const f = after.match(/^,[ \t]{1,2}(\p{Lu}\p{Ll}+(?:[ \t]\p{Lu}\p{Ll}+)?)(?![\p{L}])/u); const ab = f && (stateAbbrOf(f[1]) || stateAbbrOf(f[1].split(/[ \t]/)[0])); if (ab) { st = ab; stEnd = b + (stateAbbrOf(f[1]) ? f[0].length : f[0].length - f[1].length + f[1].split(/[ \t]/)[0].length); comma = true; } } }
+      const zipAfter = /^,?[ \t]{1,2}\d{5}(?!\d)/.test(text.slice(stEnd, stEnd + 9)) || (st === null && /^,?[ \t]{1,2}\d{5}(?![\d\/:.])(?!\s*(?:mg|mcg|ml|units?|cells|copies|iu)\b)/i.test(after));
+      const prepWord = prev && prev.word && /^[ \t]$/.test(text.slice(prev.fullEnd, a)) ? prev.core.toLowerCase() : '';
+      const toward = /^(?:in|near|outside|around|toward|towards)$/.test(prepWord)
+        || (prepWord === 'from' && (!given || /(?:\b(?:is|are|was|were|originally|comes?|came|moved|moving|drove|drives?|driving|travel\w*|commut\w*|flew|flying|fl(?:y|ies)|visiting|relocat\w*|way|back|up|down|here|in|trip|pt|patient)\s+from\s)$/i.test(before)))
+        || (prepWord === 'to' && /(?:\b(?:mov\w+|relocat\w+|dr[io]v\w+|travel\w*|fl(?:y|ew|ying|ies)|trips?|commut\w+|going|goes|went|return\w*|back|transferr?\w*|retir\w+)\s+(?:[\p{L}'’]+\s+){0,2}to\s)$/iu.test(before))
+        || (prepWord === 'of' && /(?:\b(?:native|resident|residents|outside|north|south|east|west|out|outskirts|suburbs?|town|city|village)\s+of\s)$/i.test(before));
+      const credential = st && /^(?:PA|MD)$/.test(st) && single && (given || (prev && prev.word && (prev.cap || isHon(prev)) && /^[ \t]$/.test(text.slice(prev.fullEnd, a)))) && !toward;
+      if (st && PL.hasPair(name, st) && !credential && (comma || !PLACE_WORDISH_ST.test(st) || zipAfter || toward || capsCell) && free(a, stEnd)) { c.end = stEnd; c.conf = 0.85; c.why = 'state'; }
+      else if (zipAfter && !other && !clinical && !eponym) { c.end = st && free(a, stEnd) ? stEnd : b; c.conf = 0.8; c.why = 'zip'; }
+      else if (other || eponym || (single && letters < 4)) { /* not a place here */ }
+      else if (toward && !clinical && ((!allDict && !given) || ((PLACE_FOLLOW.test(after) || PLACE_SITE.test(after)) && (!allDict || PLACE_LEFT.test(before))))) { c.conf = allDict || given ? 0.6 : 0.7; c.why = 'prep'; }
+      else if (PLACE_SITE.test(after) && !clinical && !(sentenceStart && allDict && single)) { c.conf = allDict || given ? 0.6 : 0.7; c.why = 'site'; }
+      else {
+        // an item of its own in brackets or in a list: place context comes from what stands beside it
+        const leftDelim = /(?:[(,;\/:]|\b(?:and|or)|&)\s*$/.test(before), rightDelim = /^(?:['’]s)?\s*(?:[),;\/.]|$|(?:and|or|&)(?![\p{L}]))/.test(after);
+        if (leftDelim && rightDelim && !clinical) {
+          const open = text.lastIndexOf('(', a), close = text.indexOf(')', b);
+          if (open >= 0 && close >= 0 && close - open <= 80 && text.lastIndexOf(')', a) < open && !text.slice(b, close).includes('(')) {
+            const inside = text.slice(open + 1, a) + ' ' + text.slice(b, close);
+            if (PLACE_SPECIALTY.test(inside) || spans.some((sp) => isLoc(sp) && sp.start > open && sp.end <= close)) { c.conf = allDict || given ? 0.6 : 0.65; c.why = 'bracket'; }
+          }
+          if (!c.conf) c.listItem = true;
+        }
+        // no context at all: only a word that is no dictionary word and no given name, and that the name logic left alone
+        // (a surname the strict pass would take stays a name; a common surname is a place only when a large city has the name)
+        if (!c.conf && !clinical && !given && !allDict && !(capsCell && letters < 5) && !(single && PLACE_COUNTRY.test(name)) && (!single || !LEX.isSurname(name) || (LEX.isEnglishWord(name) && (!LEX.isStrongName(name) || LEX.CITY_SET.has(lname) || PL.isMajor(name))))) { c.conf = sentenceStart ? 0.45 : 0.5; c.why = 'bare'; }
+      }
+      cands.push(c); i = e - 1;
+    }
+    // a list: an ambiguous item beside a place is a place too ("PCPs in Akron, Reading and Flint")
+    const between = (x, y) => /^(?:['’]s)?\s*(?:[,;\/]|,?\s*(?:and|or)(?![\p{L}])|&)\s*$/.test(text.slice(x, y)) && y - x <= 8;
+    const placeEnds = () => spans.filter(isLoc).map((sp) => [sp.start, sp.end]).concat(cands.filter((c) => c.conf).map((c) => [c.a, c.end]));
+    for (let changed = true; changed;) {
+      changed = false; const known = placeEnds();
+      for (const c of cands) {
+        if (c.conf || !c.listItem) continue;
+        if (known.some(([s2, e2]) => (e2 <= c.a && between(e2, c.a)) || (s2 >= c.b && between(c.b, s2)))) { c.conf = 0.6; c.why = 'list'; changed = true; }
+      }
+    }
+    for (const c of cands) if (c.conf && free(c.a, c.end)) add.push({ start: c.a, end: c.end, type: 'LOCATION', source: `place:${c.why}`, conf: c.conf, text: text.slice(c.a, c.end) });
+    if (!add.length) return spans;
+    return spans.concat(add).sort((x, y) => x.start - y.start);
+  }
+
   function detectTextCore(text, ctx) {
     if (!text) return [];
     const cfg = ctx.cfg;
@@ -3255,6 +3387,7 @@
     if (cfg.layers.model) out = finishNames(text, out, cfg);
     out = compoundNameParts(text, out, ctx);
     out = numberAfterName(text, out);
+    if (cfg.layers.model) out = placeSpans(text, out, cfg);
     if (cfg.strict) out = strictSpans(text, out, cfg);
     if (manual && manual.remove) {
       // a removed span must stay removed even if a merged/propagated span re-covers exactly it
