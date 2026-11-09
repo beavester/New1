@@ -1,0 +1,1293 @@
+[
+  {
+    "id": "m18-t01",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "DOB",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "03/14/2026",
+        "Okafor, Chidinma",
+        "E4471029",
+        "07/22/1961",
+        "FOLFOX C3D1",
+        "Tolerated well. Daughter Adaeze drove her today."
+      ],
+      [
+        "03/14/2026",
+        "Brennan, Thomas",
+        "E4471877",
+        "11/02/1954",
+        "Pembrolizumab",
+        "Pre-meds given. Wife Maureen requests call back 555-0142."
+      ],
+      [
+        "03/28/2026",
+        "Okafor, Chidinma",
+        "E4471029",
+        "07/22/1961",
+        "FOLFOX C3D15",
+        "Mild neuropathy grade 1. Outside PCP Dr. Iwu notified."
+      ],
+      [
+        "03/28/2026",
+        "Saldana, Rosario",
+        "E4472310",
+        "05/09/1970",
+        "AC-T",
+        "Port flushed, good blood return."
+      ]
+    ],
+    "phi": [
+      "03/14/2026",
+      "Okafor, Chidinma",
+      "E4471029",
+      "07/22/1961",
+      "Adaeze",
+      "Brennan, Thomas",
+      "E4471877",
+      "11/02/1954",
+      "Maureen",
+      "555-0142",
+      "03/28/2026",
+      "Iwu",
+      "Saldana, Rosario",
+      "E4472310",
+      "05/09/1970"
+    ],
+    "keep": [
+      "Tolerated well",
+      "Mild neuropathy grade 1",
+      "Port flushed, good blood return"
+    ],
+    "category": "routine",
+    "note": "Standard export; relatives and outside PCP in comments."
+  },
+  {
+    "id": "m18-t02",
+    "kind": "table",
+    "headers": [
+      "Dt",
+      "Pt Name",
+      "Pt MRN",
+      "Age",
+      "Attending",
+      "Tx",
+      "Comment"
+    ],
+    "rows": [
+      [
+        "4/2/26",
+        "Tran, Minh Duc",
+        "880213",
+        "67",
+        "Dr. Halvorsen",
+        "Rituximab",
+        "Slow titration per protocol, no reaction."
+      ],
+      [
+        "4/2/26",
+        "Kowalczyk, Janina",
+        "880457",
+        "72",
+        "Dr. Halvorsen",
+        "Zoledronic acid",
+        "Creatinine ok. Son Piotr waiting in lobby."
+      ],
+      [
+        "4/9/26",
+        "Tran, Minh Duc",
+        "880213",
+        "67",
+        "Dr. Halvorsen",
+        "Rituximab",
+        "Mild chills at 150 mg/hr, rate held, resolved."
+      ],
+      [
+        "4/9/26",
+        "Abdi, Hodan",
+        "881002",
+        "45",
+        "Dr. Pereira",
+        "Iron sucrose",
+        "Pt asks results be sent to her husband Mohamed."
+      ]
+    ],
+    "phi": [
+      "4/2/26",
+      "Tran, Minh Duc",
+      "880213",
+      "Halvorsen",
+      "Kowalczyk, Janina",
+      "880457",
+      "Piotr",
+      "4/9/26",
+      "Abdi, Hodan",
+      "881002",
+      "Pereira",
+      "Mohamed"
+    ],
+    "keep": [
+      "Slow titration per protocol, no reaction",
+      "Creatinine ok",
+      "rate held, resolved"
+    ],
+    "category": "routine",
+    "note": "Abbreviated headers, short dates, ages under 90 not PHI; attending names listed."
+  },
+  {
+    "id": "m18-t03",
+    "kind": "table",
+    "headers": [
+      "Appointment Date",
+      "Patient",
+      "MRN",
+      "Acct #",
+      "Phone",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "05/06/2026",
+        "Delacroix, Marie-Josee",
+        "M20931145",
+        "A55103388",
+        "(555) 013-2241",
+        "Carboplatin/Paclitaxel",
+        "C2D1. Labs within parameters, proceed."
+      ],
+      [
+        "05/06/2026",
+        "Haddad, Samir",
+        "M20931880",
+        "A55104012",
+        "555-013-7720",
+        "Nivolumab",
+        "TSH pending. Cough improved since last visit."
+      ],
+      [
+        "05/13/2026",
+        "Delacroix, Marie-Josee",
+        "M20931145",
+        "A55103388",
+        "(555) 013-2241",
+        "Carboplatin/Paclitaxel",
+        "C2D8 weekly paclitaxel only. Husband Rejean at bedside."
+      ],
+      [
+        "05/13/2026",
+        "Villanueva, Corazon",
+        "M20932217",
+        "A55104590",
+        "555-013-9184",
+        "Bortezomib SQ",
+        "Injection site L abdomen, no erythema."
+      ],
+      [
+        "05/20/2026",
+        "Haddad, Samir",
+        "M20931880",
+        "A55104012",
+        "555-013-7720",
+        "Nivolumab",
+        "Rescheduled from 5/19 at pt request."
+      ]
+    ],
+    "phi": [
+      "05/06/2026",
+      "Delacroix, Marie-Josee",
+      "M20931145",
+      "A55103388",
+      "(555) 013-2241",
+      "Haddad, Samir",
+      "M20931880",
+      "A55104012",
+      "555-013-7720",
+      "05/13/2026",
+      "Rejean",
+      "Villanueva, Corazon",
+      "M20932217",
+      "A55104590",
+      "555-013-9184",
+      "05/20/2026",
+      "5/19"
+    ],
+    "keep": [
+      "Labs within parameters, proceed",
+      "Cough improved since last visit",
+      "Injection site L abdomen, no erythema"
+    ],
+    "category": "routine",
+    "note": "Account and phone columns, repeated patient."
+  },
+  {
+    "id": "m18-t04",
+    "kind": "table",
+    "headers": [
+      "Visit Dt",
+      "Pat Name",
+      "MRN",
+      "DOB",
+      "Prov",
+      "Chair",
+      "Notes"
+    ],
+    "rows": [
+      [
+        "06/01/2026",
+        "Pierre-Louis, Guerline",
+        "3304419",
+        "02/14/1958",
+        "Nakamura",
+        "Chair 7",
+        "Herceptin maintenance q3w. Echo due 07/2026."
+      ],
+      [
+        "06/01/2026",
+        "Rossi, Gianfranco",
+        "3304872",
+        "09/30/1949",
+        "Nakamura",
+        "Chair 3",
+        "Pt reports diarrhea x2 days, loperamide reviewed."
+      ],
+      [
+        "06/22/2026",
+        "Pierre-Louis, Guerline",
+        "3304419",
+        "02/14/1958",
+        "Nakamura",
+        "Chair 7",
+        "Sister Nadege accompanied. No new complaints."
+      ]
+    ],
+    "phi": [
+      "06/01/2026",
+      "Pierre-Louis, Guerline",
+      "3304419",
+      "02/14/1958",
+      "Nakamura",
+      "Rossi, Gianfranco",
+      "3304872",
+      "09/30/1949",
+      "06/22/2026",
+      "Nadege"
+    ],
+    "keep": [
+      "Herceptin maintenance q3w",
+      "loperamide reviewed",
+      "No new complaints"
+    ],
+    "category": "routine",
+    "note": "Prov column with surname only; chair numbers are not PHI."
+  },
+  {
+    "id": "m18-t05",
+    "kind": "table",
+    "headers": [
+      "Appt",
+      "Patient Name / MRN",
+      "DOB/Age",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "07/07/2026 0830",
+        "Bui, Thanh Huong / 51002873",
+        "03/03/1934 (92y)",
+        "Azacitidine D1",
+        "92 yo, frail. Grandson Kevin Bui handles meds, cell 555-0177."
+      ],
+      [
+        "07/07/2026 0900",
+        "Adeyemi, Oluwaseun / 51003310",
+        "12/18/1979 (46y)",
+        "Daratumumab",
+        "Infusion reaction hx, premedicate. Insurance Aetna member W882041937."
+      ],
+      [
+        "07/08/2026 0830",
+        "Bui, Thanh Huong / 51002873",
+        "03/03/1934 (92y)",
+        "Azacitidine D2",
+        "Kevin called to say she will be late."
+      ]
+    ],
+    "phi": [
+      "07/07/2026 0830",
+      "Bui, Thanh Huong / 51002873",
+      "03/03/1934 (92y)",
+      "92",
+      "Kevin Bui",
+      "555-0177",
+      "Adeyemi, Oluwaseun / 51003310",
+      "12/18/1979 (46y)",
+      "W882041937",
+      "07/08/2026 0830",
+      "Kevin"
+    ],
+    "keep": [
+      "frail",
+      "Infusion reaction hx, premedicate",
+      "Azacitidine D2"
+    ],
+    "category": "hard",
+    "note": "Merged name/MRN and DOB/age columns; age over 89 in comment; member ID."
+  },
+  {
+    "id": "m18-t06",
+    "kind": "table",
+    "headers": [
+      "Date",
+      "Last Name",
+      "First Name",
+      "MRN",
+      "Drug",
+      "RN Comment"
+    ],
+    "rows": [
+      [
+        "08/03/2026",
+        "Park",
+        "Ji-hoon",
+        "KC-118204",
+        "Gemcitabine",
+        "Neutrophils 1.6, proceeded per Dr. Stavros."
+      ],
+      [
+        "08/03/2026",
+        "Fitzgerald",
+        "Siobhan",
+        "KC-118377",
+        "Trastuzumab deruxtecan",
+        "Mild nausea, ondansetron given."
+      ],
+      [
+        "08/10/2026",
+        "Park",
+        "Ji-hoon",
+        "KC-118204",
+        "Gemcitabine",
+        "Wife Seo-yeon asked about parking validation."
+      ],
+      [
+        "08/10/2026",
+        "Mbeki",
+        "Thandiwe",
+        "KC-118590",
+        "Pemetrexed",
+        "B12 injection given, folic acid adherence confirmed."
+      ]
+    ],
+    "phi": [
+      "08/03/2026",
+      "Park",
+      "Ji-hoon",
+      "KC-118204",
+      "Stavros",
+      "Fitzgerald",
+      "Siobhan",
+      "KC-118377",
+      "08/10/2026",
+      "Seo-yeon",
+      "Mbeki",
+      "Thandiwe",
+      "KC-118590"
+    ],
+    "keep": [
+      "Mild nausea, ondansetron given",
+      "folic acid adherence confirmed",
+      "Neutrophils 1.6"
+    ],
+    "category": "routine",
+    "note": "Split last/first name columns."
+  },
+  {
+    "id": "m18-t07",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Pt",
+      "MRN",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "09/14/2026",
+        "Hope, Faith",
+        "60011845",
+        "Faith says pain 3/10. Will recheck BP after infusion."
+      ],
+      [
+        "09/14/2026",
+        "Child, Rose",
+        "60012290",
+        "Port accessed without issue. Rose asks for warm blanket, will bring her own next time."
+      ],
+      [
+        "09/21/2026",
+        "Hope, Faith",
+        "60011845",
+        "Mother June Hope brought her; June has her own appt in March."
+      ],
+      [
+        "09/21/2026",
+        "Long, Grant",
+        "60013007",
+        "Grant application for copay assistance submitted. Long infusion, 4 hr."
+      ]
+    ],
+    "phi": [
+      "09/14/2026",
+      "Hope, Faith",
+      "60011845",
+      "Faith",
+      "Child, Rose",
+      "60012290",
+      "Rose",
+      "09/21/2026",
+      "June Hope",
+      "June",
+      "Long, Grant",
+      "60013007",
+      "Grant"
+    ],
+    "keep": [
+      "pain 3/10",
+      "Port accessed without issue",
+      "copay assistance submitted"
+    ],
+    "category": "hard",
+    "note": "Names that are common English words (Hope, Faith, Rose, Child, Long, Grant, June) mixed with same words used as ordinary words."
+  },
+  {
+    "id": "m18-t08",
+    "kind": "table",
+    "headers": [
+      "Appt Dt",
+      "Patient Name",
+      "MRN",
+      "DOB",
+      "Attending",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "10/05/2026",
+        "Sharma, Devika",
+        "00748812",
+        "04/11/1966",
+        "Dr. Oyelaran",
+        "Docetaxel",
+        "C4. Nail changes noted, cryotherapy mitts used."
+      ],
+      [
+        "10/05/2026",
+        "Castillo, Ernesto",
+        "00749105",
+        "08/27/1952",
+        "Dr. Oyelaran",
+        "Leuprolide",
+        "Q3mo depot. Next due 01/05/2027."
+      ],
+      [
+        "10/05/2026",
+        "Sharma, Devika",
+        "00748812",
+        "04/11/1966",
+        "Dr. Oyelaran",
+        "Pegfilgrastim OBI",
+        "On-body injector applied R arm, lot checked."
+      ],
+      [
+        "10/12/2026",
+        "Lindqvist, Astrid",
+        "00749630",
+        "01/19/1975",
+        "Dr. Mahlangu",
+        "Ocrelizumab",
+        "Neurology referral, first dose split 300 mg."
+      ]
+    ],
+    "phi": [
+      "10/05/2026",
+      "Sharma, Devika",
+      "00748812",
+      "04/11/1966",
+      "Oyelaran",
+      "Castillo, Ernesto",
+      "00749105",
+      "08/27/1952",
+      "01/05/2027",
+      "10/12/2026",
+      "Lindqvist, Astrid",
+      "00749630",
+      "01/19/1975",
+      "Mahlangu"
+    ],
+    "keep": [
+      "Nail changes noted, cryotherapy mitts used",
+      "first dose split 300 mg",
+      "On-body injector applied R arm"
+    ],
+    "category": "routine",
+    "note": "Future appointment date in comment."
+  },
+  {
+    "id": "m18-t09",
+    "kind": "table",
+    "headers": [
+      "Svc Date",
+      "Name",
+      "ID",
+      "Emerg Contact",
+      "Emerg Ph",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "11/02/2026",
+        "Nwachukwu, Ifeanyi",
+        "MRN 7720914",
+        "Nwachukwu, Ngozi (wife)",
+        "555-0163",
+        "Cetuximab",
+        "Rash grade 2 face, doxycycline started."
+      ],
+      [
+        "11/02/2026",
+        "Gagnon, Luc",
+        "MRN 7721388",
+        "Gagnon, Sylvie (dtr)",
+        "555-0119",
+        "Atezolizumab",
+        "Lives at 48 Rue Beaubien, Lachine, needs ride home; cab voucher."
+      ],
+      [
+        "11/09/2026",
+        "Nwachukwu, Ifeanyi",
+        "MRN 7720914",
+        "Nwachukwu, Ngozi (wife)",
+        "555-0163",
+        "Cetuximab",
+        "Ngozi reports rash better."
+      ]
+    ],
+    "phi": [
+      "11/02/2026",
+      "Nwachukwu, Ifeanyi",
+      "7720914",
+      "Nwachukwu, Ngozi",
+      "555-0163",
+      "Gagnon, Luc",
+      "7721388",
+      "Gagnon, Sylvie",
+      "555-0119",
+      "48 Rue Beaubien",
+      "Lachine",
+      "11/09/2026",
+      "Ngozi"
+    ],
+    "keep": [
+      "Rash grade 2 face, doxycycline started",
+      "cab voucher",
+      "rash better"
+    ],
+    "category": "routine",
+    "note": "Emergency contact columns; street address and town in comment."
+  },
+  {
+    "id": "m18-t10",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "Age",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "01/12/2026",
+        "Hernandez, Maria Guadalupe",
+        "20055871",
+        "58",
+        "Oxaliplatin/5-FU",
+        "Pump disconnect scheduled 01/14/2026. Son Luis interprets."
+      ],
+      [
+        "01/12/2026",
+        "Ahmed, Farhan",
+        "20056402",
+        "63",
+        "Infliximab",
+        "GI clinic patient. Dr. Kessler (Riverbend GI) wants CBC faxed to 555-0188."
+      ],
+      [
+        "01/14/2026",
+        "Hernandez, Maria Guadalupe",
+        "20055871",
+        "58",
+        "5-FU pump d/c",
+        "Pump disconnected, no leakage, site clean."
+      ]
+    ],
+    "phi": [
+      "01/12/2026",
+      "Hernandez, Maria Guadalupe",
+      "20055871",
+      "01/14/2026",
+      "Luis",
+      "Ahmed, Farhan",
+      "20056402",
+      "Kessler",
+      "555-0188"
+    ],
+    "keep": [
+      "Pump disconnected, no leakage, site clean",
+      "GI clinic patient"
+    ],
+    "category": "routine",
+    "note": "Outside provider and fax number in comment."
+  },
+  {
+    "id": "m18-t11",
+    "kind": "table",
+    "headers": [
+      "Dt",
+      "Pt Name",
+      "MRN",
+      "Prov",
+      "Med",
+      "Cmt"
+    ],
+    "rows": [
+      [
+        "02/03/2026",
+        "Dang, Quoc Bao",
+        "PH0041177",
+        "Ferreira",
+        "IVIG",
+        "Weight 71 kg, dose 0.4 g/kg."
+      ],
+      [
+        "02/03/2026",
+        "Osei-Bonsu, Akosua",
+        "PH0041526",
+        "Ferreira",
+        "Ferric carboxymaltose",
+        "Second dose. Hgb 9.8."
+      ],
+      [
+        "02/04/2026",
+        "Dang, Quoc Bao",
+        "PH0041177",
+        "Ferreira",
+        "IVIG",
+        "Day 2. Headache, acetaminophen given."
+      ],
+      [
+        "02/05/2026",
+        "Dang, Quoc Bao",
+        "PH0041177",
+        "Ferreira",
+        "IVIG",
+        "Day 3. Daughter Linh picking him up."
+      ],
+      [
+        "02/10/2026",
+        "Osei-Bonsu, Akosua",
+        "PH0041526",
+        "Ferreira",
+        "Ferric carboxymaltose",
+        "Phos check ordered."
+      ]
+    ],
+    "phi": [
+      "02/03/2026",
+      "Dang, Quoc Bao",
+      "PH0041177",
+      "Ferreira",
+      "Osei-Bonsu, Akosua",
+      "PH0041526",
+      "02/04/2026",
+      "02/05/2026",
+      "Linh",
+      "02/10/2026"
+    ],
+    "keep": [
+      "Weight 71 kg, dose 0.4 g/kg",
+      "Headache, acetaminophen given",
+      "Phos check ordered"
+    ],
+    "category": "routine",
+    "note": "Multi-day IVIG course, same patient on several rows."
+  },
+  {
+    "id": "m18-t12",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "03/02/2026",
+        "Cohen, Ruth",
+        "41100236",
+        "Pt prefers to be called 'Ruthie'. Email results to ruthcohen.fake@example.com."
+      ],
+      [
+        "03/02/2026",
+        "Rahman, Nusrat",
+        "41100589",
+        "Portal msg: pt uploaded photo to mychart.example.org/pt/41100589/photos."
+      ],
+      [
+        "03/09/2026",
+        "Cohen, Ruth",
+        "41100236",
+        "Ruthie stable. Husband Avraham asked re: travel to Haifa next month."
+      ]
+    ],
+    "phi": [
+      "03/02/2026",
+      "Cohen, Ruth",
+      "41100236",
+      "Ruthie",
+      "ruthcohen.fake@example.com",
+      "Rahman, Nusrat",
+      "41100589",
+      "mychart.example.org/pt/41100589/photos",
+      "03/09/2026",
+      "Avraham"
+    ],
+    "keep": [
+      "stable",
+      "Portal msg"
+    ],
+    "category": "routine",
+    "note": "Nickname, email, personal URL with MRN embedded."
+  },
+  {
+    "id": "m18-t13",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "DOB",
+      "Phone",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "04/06/2026",
+        "Santos, Rodel",
+        "90310044",
+        "06/15/1971",
+        "555-0131",
+        "R-CHOP C1",
+        "Tumor lysis precautions, allopurinol started."
+      ],
+      [
+        "04/06/2026",
+        "Wojcik, Agnieszka",
+        "90310378",
+        "10/02/1983",
+        "555-0154",
+        "Vedolizumab",
+        "Pre-infusion vitals stable, 30 min infusion."
+      ],
+      [
+        "04/27/2026",
+        "Santos, Rodel",
+        "90310044",
+        "06/15/1971",
+        "555-0131",
+        "R-CHOP C2",
+        "Partner Jomar asks for work note."
+      ],
+      [
+        "04/27/2026",
+        "Ibrahim, Layla",
+        "90310921",
+        "12/25/1990",
+        "555-0108",
+        "Natalizumab",
+        "JCV antibody index pending."
+      ]
+    ],
+    "phi": [
+      "04/06/2026",
+      "Santos, Rodel",
+      "90310044",
+      "06/15/1971",
+      "555-0131",
+      "Wojcik, Agnieszka",
+      "90310378",
+      "10/02/1983",
+      "555-0154",
+      "04/27/2026",
+      "Jomar",
+      "Ibrahim, Layla",
+      "90310921",
+      "12/25/1990",
+      "555-0108"
+    ],
+    "keep": [
+      "Tumor lysis precautions, allopurinol started",
+      "Pre-infusion vitals stable",
+      "JCV antibody index pending"
+    ],
+    "category": "routine",
+    "note": "Plain export with phone column."
+  },
+  {
+    "id": "m18-t14",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "05/04/2026",
+        "Warsame, Faadumo",
+        "73390012",
+        "Pt says sister faadumo's daughter (hamdi) is a nurse at another hospital."
+      ],
+      [
+        "05/04/2026",
+        "Morin, Gilles",
+        "73390455",
+        "spoke w/ dr. bouchard at st-jerome clinic, ok to give dose."
+      ],
+      [
+        "05/11/2026",
+        "Warsame, Faadumo",
+        "73390012",
+        "hamdi called re appt time."
+      ]
+    ],
+    "phi": [
+      "05/04/2026",
+      "Warsame, Faadumo",
+      "73390012",
+      "faadumo",
+      "hamdi",
+      "Morin, Gilles",
+      "73390455",
+      "bouchard",
+      "st-jerome",
+      "05/11/2026"
+    ],
+    "keep": [
+      "ok to give dose",
+      "called re appt time"
+    ],
+    "category": "hard",
+    "note": "Lowercase names and outside clinic town in comments."
+  },
+  {
+    "id": "m18-t15",
+    "kind": "table",
+    "headers": [
+      "Date of Svc",
+      "Pt Name",
+      "MRN",
+      "Attending",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "06/08/2026",
+        "Ortiz, Benjamin",
+        "18820443",
+        "Dr. Achterberg",
+        "Denosumab",
+        "Calcium 9.1, ok to give. Dental clearance on file."
+      ],
+      [
+        "06/08/2026",
+        "Le, Kim Anh",
+        "18820791",
+        "Dr. Achterberg",
+        "Pertuzumab/Trastuzumab",
+        "Phesgo SQ, observed 30 min."
+      ],
+      [
+        "06/08/2026",
+        "Ortiz, Benjamin",
+        "18820443",
+        "Dr. Achterberg",
+        "Zoledronic acid",
+        "Order changed, see above."
+      ],
+      [
+        "06/29/2026",
+        "Le, Kim Anh",
+        "18820791",
+        "Dr. Achterberg",
+        "Pertuzumab/Trastuzumab",
+        "Brother Hoang drove. LVEF 58% on last echo."
+      ]
+    ],
+    "phi": [
+      "06/08/2026",
+      "Ortiz, Benjamin",
+      "18820443",
+      "Achterberg",
+      "Le, Kim Anh",
+      "18820791",
+      "06/29/2026",
+      "Hoang"
+    ],
+    "keep": [
+      "Calcium 9.1, ok to give",
+      "observed 30 min",
+      "LVEF 58% on last echo"
+    ],
+    "category": "routine",
+    "note": "Short surname Le."
+  },
+  {
+    "id": "m18-t16",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "DOB",
+      "Device",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "07/13/2026",
+        "Castellanos, Ximena",
+        "55209183",
+        "02/28/1962",
+        "Port",
+        "Pump serial SN 4471-0098-22 swapped, alarm fault."
+      ],
+      [
+        "07/13/2026",
+        "Kim, Dong-hyun",
+        "55209540",
+        "09/09/1957",
+        "PICC",
+        "Wife Eun-ji will flush at home. Home health agency number 555-0195."
+      ],
+      [
+        "07/15/2026",
+        "Castellanos, Ximena",
+        "55209183",
+        "02/28/1962",
+        "Port",
+        "Ambulatory pump returned, serial 4471-0098-22 sent to biomed."
+      ],
+      [
+        "07/20/2026",
+        "Kim, Dong-hyun",
+        "55209540",
+        "09/09/1957",
+        "PICC",
+        "Dressing change. Drove himself, plate 7KDX219 in lot B."
+      ]
+    ],
+    "phi": [
+      "07/13/2026",
+      "Castellanos, Ximena",
+      "55209183",
+      "02/28/1962",
+      "4471-0098-22",
+      "Kim, Dong-hyun",
+      "55209540",
+      "09/09/1957",
+      "Eun-ji",
+      "555-0195",
+      "07/15/2026",
+      "07/20/2026",
+      "7KDX219"
+    ],
+    "keep": [
+      "alarm fault",
+      "Dressing change",
+      "sent to biomed"
+    ],
+    "category": "hard",
+    "note": "Device serial and licence plate in comments."
+  },
+  {
+    "id": "m18-t17",
+    "kind": "table",
+    "headers": [
+      "Appt",
+      "Patient",
+      "MRN",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "08/17/2026",
+        "Sesay, Mariatu",
+        "63004418",
+        "Carfilzomib",
+        "Hydration given pre and post. BP 142/88."
+      ],
+      [
+        "08/17/2026",
+        "O'Connell, Declan",
+        "63004602",
+        "Durvalumab",
+        "Pt asked about clinical trial, Dr. Venkataraman to discuss."
+      ],
+      [
+        "08/18/2026",
+        "Sesay, Mariatu",
+        "63004418",
+        "Carfilzomib",
+        "D2. Husband Abubakar present."
+      ],
+      [
+        "08/24/2026",
+        "Sesay, Mariatu",
+        "63004418",
+        "Carfilzomib",
+        "D8. Cr stable."
+      ],
+      [
+        "08/31/2026",
+        "O'Connell, Declan",
+        "63004602",
+        "Durvalumab",
+        "Rash on trunk, topical steroid."
+      ]
+    ],
+    "phi": [
+      "08/17/2026",
+      "Sesay, Mariatu",
+      "63004418",
+      "O'Connell, Declan",
+      "63004602",
+      "Venkataraman",
+      "08/18/2026",
+      "Abubakar",
+      "08/24/2026",
+      "08/31/2026"
+    ],
+    "keep": [
+      "Hydration given pre and post",
+      "Rash on trunk, topical steroid",
+      "Cr stable"
+    ],
+    "category": "routine",
+    "note": "Apostrophe surname; in-house attending named."
+  },
+  {
+    "id": "m18-t18",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "DOB",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "09/08/2026",
+        "Moreau, Celine",
+        "82200157",
+        "11/30/1931",
+        "Pt is 94, from Trois-Rivieres, ZIP on file 01234 wrong - updated to 01236."
+      ],
+      [
+        "09/08/2026",
+        "Alvarez, Jesus",
+        "82200498",
+        "05/05/1960",
+        "Jesus reports nausea; prayer group visited. Visitor Pastor Eduardo Montoya."
+      ],
+      [
+        "09/15/2026",
+        "Moreau, Celine",
+        "82200157",
+        "11/30/1931",
+        "Niece Josee at 22 Maple Ct asked for copy of calendar."
+      ]
+    ],
+    "phi": [
+      "09/08/2026",
+      "Moreau, Celine",
+      "82200157",
+      "11/30/1931",
+      "94",
+      "Trois-Rivieres",
+      "01234",
+      "01236",
+      "Alvarez, Jesus",
+      "82200498",
+      "05/05/1960",
+      "Jesus",
+      "Eduardo Montoya",
+      "09/15/2026",
+      "Josee",
+      "22 Maple Ct"
+    ],
+    "keep": [
+      "reports nausea",
+      "asked for copy of calendar"
+    ],
+    "category": "hard",
+    "note": "Age over 89, ZIP codes, address, name Jesus, visitor name."
+  },
+  {
+    "id": "m18-t19",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Pt Name",
+      "MRN",
+      "DOB",
+      "Attending",
+      "Regimen",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "10/19/2026",
+        "Reyes, Imelda",
+        "37712086",
+        "07/04/1968",
+        "Dr. Whitcombe",
+        "Paclitaxel weekly",
+        "Wk 6 of 12. Neuropathy grade 1, continue."
+      ],
+      [
+        "10/19/2026",
+        "Yusuf, Abdirahman",
+        "37712455",
+        "03/21/1955",
+        "Dr. Whitcombe",
+        "Cabazitaxel",
+        "Steroid taper reviewed. Son Abdullahi to bring medication list."
+      ],
+      [
+        "10/26/2026",
+        "Reyes, Imelda",
+        "37712086",
+        "07/04/1968",
+        "Dr. Whitcombe",
+        "Paclitaxel weekly",
+        "Wk 7 of 12. Held for ANC 0.9."
+      ],
+      [
+        "10/26/2026",
+        "Nowak, Tadeusz",
+        "37712810",
+        "12/01/1948",
+        "Dr. Whitcombe",
+        "Belimumab",
+        "Lupus clinic referral. Tolerated."
+      ]
+    ],
+    "phi": [
+      "10/19/2026",
+      "Reyes, Imelda",
+      "37712086",
+      "07/04/1968",
+      "Whitcombe",
+      "Yusuf, Abdirahman",
+      "37712455",
+      "03/21/1955",
+      "Abdullahi",
+      "10/26/2026",
+      "Nowak, Tadeusz",
+      "37712810",
+      "12/01/1948"
+    ],
+    "keep": [
+      "Neuropathy grade 1, continue",
+      "Held for ANC 0.9",
+      "Steroid taper reviewed"
+    ],
+    "category": "routine",
+    "note": "Standard export."
+  },
+  {
+    "id": "m18-t20",
+    "kind": "table",
+    "headers": [
+      "Appt Date",
+      "Patient Name",
+      "MRN",
+      "Comments"
+    ],
+    "rows": [
+      [
+        "11/16/2026",
+        "Jean-Baptiste, Wislande",
+        "29400113",
+        "Called pt's cousin Fritznel Jean-Baptiste at 555-0126 x203 to confirm."
+      ],
+      [
+        "11/16/2026",
+        "Agarwal, Rohan",
+        "29400467",
+        "SSN 000-55-1234 written on paper consent, flag for HIM."
+      ],
+      [
+        "11/23/2026",
+        "Jean-Baptiste, Wislande",
+        "29400113",
+        "Pt stated DOB as 3rd of April 1977 when verifying ID."
+      ],
+      [
+        "11/23/2026",
+        "Agarwal, Rohan",
+        "29400467",
+        "Mother Sunita Agarwal visiting from Pune."
+      ]
+    ],
+    "phi": [
+      "11/16/2026",
+      "Jean-Baptiste, Wislande",
+      "29400113",
+      "Fritznel Jean-Baptiste",
+      "555-0126",
+      "Agarwal, Rohan",
+      "29400467",
+      "000-55-1234",
+      "11/23/2026",
+      "3rd of April 1977",
+      "Sunita Agarwal",
+      "Pune"
+    ],
+    "keep": [
+      "flag for HIM",
+      "when verifying ID"
+    ],
+    "category": "hard",
+    "note": "Spelled-out DOB, SSN, phone extension, foreign city."
+  }
+]
