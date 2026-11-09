@@ -3326,8 +3326,8 @@
   const formMatcher = (forms) => {
     const lens = [...new Set([...forms].map((f) => f.length))].sort((x, y) => y - x);
     const firsts = new Set([...forms].map((f) => f[0]));
-    return {
-      lastIndex: 0,
+    // (a RegExp object that never matches, with its exec replaced: lastIndex, test() and instanceof keep working)
+    return Object.assign(/(?!)/g, {
       exec(text) {
         const n = text.length;
         for (let i = this.lastIndex; i < n; i++) {
@@ -3341,7 +3341,7 @@
         }
         this.lastIndex = 0; return null;
       },
-    };
+    });
   };
   function collectPropagation(allSpans, cfg, seedTerms, ambiguousOnly) {
     const terms = new Set(), ambTerms = new Set(), handleParts = new Set(), placeTerms = new Set(), cueOnly = new Set();
@@ -3398,15 +3398,18 @@
     if (!terms.size && !ambTerms.size && !handleParts.size && !placeTerms.size) return null;
     const mk = (set) => new RegExp(`(?<![A-Za-z0-9])(?:${[...set].sort((a, b) => b.length - a.length).map(escapeRe).join('|')})(?![A-Za-z0-9])`, 'g'); // case-sensitive on purpose
     // the names, in every form each is written in (a letter of any script bounds a match: "ania" is not found inside "Bośnia")
-    const allForms = new Set(); if (!ambiguousOnly) terms.forEach((t) => propagationForms(t).forEach((x) => allForms.add(x)));
+    // (a "name" longer than any name is not looked for again: the lookup stays linear on a hostile cell)
+    const allForms = new Set(); if (!ambiguousOnly) terms.forEach((t) => { if (t.length <= 80) propagationForms(t).forEach((x) => allForms.add(x)); });
     const re = terms.size && !ambiguousOnly ? formMatcher(allForms) : /(?!)/g;
     re.terms = [...terms];
     // the names worth keeping for the rest of the session (see processTableCore): found on evidence of their own, and no
     // ordinary, clinical or drug word, so one input's mistake is not repeated in the next
     const carryWord = (w) => { const lc = w.toLowerCase(); return w.length >= 3 && /^\p{Lu}/u.test(w) && !LEX.isAmbiguous(w) && !LEX.isClinical(w) && !COMMON_CAP.has(lc) && !COMMON_LOWER.has(lc) && !relWord(w) && !monthIndex(w) && !DRUG_STEM.test(w) && !LEX.HONORIFIC_SET.has(lc) && ((!LEX.isEnglishWord(w) && !LEX.isDictWord(w)) || LEX.FIRST_SET.has(lc) || LEX.LAST_SET.has(lc)); };
     re.carry = [...terms].filter((t) => strong.has(t) && (/^(?:[A-Z]\.){1,2}[A-Z]$/.test(t) ? false : t.split(/[\s,]+/).filter(Boolean).every((w) => carryWord(w.replace(/['’]s$/, '').replace(/\.$/, '')))));
-    // a word-name in capitals ("GRACE asked") is the same person; never the words that are verbs or abbreviations in capitals
-    [...ambTerms].forEach((t) => { if (t.length >= 4 && /^[A-Z][a-z]+$/.test(t) && !cueOnly.has(t) && !/^(?:will|hope|mark|bill|may|grant|chase|rose|faith|joy|sue|pat|art|guy|bob)$/i.test(t) && !LEX.isClinical(t)) ambTerms.add(t.toUpperCase()); });
+    // a word-name in capitals is the same person only right before a person verb or a possessive ("GRACE asked", "WARD's
+    // wife"): capitals carry no sentence-start signal, so "per WARD policy" and "NO LONG infusions" stay (cueOnly, see
+    // detectText); never the words that are verbs or abbreviations in capitals
+    [...ambTerms].forEach((t) => { if (t.length >= 4 && /^[A-Z][a-z]+$/.test(t) && !cueOnly.has(t) && !/^(?:will|hope|mark|bill|may|grant|chase|rose|faith|joy|sue|pat|art|guy|bob)$/i.test(t) && !LEX.isClinical(t)) { ambTerms.add(t.toUpperCase()); cueOnly.add(t.toUpperCase()); } });
     re.ambiguous = ambTerms.size ? mk(ambTerms) : null;
     if (re.ambiguous) re.ambiguous.cueOnly = cueOnly;
     re.places = placeTerms.size ? mk(placeTerms) : null;
@@ -5089,7 +5092,14 @@
   // processTableCore), as the self-check looks for them: in any letter case, hyphenated, spaced or run together, with or
   // without accents. Only a name that is no ordinary, clinical or made-up word is looked for this way.
   const ALIAS_CHECK = new WeakMap();
-  function aliasCheckKeys(registry) {
+  // (a name the user allowlisted is not looked for: the detector leaves it on purpose)
+  function aliasCheckKeys(registry, allow) {
+    const all = aliasCheckKeysAll(registry);
+    if (!allow || !allow.size || !all.length) return all;
+    const kept = all.filter((k) => !allow.has(k) && !k.split(/[-\s]+/).some((h) => allow.has(h)));
+    return kept.length === all.length ? all : kept;
+  }
+  function aliasCheckKeysAll(registry) {
     const terms = registry && registry.aliasTerms instanceof Map ? registry.aliasTerms : null;
     if (!terms || !terms.size) return [];
     const taken = registry.taken instanceof Set ? registry.taken : new Set();
@@ -5110,7 +5120,7 @@
   function selfCheckScan(result, o, census, cfg, ix) {
     const { hits, providerHits, coincidences, unnamed, digitKeys, tokenIndex, tokenScan, initialPairs, stemsByInitial, studyCodes, fuzzy, outRows, headers, digitsOf, dobHasYear, isMonthOfDate } = ix;
     void digitsOf;
-    const aliasKeys = aliasCheckKeys(result.registry);
+    const aliasKeys = aliasCheckKeys(result.registry, cfg && cfg.allowSet instanceof Set ? cfg.allowSet : null);
     const aliasScan = aliasKeys.length ? (aliasKeys.scan || (aliasKeys.scan = makeScan(aliasKeys))) : null;
     const ageAfterName = /(?:\b[A-Z][a-z]+,?\s|\b(?:turned|turning|is|now|age|aged)\s)(9\d|1[01]\d)(?![\d+\/%:]|\.\d|\s*(?:mg|mcg|kg|lb|lbs|ml|mL|cc|units?|%|mmhg|bpm|min|hrs?|yo|y\/o|yrs?|years?|day|days|x))/g;
     const vitalBefore = /\b(?:hr|bp|spo2|o2|sat|sats|pulse|wt|weight|glucose|bg|temp|k|na|cr|plt|hgb|wbc|anc|rate|dose|level|count|score|mg|egfr|inr|ldh|auc|room|chair|bay|ext|x|cycle|day|grade|stage|pain)\s*$/i;
@@ -5243,7 +5253,9 @@
     const rareName = (w) => w.length >= 4 && !LEX.isEnglishWord(w) && !LEX.isDictWord(w) && !LEX.isClinical(w);
     const rc = result.census && result.census.patients;
     if (rc && typeof rc.forEach === 'function') rc.forEach((p) => { if (p && p.entity && p.entity.nicks) p.entity.nicks.forEach((n) => String(n).split(/[\s,]+/).forEach((t) => { const w = t.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, ''); if (rareName(w)) { nameSet.add(w.toLowerCase()); if (/-/.test(w)) joinForms(w.toLowerCase()).forEach((x) => { if (x.length >= 4) nameSet.add(x); }); } })); });
-    aliasCheckKeys(result.registry).forEach((k) => { if (rareName(k)) nameSet.add(k); });
+    // (from five letters on: a four-letter name in capitals is left to the detector as an abbreviation, and a needle is
+    // matched in any letter case)
+    aliasCheckKeys(result.registry, allow).forEach((k) => { if (k.length >= 5 && rareName(k)) nameSet.add(k); });
     out.needles.digits = [...digitSet]; out.needles.names = [...nameSet];
     const hits = findNeedles(result.headers ? [result.headers, ...result.rows] : result.rows, out.needles);
     hits.forEach((h) => out.identifiers.push({ row: h.row - (result.headers ? 1 : 0), col: h.col, header: cellToString((result.headers || [])[h.col]), text: h.text, type: h.type }));
