@@ -1201,7 +1201,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     { role: 'provider', re: /\b(provider|attending|physician|ordering|prescrib|doctor|\bdr\b|oncologist|referring|pcp|nurse|\brn\b|pharmacist|md\b|signed by|entered by|authoriz)/i, not: /\b(note|notes|comment|comments|instruction|instructions|remark|remarks|message|narrative|fax|phone|tel)\b/i },
     { role: 'age', re: /^\s*age\b|\b(?:pt|pat|patient)\s*age\b|\bage\s*\(?(?:y|yr|yrs|years)?\)?\s*$/i },
     { role: 'dob', re: /\bbirth\s*(?:dt|date)?\b|\bb\.?day\b/i },
-    { role: 'provider', re: /^\s*(?:prov|prov\.|attending|attend|md|phys|physician|doc|ordering\s*md|onc|oncologist|pcp|referring\s*(?:md|prov|provider)?)\s*$/i },
+    { role: 'provider', re: /^\s*(?:(?:ref|refer|referring|ord|ordering|outside|consult|sched|admitting|treating|primary)\.?\s*)?(?:prov|prov\.|provider|attending|attend|md|phys|physician|doc|dr|onc|oncologist|pcp)\s*$|^\s*referring\s*$/i },
     { role: 'drop', re: /\b(?:emerg(?:ency)?\s*contact|emerg\s*cont|e\.?c\.?\s*name|contact\s*name|next\s*of\s*kin|\bnok\b|kin\b|guar(?:antor)?\b|caregiver\s*name|poa\s*name|proxy\s*name|spouse\s*name)/i },
     // a patient name split over two columns ("Pt Last" / "Pt First", "Last Name" / "First Name", "Surname" / "Given")
     { role: 'patient_name', re: /^\s*(?:pt|pat|patient)?\s*\.?\s*(?:last|first|sur|given|family|middle)\s*(?:name|nm)?\s*$/i },
@@ -1855,6 +1855,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     // (a match starts only where the run of address characters starts, so a long run with no @ is scanned once, not once per
     // character)
     EMAIL: /(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
+    EMAIL_OBF: /(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]{1,64}\s*[\[(\{]\s*at\s*[\])\}]\s*[A-Za-z0-9-]{1,63}(?:\s*[\[(\{]\s*dot\s*[\])\}]\s*[A-Za-z]{2,24}){1,4}/gi,
     URL: /\b(?:https?:\/\/|www\.)[^\s<>"']+|\b[a-z0-9][a-z0-9\-]*(?:\.[a-z0-9\-]+)*\.(?:com|org|net|edu|gov|us|io|me|info|co|ly|page|site|health|care)\/[^\s<>"',;)]+/gi,
     // a serial named a few words after its label: "Pump serial CADD-S 4419-88213", "serial no. for the pump 7731-0042"
     SERIAL_NEAR: /\b(?:serial|s\/n|sn)\b(?:\s*(?:#|no\.?|num(?:ber)?))?[\s:]+(?:[A-Za-z][\w\-]*\s+){0,3}?([A-Z0-9]*\d[A-Z0-9]*(?:-[A-Z0-9]+|\s[A-Z0-9]*\d[A-Z0-9]*)*)/gi,
@@ -1869,7 +1870,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     PHONE_PLAIN: /(?<![\d\w.-])\d{10}(?![\d\w-])(?!\.\d)(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?|(?<=\b(?:called|call|ph|phone|cell|tel|fax|#)\s{0,3})\d{7}(?![\d\w-])(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})?|(?<![\d\w.-])\d{7}(?=\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})(?:\s*(?:x|ext\.?|extension)\s*\.?\s*\d{1,6})/gi,
     // OCR-noisy phone: digits with O/I/l confusions, at least 7 real digits, 3-3-4 shape
     PHONE_OCR: /(?<![\w])\(?[\dOIl]{3}\)?(?:\s*[-.]\s*|\s)[\dOIl]{3}(?:\s*[-.]\s*|\s)[\dOIl]{4}(?![\w])/g,
-    AGE: /\b(?:age[d]?\s*:?\s*(9\d|1[0-2]\d)(?![\d\/%-])(?!\.\d)(?!,\d)|(9\d|1[0-2]\d)\s*(?:-|\s)?\s*(?:y\/o|yo|y\.o\.?|yrs?\.?(?:\s*old)?|years?(?:[-\s]old)?|year[-\s]old|yr[-\s]old)(?![A-Za-z])|\b(?:his|her|their)\s+(?:(?:early|mid|late)[-\s])?(9|10)0s\b|\b(?:nonagenarian|centenarian)\b)/gi,
+    AGE: /\b(?:age[d]?\s*:?\s*(9\d|1[0-2]\d)(?![\d\/%-])(?!\.\d)(?!,\d)|(9\d|1[0-2]\d)\s*(?:-|\s)?\s*(?:y\/o|yo|y\.[o0]{1,2}\.?|y\s?[o0]\b|yrs?\.?(?:\s*old)?|years?(?:[-\s]old)?|year[-\s]old|yr[-\s]old)(?![A-Za-z])|\b(?:his|her|their)\s+(?:(?:early|mid|late)[-\s])?(9|10)0s\b|\b(?:nonagenarian|centenarian)\b)/gi,
     // "just turned 91", "turning 95 next month", "turns 100": the verb alone says age (degrees, doses and units excluded)
     AGE_TURNS: /\b(?:turned|turning|turns)\s+(9\d|1[01]\d)(?![\d\/%,:.-]|\.\d)(?!\s*(?:degrees?|deg\b|°|mg|mcg|kg|lb|lbs|%|ml|mL|cc|units?|min|minutes|times|x\b))/gi,
     // a table age with a bare y: "91 y", "93y M", "| 95 y |"
@@ -1944,7 +1945,17 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
 
     // Spanish / French / Portuguese / Italian day-month dates ("3 de noviembre", "12 novembre 2026", "le 4 mars")
     run(/\b\d{1,2}(?:\s+de)?\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|sept?iembre|octubre|noviembre|diciembre|janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre|janeiro|fevereiro|mar[cç]o|maio|junho|julho|setembro|outubro|novembro|dezembro|gennaio|febbraio|aprile|maggio|giugno|luglio|settembre|ottobre|dicembre)(?:\s+(?:de\s+)?\d{4})?\b/gi, 'DATE');
-    run(RULES.EMAIL, 'EMAIL'); run(RULES.URL, 'URL');
+    run(RULES.EMAIL, 'EMAIL'); if (/[\[(\{]\s*at\s*[\])\}]/i.test(text)) run(RULES.EMAIL_OBF, 'EMAIL'); run(RULES.URL, 'URL');
+    const lateIds = [];
+    { // vehicle plates ("plate IL KX4 7721"), a list of record numbers after "MRNs", and letter-led member numbers (HP00917735)
+      const pushId = (a, b, type) => { lateIds.push({ start: a, end: b, type, source: 'rule', conf: 0.9, text: text.slice(a, b) }); };
+      let pm; const PLATE = /\b(?:licen[cs]e\s+)?(?:plate|tag)s?\b\s*(?:#|no\.?|number)?\s*:?\s*(?:(?:[A-Z]{2})\s+)?([A-Z0-9]{1,4}(?:[\s-][A-Z0-9]{2,5})?)\b/g;
+      while ((pm = PLATE.exec(text))) { const v = pm[1]; if (!/\d/.test(v) || !/[A-Z]/.test(v) && v.replace(/\D/g, '').length < 5) continue; const a = pm.index + pm[0].length - v.length; pushId(a, a + v.length, 'ID_OTHER'); }
+      const MRNS = /\b(?:MRNs|MRN's|record\s+numbers)\b/gi;
+      while ((pm = MRNS.exec(text))) { const win = text.slice(pm.index, pm.index + 90); const re = /\d[\d\-]{4,}\d/g; let d; while ((d = re.exec(win))) { if (d[0].replace(/\D/g, '').length >= 6) pushId(pm.index + d.index, pm.index + d.index + d[0].length, 'MRN'); } }
+      const ALNUM = /\b[A-Z]{1,4}\d{7,12}\b(?!\s*(?:mg|mcg|ml|units?|iu)\b)/g;
+      while ((pm = ALNUM.exec(text))) pushId(pm.index, pm.index + pm[0].length, 'ID_OTHER');
+    }
     { RULES.SERIAL_NEAR.lastIndex = 0; let sm; while ((sm = RULES.SERIAL_NEAR.exec(text))) { const v = sm[1]; if (v.replace(/\D/g, '').length < 5) continue; const a = sm.index + sm[0].length - v.length; if (spans.some((x) => x.start < a + v.length && a < x.end)) continue; spans.push({ start: a, end: a + v.length, type: 'ID_OTHER', source: 'rule', conf: 0.9, text: v }); } } run(RULES.IP, 'IP'); run(RULES.SSN, 'SSN');
     { RULES.SSN_LAST4.lastIndex = 0; let sm; while ((sm = RULES.SSN_LAST4.exec(text))) { const st = sm.index + sm[0].length - 4; spans.push({ start: st, end: st + 4, type: 'ID_OTHER', source: 'rule', text: sm[1] }); } }
     { RULES.INSURANCE_ID.lastIndex = 0; let im; while ((im = RULES.INSURANCE_ID.exec(text))) { const st = im.index + im[0].lastIndexOf(im[1]); spans.push({ start: st, end: st + im[1].length, type: 'ID_OTHER', source: 'rule', text: im[1] }); } }
@@ -2248,6 +2259,8 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
       for (let i = spans.length - 1; i >= 0; i--) if (spans[i].type === 'DATE' && spans[i].start >= dm.index && spans[i].end <= dm.index + raw.length) spans.splice(i, 1);
       spans.push({ start: dm.index, end: dm.index + raw.length, type: 'DATE', source: 'rule', text: raw, date: pd, conf: 0.8 });
     }
+    // added last, only where no other rule already matched, so a labelled identifier keeps its own span
+    lateIds.forEach((x) => { if (!spans.some((y) => y.start < x.end && x.start < y.end)) spans.push(x); });
     return spans;
   }
 
@@ -3861,12 +3874,27 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
         if (/^\s+(?:will|would|is|was|has|had|can|could|should|says|said|reports|reported|called|asked|wants|states|stated|denies|tolerated|returns|returned|arrived|left|declined|agreed|feels|felt)\b/.test(nx) || /^['’]s\b/.test(nx)) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
       }
     }
+    // a word-name doing what people do: "Will says his wife…", "Grace called back" (a modal or noun is never followed by
+    // a reporting verb in the third person); and a lower-case first name right before a phone number ("gladys # 555-0144")
+    for (let i = 0; i < toks.length - 1; i++) {
+      const t = toks[i]; if (!t.word || !free(t.start, t.end)) continue;
+      const nx = text.slice(t.end, t.end + 30);
+      if (t.cap && t.core.length >= 3 && LEX.isFirstName(t.core) && !DRUG_STEM.test(t.core) && /^\s+(?:says|said|reports|reported|states|stated|wants|wanted|asks|asked|called|calls|denies|denied|agrees|agreed|declines|declined|feels|felt|tolerated|arrived|requests|requested|prefers|confirmed|confirms|texted|emailed|phoned)\b/.test(nx)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
+      if (/^[\p{Ll}]/u.test(t.core) && t.core.length >= 3 && LEX.isFirstName(t.core) && !LEX.isEnglishWord(t.core) && /^\s*(?:#|:|at|cell|ph|phone|tel)?\s*\(?\d{3}\)?[\s.\-]?\d{3,4}/i.test(nx)) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
     // "Pt May Tran": a first name that is also a word, between a patient cue and a name already found, is part of the name
     for (const sp of nameSpans) {
       const lead = text.slice(Math.max(0, sp.start - 40), sp.start).match(/\b(?:Pt|Pat|Patient|Mr|Mrs|Ms|Miss|Mx)\.?:?\s+(\p{Lu}[\p{Ll}'’]+)\s$/u);
       if (!lead || !LEX.isFirstName(lead[1])) continue;
       const a = sp.start - 1 - lead[1].length;
       if (free(a, a + lead[1].length)) add.push({ start: a, end: a + lead[1].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+    }
+    // where someone is staying or living: "staying with niece in Quincy this week", "moved in with her son in Brockton"
+    const STAY_IN = /\b(?:staying|stays|stay|lives|living|live|moved|moving|visiting|relocat\w*|summers?|winters?)\b(?:\s+[\p{L}'’]+){0,4}?\s+in\s+(\p{Lu}[\p{Ll}'’]+(?:\s\p{Lu}[\p{Ll}'’]+)?)/gu;
+    while ((m = STAY_IN.exec(text))) {
+      const v = m[1], a = m.index + m[0].length - v.length;
+      if (LEX.isClinical(v.split(' ')[0]) || /^(?:Bay|Chair|Room|Pod|Unit|Clinic|Hospice|Rehab|Assisted|Memory|January|February|March|April|May|June|July|August|September|October|November|December|Spring|Summer|Fall|Winter)$/i.test(v.split(' ')[0])) continue;
+      if (free(a, a + v.length)) add.push({ start: a, end: a + v.length, type: 'LOCATION', source: 'strict', conf: 0.5 });
     }
     // an age of 90 or more said in words around it: "mom is 97 now", "she turned 93", "will be 91 next week"
     const AGE_SAID = /\b(?:is|turned|turns|will\s+be|was)\s+(9\d|1[01]\d)(?=\s+(?:now|today|this|next|last|years?|yrs?|y\.?o\.?|year[-\s]old)\b|\s*(?:[.,;!]|$))/gi;

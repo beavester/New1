@@ -1484,3 +1484,11 @@ test('nicknames and reused word-names: (Paddy), goes by, "Will will return", "Pt
   const c = run('Pt May Tran ok.'); assert.ok(!/\bMay\b|Tran/.test(c), c);
   for (const t of ['Will call if fever. May need dose reduction.', 'Pt prefers Portuguese interpreter.', 'Rituximab (Truxima) given.', 'Seen by Home Health Aide (Hospice).']) assert.equal(run(t), t);
 });
+
+test('round 13 patterns: plates, MRN lists, member numbers, bracketed emails, staying in a town, word-names with a reporting verb', () => {
+  const run = (t) => D.processTable({ headers: ['Comments'], rows: [[t]] }, {}).rows[0][0];
+  const cases = [['Parking validated for plate IL KX4 7721.', 'KX4 7721'], ['has two MRNs (0093-221-847 and 0093-221-874).', '0093-221-847'], ['Harvard Pilgrim  HP00917735  ok', 'HP00917735'],
+    ['sent to dwhitfield [at] examplemail [dot] com', 'dwhitfield'], ['Pt staying with niece in Quincy this week', 'Quincy'], ['Will says his wife will call.', 'Will says'], ['ride ok. gladys # 555-9654.', 'gladys'], ['91 y.0o. M', '91 y']];
+  for (const [t, gone] of cases) assert.ok(!run(t).includes(gone), `${t} -> ${run(t)}`);
+  for (const t of ['Will call if fever. May need dose reduction.', 'Pembrolizumab 200 mg q3w, CD20 positive', 'lives in Assisted living']) assert.equal(run(t), t);
+});
