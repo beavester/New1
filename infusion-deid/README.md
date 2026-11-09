@@ -54,6 +54,19 @@ Known gap: an out-of-lexicon surname with no cue at all (`Vanterpool called abou
 
 ## Measured on blind red-team cases
 
+Five measurement-only rounds (fresh blind cases, scored once, no fixes before scoring), 92 cases each:
+
+| Version measured | Ordinary comments leaking | Hard comments leaking | Screenshots leaking |
+| --- | --- | --- | --- |
+| v0.2 (round 5) | 10 of 56 (18%) | 12 of 24 | 0 of 12 |
+| v0.3 (round 6) | 3 of 56 (5%) | 10 of 24 | 3 of 12 |
+| v0.4 (round 7) | 5 of 56 (9%) | 4 of 24 | 3 of 12 |
+| v0.5 (round 8) | 0 of 55 (0%) | 9 of 25 | 1 of 12 |
+| v0.6 (round 9) | 1 of 56 (2%) | 5 of 24 | 2 of 12 |
+
+Each round's leaks were fixed with general rules afterwards and the cases kept as regressions (`test/redteam/`, 350 text/table cases, 93 screenshots, all clean on the current build). Read the ordinary-comment row as "a few percent of comments in realistic notes still carry an identifier; hard-case text leaks far more often". The gold set on real reports remains the number that counts.
+
+
 Rounds 1–4 were find-and-fix rounds: the fixed corpus in `test/redteam/` (170 text/table cases, 45 screenshots) is a regression guarantee, not a miss rate. Round 5 was measurement only (92 fresh cases, no fixes): with the curated lexicon, 10 of 56 ordinary comments and 12 of 24 hard ones leaked at least one identifier; screenshots 0 of 12. Nine of the ten ordinary leaks were a patient's full name in a stand-alone note; v0.3's large lexicon and person-cue rules target exactly that. The unbiased number for v0.3 comes from round 6 (see `docs/PLAN.md` §7). Run the scorer yourself: `node test/redteam/score.js --ocr`.
 
 ## Development
