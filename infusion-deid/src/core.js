@@ -1241,6 +1241,9 @@
     // slash pairs already read as a score in this text ("Pain 6/10"): a later pair on the same scale in the same sentence
     // is the same measurement taken again ("..., 2/10 after hydration")
     const scoreSeen = [];
+    const SCORE_LINK = '(?:[ \\t]+(?:is|was|now|at|of|to|down|up|currently|about|around|approx|still|a|an|remains?|level|only|as|today|improved|improving|decreased|increased|dropped|went|rated|rates|score|scale|(?:down|up|improved|decreased|increased|dropped|went)[ \\t]+from))';
+    const SCORE_SYMPTOM = new RegExp('\\b(?:pain|fatigue|nausea|distress|anxiety|depression|dyspnea|sob|headache|ha|cramping|cramps|discomfort|itching|pruritus|neuropathy|scores?|rated?|rates|rating|scale|severity|intensity|vas|nrs|esas)' + SCORE_LINK + '{0,3}[ \\t]*[:=(]?[ \\t]*$', 'i');
+    const SCORE_GRADED = new RegExp('\\b(?:grade|gr|ecog|kps|strength|motor|power|mrc|gcs|reflex(?:es)?|dtrs?|pulses?|edema|mucositis|ctcae|stage|ratio)' + SCORE_LINK + '{0,2}[ \\t]*[:=(]?[ \\t]*$', 'i');
     for (const p of DATE_PATTERNS) {
       p.re.lastIndex = 0; let m;
       while ((m = p.re.exec(text))) {
@@ -1272,11 +1275,12 @@
             const sentence = text.slice(Math.max(0, m.index - 70), m.index).split(/[.!?;](?:\s|$)|\n/).pop();
             const dateWord = /\b(?:on|since|until|till|by|due|appt|appointment|seen|scheduled|sched|resched(?:uled)?|rtc|dos|dated|visit|next|last|starting|started|begins?|beginning|returns?|returning|booked|moved|labs?|scan|f\/u|(?:moved|changed|pushed|bumped|resched(?:uled)?|switched)[ \t]+to)[ \t]*:?[ \t]*$/i.test(sentence);
             if (!dateWord) {
-              const LINK = '(?:[ \\t]+(?:is|was|now|at|of|to|down|up|currently|about|around|approx|still|a|an|remains?|level|only|as|today|improved|improving|decreased|increased|dropped|went|rated|rates|score|scale|(?:down|up|improved|decreased|increased|dropped|went)[ \\t]+from))';
-              const symptom = new RegExp('\\b(?:pain|fatigue|nausea|distress|anxiety|depression|dyspnea|sob|headache|ha|cramping|cramps|discomfort|itching|pruritus|neuropathy|scores?|rated?|rates|rating|scale|severity|intensity|vas|nrs|esas)' + LINK + '{0,3}[ \\t]*[:=(]?[ \\t]*$', 'i').test(sentence);
-              const graded = new RegExp('\\b(?:grade|gr|ecog|kps|strength|motor|power|mrc|gcs|reflex(?:es)?|dtrs?|pulses?|edema|mucositis|ctcae|stage|ratio)' + LINK + '{0,2}[ \\t]*[:=(]?[ \\t]*$', 'i').test(sentence);
-              const carried = scoreSeen.some((x) => x.d === pd.d && m.index > x.end && m.index - x.end <= Math.min(40, sentence.length) && !spans.some((y) => (y.type === 'DATE' || y.type === 'DOB') && y.start >= x.end && y.end <= m.index));
-              const symptomAfter = pd.d === 10 && /^[ \t]+(?:pain|nausea|fatigue|headache|ha|sob|dyspnea|cramping|discomfort|severity|intensity|out[ \t]+of)\b/i.test(after);
+              const symptom = SCORE_SYMPTOM.test(sentence);
+              const graded = SCORE_GRADED.test(sentence);
+              // nothing but a separator, a connective or a when/where phrase may stand between the two ("6/10 at arrival, 2/10",
+              // "8/10 -> 3/10", "6/10 before and 2/10 after"): a new noun governs its own pair ("pain 8/10, PRBC 2/10" is a date)
+              const carried = scoreSeen.some((x) => x.d === pd.d && m.index > x.end && m.index - x.end <= 40 && /^(?:[ \t]*(?:,|-+>|→|=>|\(|\)|\/|(?:at|on|upon|with|w\/|after|before|pre|post|during|while|then|and|to|now|down|up|but|or|later|earlier|initially|currently|rest|resting|movement|moving|activity|arrival|admission|baseline|discharge|worst|best|max|min|peak|average|avg|am|pm|morning|evening|night|today|yesterday|this|last|in|the|its|is|was)\b))*[ \t]*$/i.test(text.slice(x.end, m.index)) && !/\b(?:on|last|this|in|the|with|w\/|at|during|before|after|upon)[ \t]*$/i.test(text.slice(x.end, m.index)));
+              const symptomAfter = pd.d === 10 && /^[ \t]+(?:pain|nausea|fatigue|headache|ha|sob|dyspnea|cramping|discomfort|severity|intensity)\b(?![ \t]+(?:clinic|mgmt|management|team|service|consult|appt|appointment|visit|meds?|rx|refill|specialist|doctor|dr|np|f\/u|follow))/i.test(after) && /\b(?:c\/o|complains?[ \t]+of|reports?|reporting|rates?|rated|endorses?|having|has|had|with|w\/|states?|describes?|denies)[ \t]*:?[ \t]*$/i.test(sentence);
               const strengthAfter = pd.d <= 5 && /^[ \t]+(?:strength|motor|power)\b/i.test(after);
               const countAfter = /^[ \t]+(?:doses?|cycles?|fractions?|treatments?|infusions?|injections?|units?|bags?|sessions?)[ \t]+(?:given|complete[d]?|received|done|administered|infused|so[ \t]+far|remaining|left|total)\b/i.test(after);
               const courseDay = pd.m < pd.d && pd.d <= 7 && /(?:^|[\s(,:])day[ \t]*#?[ \t]*$/i.test(sentence) && !/\b(?:next|same|that|last|following|previous|clinic|appt|treatment|infusion|every|each|the|this)[ \t]+day[ \t]*#?[ \t]*$/i.test(sentence);
@@ -2815,7 +2819,8 @@
         if (!/[\s,]/.test(m[0]) && (eponymUse(text, start, end) || modalUse(text, start, end))) continue;
         // a surname that is an ordinary word, written in lower case where the writer uses capitals, is the word ("he feels
         // strong", "white count") unless it stands where only a person can ("spoke w/ strong", "strong's wife")
-        if (!/^\p{Lu}/u.test(m[0]) && !/[\s,]/.test(m[0]) && !hit.given && LEX.isEnglishWord(m[0]) && /\p{Lu}\p{Ll}/u.test(text) && !personSlotLoose(text, start, end) && !/^['’]s\b/.test(text.slice(end))) continue;
+        // (only after a linking verb, a degree word or a determiner, mid-sentence: "strong c/o nausea", "gave strong her card" stay names)
+        if (!/^\p{Lu}/u.test(m[0]) && !/[\s,]/.test(m[0]) && !hit.given && LEX.isDictWord(m[0]) && /\p{Lu}\p{Ll}/u.test(text) && /\b(?:feels?|feeling|felt|is|was|are|were|be|been|looks?|looking|looked|seems?|seemed|appears?|appeared|remains?|remained|getting|gets|got|stays?|very|quite|too|so|more|less|not|still|a|an|the|her|his|their|no|any|some|of|and|or|but)[ \t]+$/.test(text.slice(Math.max(0, start - 12), start)) && !personSlotOf(text, start, end).lineStart && !personSlotLoose(text, start, end) && !/^['’]s\b/.test(text.slice(end))) continue;
         // a surname that is one half of a hyphenated compound (Haddad-Khalil, Wisniewski-Kaminski): take the whole compound
         while (end < text.length && text[end] === '-' && /[A-Za-z]/.test(text[end + 1] || '')) { const mm = text.slice(end + 1).match(/^[A-Za-z'’]+/); end += 1 + mm[0].length; }
         while (start > 0 && text[start - 1] === '-' && /[A-Za-z]/.test(text[start - 2] || '')) { const mm = text.slice(Math.max(0, start - 61), start - 1).match(/[A-Za-z'’]+$/); if (/^[a-z]/.test(mm[0]) && mm[0].length < 3) break; start -= 1 + mm[0].length; }
