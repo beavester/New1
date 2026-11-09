@@ -592,6 +592,8 @@
     Mill Union Market Spring Prospect Pleasant Ridge Sunset Railroad Meadow Orchard Forest River Lake Hillside Valley
     Bridge Academy Broad Liberty Jefferson Monroe Locust Mulberry Dogwood Aspen Cottonwood Beech Linden Grove Highland
     Fairview Woodland Lakeview Ridgewood Edgewood Glenwood Sherwood Kenwood Brookside Railway Juniper Hemlock
+    Maplewood Oakhurst Pinehurst Cedarhurst Wynnewood Thornwood Briarcliff Glenmoor Ferndale Kentwood Dunmoor
+    Woodmere Lynnwood Elmcrest Oakdale Ravenwood Stonehaven Foxcroft
   `);
   // towns: ordinary US place names from outside the region the tool is used in (no Western New York or upstate names)
   const FAKE_CITIES = words(`

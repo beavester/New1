@@ -3894,8 +3894,21 @@
       const words = city.trim().split(/\s+/);
       const keepPre = words.length >= 2 && LEX.CITY_KEEP_PREFIX.has(words[0].replace(/\.$/, '').toLowerCase()) ? words[0] : '';
       const keepSuf = !keepPre && words.length >= 2 && LEX.CITY_KEEP_SUFFIX.has(words[words.length - 1].toLowerCase()) ? words[words.length - 1] : '';
-      const made = stringSurrogate('LOCATION', city.trim(), () => pick(LEX.FAKE_CITIES));
-      return /\s/.test(made) ? made : `${keepPre ? keepPre + ' ' : ''}${made}${keepSuf ? ' ' + keepSuf : ''}`; // (a restored key may hold a two-word value)
+      // (the kept word is part of the stored value, so the key restores "North Dover" to "North Tonawanda" whole)
+      return stringSurrogate('LOCATION', city.trim(), () => `${keepPre ? keepPre + ' ' : ''}${pick(LEX.FAKE_CITIES)}${keepSuf ? ' ' + keepSuf : ''}`);
+    };
+    // the state a town was written with: a two-letter code (upper case, or any case in a lower-case note) or a state name,
+    // peeled off the end so a town of two words keeps both ("Niagara Falls NY")
+    const splitState = (orig) => {
+      const m = orig.match(/^(.*[A-Za-z.])(,?\s+)([A-Za-z]+\s[A-Za-z]+|[A-Za-z]+)(\.?)$/);
+      if (!m) return null;
+      for (const cand of [m, orig.match(/^(.*[A-Za-z.])(,?\s+)([A-Za-z]+)(\.?)$/)]) {
+        if (!cand || !/[A-Za-z]{3}/.test(cand[1])) continue;
+        const st = cand[3];
+        const isState = st.length === 2 ? (LEX.STATE_ABBR_SET.has(st) || (orig === orig.toLowerCase() && LEX.STATE_ABBR_SET.has(st.toUpperCase()))) : LEX.STATE_NAME_SET.has(st.toLowerCase());
+        if (isState && !LEX.STATE_NAME_SET.has(`${cand[1]} ${st}`.toLowerCase())) return cand;
+      }
+      return null;
     };
     const fakePlace = (orig, before, after) => {
       const ka = after.match(KIND_AFTER);
@@ -3904,8 +3917,8 @@
         if (saint && /^(?:church|parish|chapel|cathedral|school|elementary|academy|college|university|hospital)$/i.test(ka[1])) return `${saint[1]} ${pick(LEX.FAKE_SAINTS)}`;
         return stem();
       });
-      const sm = orig.match(/^(.*?[A-Za-z.])(,?\s+)([A-Z]{2}|[A-Za-z]+(?:\s[A-Za-z]+)?)(\.?)$/);
-      if (sm && /[A-Za-z]{3}/.test(sm[1]) && (sm[3].length === 2 ? LEX.STATE_ABBR_SET.has(sm[3]) : LEX.STATE_NAME_SET.has(sm[3].toLowerCase())) && !LEX.STATE_NAME_SET.has(`${sm[1]} ${sm[3]}`.toLowerCase())) return fakeCity(sm[1]) + sm[2] + sm[3] + sm[4];
+      const sm = splitState(orig);
+      if (sm) return fakeCity(sm[1]) + sm[2] + sm[3] + sm[4];
       return fakeCity(orig);
     };
     // A lone name that the sentence uses as a street ("lives on Mosher", "PCP at Lifetime Health on Mosher", "corner of
@@ -3925,7 +3938,11 @@
       const clause = before.split(/[.;!?\n]/).pop();
       return STREET_CLAUSE.test(clause) || STREET_CORNER.test(clause);
     };
-    const fakeStreetName = (orig) => matchCase(orig, stringSurrogate('ADDRESS', orig, () => pick(LEX.FAKE_STREETS)));
+    // a street written as one bare word is restored by that word alone, so it is never an ordinary word (a later "Pleasant
+    // and cooperative" must not come back as the real street): Hillside, Fairview, Glenwood, not Pleasant or Market
+    let bareStreets = null;
+    const pickBareStreet = () => pick(bareStreets || (bareStreets = LEX.FAKE_STREETS.filter((x) => !LEX.isEnglishWord(x) && !LEX.isDictWord(x))));
+    const fakeStreetName = (orig) => matchCase(orig, stringSurrogate('ADDRESS', orig, pickBareStreet));
 
     return {
       collisions,
@@ -3985,7 +4002,7 @@
             .replace(/\b(?:ninety|one[-\s]hundred)(?:(?:[-\s]|\s+and\s+)(?:one|two|three|four|five|six|seven|eight|nine))?/i, '90+');
           case 'ADDRESS': return matchCase(orig, stringSurrogate('ADDRESS', orig, () => {
             if (/\bbox\b/i.test(orig)) return orig.replace(/\d+(?!.*\d)/, () => String(Math.floor(rng() * 9000) + 1000)).replace(/^(?:RR|R\.R\.|Rural\s+Route|HC)\s*\d+/i, (m) => m.replace(/\d+/, () => String(Math.floor(rng() * 9) + 1)));
-            if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${(Math.floor(rng() * 880) + 120)} ${pick(LEX.FAKE_STREETS)} Rd`; const suf = (orig.replace(/^\s*(?:\d+[A-Za-z]?\s+)?(?:[NSEW]\.?\s+)?[A-Za-z'’\-]+/, '').match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway|Terrace|Circle|Trail|Highway|Row|Square|Sq|Loop|Pike|Turnpike|Tpke|Alley|Crescent)\b/i) || [])[1] || ''; return `${/^\d/.test(orig) ? (Math.floor(rng() * 880) + 120) + ' ' : ''}${pick(LEX.FAKE_STREETS)}${suf ? ' ' + suf : ''}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; })); // stored as made, written in the case of each mention
+            if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${(Math.floor(rng() * 880) + 120)} ${pick(LEX.FAKE_STREETS)} Rd`; const suf = (orig.replace(/^\s*(?:\d+[A-Za-z]?\s+)?(?:[NSEW]\.?\s+)?[A-Za-z'’\-]+/, '').match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway|Terrace|Circle|Trail|Highway|Row|Square|Sq|Loop|Pike|Turnpike|Tpke|Alley|Crescent)\b/i) || [])[1] || ''; return `${/^\d/.test(orig) ? (Math.floor(rng() * 880) + 120) + ' ' : ''}${suf || /^\d/.test(orig) ? pick(LEX.FAKE_STREETS) : pickBareStreet()}${suf ? ' ' + suf : ''}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; })); // stored as made, written in the case of each mention
           case 'ZIP': return orig.replace(/\d{5}(-\d{4})?/, (z) => zip3(z));
           case 'ORG': return matchCase(orig, stringSurrogate('ORG', orig, () => fakeOrg(orig, ctxBefore(), ctxAfter()))); // the case of this mention (TOPS, tops)
           case 'LOCATION': return matchCase(orig, fakePlace(orig, ctxBefore(), ctxAfter()));
