@@ -3896,6 +3896,12 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
       if (LEX.isClinical(v.split(' ')[0]) || /^(?:Bay|Chair|Room|Pod|Unit|Clinic|Hospice|Rehab|Assisted|Memory|January|February|March|April|May|June|July|August|September|October|November|December|Spring|Summer|Fall|Winter)$/i.test(v.split(' ')[0])) continue;
       if (free(a, a + v.length)) add.push({ start: a, end: a + v.length, type: 'LOCATION', source: 'strict', conf: 0.5 });
     }
+    // a ZIP on its own after a place or name the screen reader split from its state ("Verlander      91770; transport van")
+    spans.concat(add).filter((sp) => sp.type === 'LOCATION' || /^NAME/.test(sp.type)).forEach((sp) => {
+      const z = text.slice(sp.end, sp.end + 48).match(/^(?:,\s*|\s{2,}|\s*\n\s*)(\d{5})(?:-\d{4})?(?![\d\/:.\-])(?!\s*(?:mg|mcg|ml|mL|units?|cells|copies|iu|k\b|x\b))/);
+      if (!z) return; const a = sp.end + z[0].length - z[1].length;
+      if (free(a, a + 5)) add.push({ start: a, end: a + 5, type: 'ZIP', source: 'strict', conf: 0.5 });
+    });
     // an age of 90 or more said in words around it: "mom is 97 now", "she turned 93", "will be 91 next week"
     const AGE_SAID = /\b(?:is|turned|turns|will\s+be|was)\s+(9\d|1[01]\d)(?=\s+(?:now|today|this|next|last|years?|yrs?|y\.?o\.?|year[-\s]old)\b|\s*(?:[.,;!]|$))/gi;
     while ((m = AGE_SAID.exec(text))) {
