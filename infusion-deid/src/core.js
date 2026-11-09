@@ -352,6 +352,17 @@
     return { raw: s, first, last, middle, format, upper, credentials: credentials.join(' ').trim() };
   }
 
+  // A name is typed without its accents as often as with them ("Bronislawa" for Bronisława, "Marie-Eve" for Marie-Ève):
+  // the accent-free spelling of a name (NFD strips the combining marks; the letters with no decomposition are mapped)
+  const FOLD_LETTERS = { 'ł': 'l', 'Ł': 'L', 'ø': 'o', 'Ø': 'O', 'đ': 'd', 'Đ': 'D', 'ð': 'd', 'Ð': 'D', 'þ': 'th', 'Þ': 'Th', 'ß': 'ss', 'æ': 'ae', 'Æ': 'Ae', 'œ': 'oe', 'Œ': 'Oe', 'ı': 'i', 'ħ': 'h', 'Ħ': 'H' };
+  const foldName = (x) => { const t = String(x); return /[^\x00-\x7f]/.test(t) ? t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[łŁøØđĐðÐþÞßæÆœŒıħĦ]/g, (c) => FOLD_LETTERS[c]) : t; };
+  // A hyphenated or two-part name is written hyphenated, spaced or run together ("Ti-Will", "Ti Will", "Tiwill")
+  const joinForms = (w) => {
+    const parts = String(w).split(/[-\s]+/).filter(Boolean);
+    if (parts.length < 2 || parts.length > 3) return [];
+    const glued = parts[0] + parts.slice(1).join('').toLowerCase();
+    return [parts.join('-'), parts.join(' ')].concat(glued.length >= 4 ? [glued] : []);
+  };
   function nameVariants(p) {
     const v = new Set();
     const add = (x) => { if (x && x.trim().length >= 2) v.add(x.trim()); };
@@ -388,6 +399,8 @@
     if (/\s/.test(l)) { const hy = l.replace(/\s+/g, '-'); add(hy); if (f) { add(`${hy}, ${f}`); add(`${f} ${hy}`); } }
     // a two-part surname run together, as in a file name or a CamelCase word ("MbekiLarsson", "OrtizDelgado", "delacruz")
     if (/[-\s]/.test(l)) { const glued = l.replace(/[-\s]+/g, ''); if (glued.length >= 5) { add(glued); if (f) { add(`${f} ${glued}`); add(`${glued}, ${f}`); add(`${glued} ${f[0]}`); } } }
+    // every variant also in its accent-free spelling
+    if (/[^\x00-\x7f]/.test(p.raw)) [...v].forEach((x) => { const fx = foldName(x); if (fx !== x) add(fx); });
     return [...v].filter((x) => x.length >= 2);
   }
   // every letter token a patient may be referred to by (lower-case), used to tell the patient from a relative who
@@ -523,18 +536,27 @@
       if (p.parsed) nameVariants(p.parsed).forEach((v) => allVariants.add(v));
       // the patient's preferred name or nickname from its own column ("Jack" for Joaquín, "Chi" for Chiamaka)
       const nicks = p.entity && p.entity.nicks ? [...p.entity.nicks] : [];
-      if (p.parsed && nicks.length) p.parsed.nicks = nicks;
+      // a nickname is written as loosely as any name: hyphenated, spaced or run together ("Ti-Will", "Ti Will", "Tiwill"),
+      // and without its accents ("Zoe" for Zoë); each written form is a variant of the same patient
+      const nickForms = new Set();
       nicks.forEach((nk) => {
         const pn = parseName(nk); if (!pn) return;
-        if (pn.format === 'single') { const w = pn.last; allVariants.add(w); const l = p.parsed && p.parsed.last; if (l && l.toLowerCase() !== w.toLowerCase()) { allVariants.add(`${w} ${l}`); allVariants.add(`${l}, ${w}`); allVariants.add(`${w} ${l[0]}.`); } }
-        else nameVariants(pn).forEach((v) => allVariants.add(v));
+        if (pn.format === 'single') {
+          const w = pn.last; allVariants.add(w); const l = p.parsed && p.parsed.last; if (l && l.toLowerCase() !== w.toLowerCase()) { allVariants.add(`${w} ${l}`); allVariants.add(`${l}, ${w}`); allVariants.add(`${w} ${l[0]}.`); }
+          const forms = /[-\s]/.test(w) ? joinForms(w) : [];
+          [w, ...forms].forEach((x) => { const fx = foldName(x); if (fx !== x) forms.push(fx); });
+          forms.forEach((x) => { if (x.length >= 3 && x.toLowerCase() !== w.toLowerCase()) { allVariants.add(x); nickForms.add(x); } });
+        } else nameVariants(pn).forEach((v) => allVariants.add(v));
       });
+      // (the accent-free spelling of the given name too: it is the same given name, and is replaced by the same made-up one)
+      if (p.parsed && p.parsed.first) { const ff = foldName(p.parsed.first); if (ff !== p.parsed.first) nickForms.add(ff); }
+      if (p.parsed && (nicks.length || nickForms.size)) p.parsed.nicks = nickForms.size ? [...nicks, ...nickForms] : nicks;
       // given names (first, middle, the halves of a hyphenated one, run together) of 4+ letters that are not ordinary words:
       // in the patient's own rows they match in lower case too ("teodoro c/o bone pain", "mikyung tolerated well")
       const givenLc = new Set();
       [p.parsed, ...[...p.names].map(parseName)].forEach((pn) => {
         if (!pn) return;
-        [pn.first, ...(pn.middle ? pn.middle.split(/\s+/) : [])].forEach((g) => { if (!g) return; const k = g.toLowerCase().replace(/\.$/, ''); givenLc.add(k); k.split(/[-\s]+/).forEach((h) => givenLc.add(h)); givenLc.add(k.replace(/[-\s]+/g, '')); });
+        [pn.first, ...(pn.middle ? pn.middle.split(/\s+/) : [])].forEach((g) => { if (!g) return; const k = g.toLowerCase().replace(/\.$/, ''); givenLc.add(k); k.split(/[-\s]+/).forEach((h) => givenLc.add(h)); givenLc.add(k.replace(/[-\s]+/g, '')); const fk = foldName(k); if (fk !== k) { givenLc.add(fk); fk.split(/[-\s]+/).forEach((h) => givenLc.add(h)); } });
         if (pn.first && pn.middle && !/\s/.test(pn.middle)) givenLc.add((pn.first + pn.middle).toLowerCase());
       });
       const literal = new Set(); p.names.forEach((nm) => { const pn = parseName(nm); if (pn) [pn.last, ...pn.last.split(/[-\s]+/), pn.last.replace(/[-\s]+/g, '')].forEach((t) => t && literal.add(t.toLowerCase())); });
@@ -573,6 +595,7 @@
       const givenSet = new Set(givenLc);
       [p.parsed, ...[...p.names].map(parseName)].forEach((pn) => { if (pn && pn.first) LEX.nicknamesOf(pn.first).forEach((n) => givenSet.add(n.toLowerCase())); });
       nicks.forEach((nk) => String(nk).toLowerCase().split(/[\s,]+/).forEach((w) => { if (w) givenSet.add(w.replace(/^[^a-z]+|[^a-z]+$/g, '')); }));
+      nickForms.forEach((x) => givenSet.add(x.toLowerCase()));
       givenSet.forEach((g) => { if (!g || g.length < 3 || literal.has(g)) return; const h = lookup.get(g); if (h && h.type === 'NAME_PATIENT' && h.entSet && h.entSet.has(p.key)) h.given = true; });
       p.ownTokens = ownTokensOf([...[...p.names].map(parseName), p.parsed]);
       if (p.dob) {
@@ -3502,8 +3525,60 @@
   }
 
   // Collect tokens worth propagating from a set of spans (document-level).
-  function collectPropagation(allSpans, cfg) {
+  // Every string the detectors decided is a person's name (by a cue, the lexicon, the strict pass, a person column) becomes
+  // a known name of this input, and is then looked for everywhere else in every form it is written in: as found, in Title
+  // Case and in CAPITALS, in lower case when it is no ordinary word, hyphenated / spaced / run together when it has two
+  // parts, each part alone, and without its accents. seedTerms are the names earlier inputs of the session found.
+  // A name that is also an ordinary or clinical word (Will, Rose, Port) never gets these forms: it stays on the
+  // ambiguous path (as written, near where it was found, mid-sentence or before a person verb).
+  const propagationForms = (term) => {
+    const forms = new Set([term]);
+    const single = !/[\s,]/.test(term);
+    if (single && /[-]/.test(term) && /^[\p{L}'’\-]+$/u.test(term)) joinForms(term).forEach((x) => forms.add(x));
+    [...forms].forEach((x) => {
+      const letters = (x.match(/\p{L}/gu) || []).length;
+      const up = x.toUpperCase(), lo = x.toLowerCase();
+      const words = lo.split(/[\s,]+/).filter(Boolean);
+      const notWord = (w) => givenNotWord(w) && !LEX.isDictWord(w) && !LEX.isAmbiguous(w);
+      // a short word in capitals is an abbreviation more often than a name ("NASH cirrhosis", "DASH diet", "CARA trial",
+      // "ANA positive"): a lone name gets its CAPITALS form from six letters on, or from five when it is no word at all;
+      // dotted initials stay as written ("T.J.")
+      if (up !== x && !/\./.test(x) && (words.length > 1 ? letters >= 6 : (letters >= 6 || (letters === 5 && notWord(lo))))) forms.add(up);
+      if (lo !== x && !/\./.test(x) && (words.length === 1 ? notWord(lo) : (words.length <= 3 && letters >= 7 && words.every((w) => w.length >= 3 && !COMMON_LOWER.has(w)) && words.some(notWord)))) forms.add(lo);
+    });
+    [...forms].forEach((x) => { const fx = foldName(x); if (fx !== x) forms.add(fx); });
+    return forms;
+  };
+  // The names in all their forms are matched as one alternation regex would match them (the longest form that starts and
+  // ends at a word boundary, case-sensitive), but by a lookup: the cost does not grow with the number of forms, and a
+  // letter of any script bounds a match. The object stands in for that regex: exec(text) and lastIndex, as a /g regex.
+  const isWordChar = (text, i) => { const c = text.charCodeAt(i); return c < 128 ? ((c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122)) : /[\p{L}\p{M}\p{N}]/u.test(text[i]); };
+  const formMatcher = (forms) => {
+    const lens = [...new Set([...forms].map((f) => f.length))].sort((x, y) => y - x);
+    const firsts = new Set([...forms].map((f) => f[0]));
+    // (a RegExp object that never matches, with its exec replaced: lastIndex, test() and instanceof keep working)
+    return Object.assign(/(?!)/g, {
+      exec(text) {
+        const n = text.length;
+        for (let i = this.lastIndex; i < n; i++) {
+          if (!firsts.has(text[i]) || (i > 0 && isWordChar(text, i - 1))) continue;
+          for (const L of lens) {
+            const e = i + L;
+            if (e > n || (e < n && isWordChar(text, e))) continue;
+            const sub = text.slice(i, e);
+            if (forms.has(sub)) { this.lastIndex = e; const m = [sub]; m.index = i; m.input = text; return m; }
+          }
+        }
+        this.lastIndex = 0; return null;
+      },
+    });
+  };
+  function collectPropagation(allSpans, cfg, seedTerms, ambiguousOnly) {
     const terms = new Set(), ambTerms = new Set(), handleParts = new Set(), placeTerms = new Set(), cueOnly = new Set();
+    // the names found on evidence of their own (a cue, the name lexicon, a person column), not only by the strict pass
+    const strong = new Set();
+    const partOk = (h) => h.length >= 4 && /^\p{Lu}/u.test(h) && !NAME_PARTICLE.test(h) && !LEX.isClinical(h) && !LEX.isAmbiguous(h) && !COMMON_CAP.has(h.toLowerCase()) && !COMMON_LOWER.has(h.toLowerCase()) && !LEX.HONORIFIC_SET.has(h.toLowerCase()) && !LEX.CREDENTIAL_SET.has(h.toLowerCase()) && !(cfg.allowSet && cfg.allowSet.has(h.toLowerCase())) && (LEX.isFirstName(h) || LEX.isSurname(h) || !LEX.isDictWord(h));
+    if (seedTerms) for (const t of seedTerms) { const x = String(t || ''); if (x.length >= 3 && x.length <= 80 && !(cfg.allowSet && cfg.allowSet.has(x.toLowerCase()))) terms.add(x); }
     const titleCase = (w) => w.toLowerCase().replace(/(^|[-'’])([a-z])/g, (m, a, b) => a + b.toUpperCase());
     for (const s of allSpans) {
       // the words of a user name or e-mail address ("rosie.delgado62", "lally.marchbanks@...") are the person's names, and
@@ -3523,15 +3598,17 @@
       }
       if (COARSE(s.type) !== 'NAME' || s.source === 'census' || s.source === 'propagate' || s.initials) continue;
       const full = s.text.trim();
+      const isStrong = /cue:|lexicon|column|manual/.test(s.source || '');
+      const addTerm = (x) => { terms.add(x); if (isStrong) strong.add(x); };
       // a lower-case surname found after a patient cue is re-found as written and in Title case ("nguyen's", "Nguyen")
-      if (/cue:pt-lower/.test(s.source) && /^[a-z][a-z'’\-]{2,}(?:,\s*[a-z][a-z'’\-]{2,})?$/.test(full)) { full.split(/,\s*/).forEach((w) => { terms.add(w); terms.add(titleCase(w)); }); continue; }
-      if (full.length >= 4 && /\s/.test(full)) terms.add(full);
+      if (/cue:pt-lower/.test(s.source) && /^[a-z][a-z'’\-]{2,}(?:,\s*[a-z][a-z'’\-]{2,})?$/.test(full)) { full.split(/,\s*/).forEach((w) => { addTerm(w); addTerm(titleCase(w)); }); continue; }
+      if (full.length >= 4 && /\s/.test(full)) addTerm(full);
       // dotted initials used as a name ("goes by T.J.", "Pt J.R. Whitcombe"): the initials alone are re-found ("T.J. reports")
-      (full.match(/(?<![\w.])(?:[A-Z]\.){1,2}[A-Z](?![\w])/g) || []).forEach((x) => { if (!/^(?:I\.V|P\.O|N\.P\.O|R\.N|M\.D|D\.O|N\.P|P\.A|A\.M|P\.M|U\.S|D\.C|B\.I\.D|T\.I\.D|Q\.I\.D|P\.R\.N|E\.R|S\.C|I\.M)$/.test(x)) terms.add(x); });
+      (full.match(/(?<![\w.])(?:[A-Z]\.){1,2}[A-Z](?![\w])/g) || []).forEach((x) => { if (!/^(?:I\.V|P\.O|N\.P\.O|R\.N|M\.D|D\.O|N\.P|P\.A|A\.M|P\.M|U\.S|D\.C|B\.I\.D|T\.I\.D|Q\.I\.D|P\.R\.N|E\.R|S\.C|I\.M)$/.test(x)) addTerm(x); });
       const parts = full.split(/[\s,]+/).filter(Boolean);
       for (const tok of parts) {
         const core = tok.replace(/['’]s$/, '').replace(/\.$/, '');
-        if (core.length < 3 || !/^[A-Z]/.test(core)) continue;
+        if (core.length < 3 || !/^\p{Lu}/u.test(core)) continue;
         if (LEX.HONORIFIC_SET.has(core.toLowerCase()) || LEX.CREDENTIAL_SET.has(core.toLowerCase())) continue;
         if (cfg.allowSet && cfg.allowSet.has(core.toLowerCase())) continue;
         // a month that is also a given name (June, April) of a full name found by a cue: re-found only right before a person
@@ -3539,16 +3616,30 @@
         if (LEX.isClinical(core)) { if (monthIndex(core) && LEX.isFirstName(core) && parts.length >= 2 && core.length >= 4) { const tc = titleCase(core); ambTerms.add(tc); cueOnly.add(tc); } continue; }
         // a word-name (Grace, Will, Hope) of a full name found by a cue is re-found elsewhere, but only mid-sentence
         // (see detectText), so "Told Grace that is fine" is caught while "Will call back" stays
-        if (LEX.isAmbiguous(core)) { if (parts.length >= 2) ambTerms.add(core.length > 1 && core === core.toUpperCase() ? titleCase(core) : core); continue; }
-        terms.add(core);
+        // (a word-name the patient goes by, "goes by Rose", is named by its cue as surely as by a surname)
+        if (LEX.isAmbiguous(core)) { if (parts.length >= 2 || /cue:alias/.test(s.source)) ambTerms.add(core.length > 1 && core === core.toUpperCase() ? titleCase(core) : core); continue; }
+        addTerm(core);
+        // each half of a hyphenated name is used alone ("Marie" of Marie-Ève, "Okonkwo" of Okonkwo-Bello)
+        if (/-/.test(core)) core.split('-').forEach((h) => { if (partOk(h)) addTerm(h); });
         // an ALL-CAPS name (MARGARITA ELENA RUIZ) is written in Title Case elsewhere in the note (Thank you, Margarita)
-        if (core === core.toUpperCase() && /[A-Z]{3}/.test(core)) terms.add(titleCase(core));
+        if (core === core.toUpperCase() && /[A-Z]{3}/.test(core)) addTerm(titleCase(core));
       }
     }
     if (!terms.size && !ambTerms.size && !handleParts.size && !placeTerms.size) return null;
     const mk = (set) => new RegExp(`(?<![A-Za-z0-9])(?:${[...set].sort((a, b) => b.length - a.length).map(escapeRe).join('|')})(?![A-Za-z0-9])`, 'g'); // case-sensitive on purpose
-    const re = terms.size ? mk(terms) : /(?!)/g;
+    // the names, in every form each is written in (a letter of any script bounds a match: "ania" is not found inside "Bośnia")
+    // (a "name" longer than any name is not looked for again: the lookup stays linear on a hostile cell)
+    const allForms = new Set(); if (!ambiguousOnly) terms.forEach((t) => { if (t.length <= 80) propagationForms(t).forEach((x) => allForms.add(x)); });
+    const re = terms.size && !ambiguousOnly ? formMatcher(allForms) : /(?!)/g;
     re.terms = [...terms];
+    // the names worth keeping for the rest of the session (see processTableCore): found on evidence of their own, and no
+    // ordinary, clinical or drug word, so one input's mistake is not repeated in the next
+    const carryWord = (w) => { const lc = w.toLowerCase(); return w.length >= 3 && /^\p{Lu}/u.test(w) && !LEX.isAmbiguous(w) && !LEX.isClinical(w) && !COMMON_CAP.has(lc) && !COMMON_LOWER.has(lc) && !relWord(w) && !monthIndex(w) && !DRUG_STEM.test(w) && !LEX.HONORIFIC_SET.has(lc) && ((!LEX.isEnglishWord(w) && !LEX.isDictWord(w)) || LEX.FIRST_SET.has(lc) || LEX.LAST_SET.has(lc)); };
+    re.carry = [...terms].filter((t) => strong.has(t) && (/^(?:[A-Z]\.){1,2}[A-Z]$/.test(t) ? false : t.split(/[\s,]+/).filter(Boolean).every((w) => carryWord(w.replace(/['’]s$/, '').replace(/\.$/, '')))));
+    // a word-name in capitals is the same person only right before a person verb or a possessive ("GRACE asked", "WARD's
+    // wife"): capitals carry no sentence-start signal, so "per WARD policy" and "NO LONG infusions" stay (cueOnly, see
+    // detectText); never the words that are verbs or abbreviations in capitals
+    [...ambTerms].forEach((t) => { if (t.length >= 4 && /^[A-Z][a-z]+$/.test(t) && !cueOnly.has(t) && !/^(?:will|hope|mark|bill|may|grant|chase|rose|faith|joy|sue|pat|art|guy|bob)$/i.test(t) && !LEX.isClinical(t)) { ambTerms.add(t.toUpperCase()); cueOnly.add(t.toUpperCase()); } });
     re.ambiguous = ambTerms.size ? mk(ambTerms) : null;
     if (re.ambiguous) re.ambiguous.cueOnly = cueOnly;
     re.places = placeTerms.size ? mk(placeTerms) : null;
@@ -4994,7 +5085,7 @@
       : given ? (() => { const auto = classifyColumns(headers, rows); return auto.map((a, i) => (i < given.length ? { header: headers[i], index: i, role: ROLES.includes(given[i] && (given[i].role || given[i])) ? (given[i].role || given[i]) : 'text' } : a)); })()
       : classifyColumns(headers, rows);
     const registry = cfg.registry || createRegistry();
-    const census = buildCensus(headers, rows, columns, { registry });
+    let census = buildCensus(headers, rows, columns, { registry });
     if (!cfg.mrnPattern && census.mrnCols.length) {
       const inferred = inferIdPattern(rows.map((r) => r[census.mrnCols[0]]));
       cfg.mrnRegex = inferred ? new RegExp(inferred, 'g') : null;
@@ -5028,17 +5119,60 @@
     // alone and is the same in every part of a long input.
     const headerCtx = { cfg, census, propagateRegex: null, rowPatientKey: null, rowExtraKeys: null, manual: null, cellKey: null, fragments: null };
     const headerSpans = headers.map((h, ci) => { if (!h) return []; try { return detectText(h, headerCtx).filter(headerSpanKeep); } catch (e) { fail(-1, ci, e); return null; } });
+    // A name the patient goes by, said in that patient's own row ("Goes by 'Bronia'", "Quist, Bart (Bartholomew)"), is a
+    // name of that patient: it joins the patient's nicknames in the session registry, so the census finds it in every row,
+    // column and letter case of this input and of later ones, it is replaced by the patient's own made-up given name, and
+    // the self-check looks for it. A word-name ("goes by Rose", "Will") is not learned this way: as a census name it would
+    // be taken at the start of a sentence too ("Rose from chair"); it stays on the ambiguous path of collectPropagation.
+    if (cfg.layers.propagate && cfg.layers.census) {
+      let learned = false;
+      const soleKey = rows.sectionOf && census.patients.size === 1 ? [...census.patients.keys()][0] : null; // a pasted note about one patient
+      const wordLike = (w) => w.length < 3 || LEX.isAmbiguous(w) || LEX.isClinical(w) || relWord(w) || COMMON_CAP.has(w.toLowerCase()) || COMMON_LOWER.has(w.toLowerCase()) || monthIndex(w) || LEX.HONORIFIC_SET.has(w.toLowerCase()) || LEX.CREDENTIAL_SET.has(w.toLowerCase()) || (cfg.allowSet && cfg.allowSet.has(w.toLowerCase())) || ((LEX.isEnglishWord(w) || LEX.isDictWord(w)) && !LEX.isFirstName(w));
+      firstPass.forEach((cells, ri) => {
+        if (census.rowExtra[ri] && census.rowExtra[ri].length) return; // a line of several patients: whose name it is cannot be told
+        const pk = census.rowPatient[ri] || soleKey; const p = pk ? census.patients.get(pk) : null;
+        if (!p || !p.entity) return;
+        cells.forEach((sp, ti) => {
+          if (!sp.length) return;
+          const text = cellToString(rows[ri][textCols[ti]]);
+          sp.forEach((s) => {
+            if (s.initials || s.manual || !/cue:(?:alias|bracket)/.test(s.source)) return;
+            const alias = text.slice(s.start, s.end).replace(/['’]s$/, '').trim();
+            if (!/^\p{Lu}[\p{L}'’]*(?:-[\p{L}'’]+){0,2}$/u.test(alias) || alias.length > 40) return; // one name, hyphenated or not
+            if (wordLike(alias.replace(/-/g, ''))) return;
+            if (p.ownTokens && p.ownTokens.has(alias.toLowerCase())) return; // already a name of this patient
+            // the sentence so far: a relative or another person named in it is the one who "goes by" the name
+            const lead = text.slice(0, s.start).split(/[.!?;\n]\s+/).pop();
+            const leadAt = s.start - lead.length;
+            if (/cue:bracket/.test(s.source)) { if (!sp.some((x) => x.type === 'NAME_PATIENT' && x.entity === pk && x.end <= s.start && x.end >= leadAt)) return; }
+            else if ((lead.match(/\p{L}[\p{L}'’\-]*/gu) || []).some((w) => relWord(w.replace(/['’]s$/, ''))) || sp.some((x) => x !== s && COARSE(x.type) === 'NAME' && x.type !== 'NAME_PATIENT' && x.end <= s.start && x.end > leadAt)) return;
+            if (!p.entity.nicks) p.entity.nicks = new Set();
+            if (![...p.entity.nicks].some((n) => String(n).toLowerCase() === alias.toLowerCase())) { p.entity.nicks.add(alias); learned = true; }
+          });
+        });
+      });
+      if (learned) { census = buildCensus(headers, rows, columns, { registry }); ctx.census = census; headerCtx.census = census; }
+    }
     if (cfg.layers.propagate) {
       const all = columnNameSpans(headers, rows, columns); firstPass.forEach((cells) => cells.forEach((sp) => all.push(...sp)));
       headerSpans.forEach((sp) => { if (sp) all.push(...sp); }); // a name found in a header is looked for in the cells too
-      ctx.propagateRegex = collectPropagation(all, cfg);
+      // the names earlier inputs of this session found (a relative, a visitor, an outside provider) are names here too;
+      // only those with a word that is written somewhere in this input are looked for (a long session keeps thousands)
+      let seeds = null;
+      if (registry.aliasTerms instanceof Map && registry.aliasTerms.size) {
+        const docToks = new Set();
+        const sq = (x) => foldName(x).toLowerCase();
+        rows.forEach((r) => textCols.forEach((ci) => { const v = cellToString(r[ci]); if (v) (sq(v).match(/\p{L}{2,}/gu) || []).forEach((w) => docToks.add(w)); }));
+        seeds = [...registry.aliasTerms.values()].filter((t) => { const ws = sq(t).match(/\p{L}{2,}/gu) || []; return ws.some((w) => docToks.has(w)) || docToks.has(ws.join('')); });
+      }
+      ctx.propagateRegex = collectPropagation(all, cfg, seeds);
       // word-names (Grace, Hope) are re-found only near where their full name was found: the same row, the other rows of the
       // same patient, or the same section of a pasted note (each line of a note is a row)
       const groupOf = (ri) => census.rowPatient[ri] != null ? 'P' + census.rowPatient[ri] : (rows.sectionOf ? 'S' + rows.sectionOf[ri] : 'R' + ri);
       const groupSpans = new Map();
       firstPass.forEach((cells, ri) => { const g = groupOf(ri); if (!groupSpans.has(g)) groupSpans.set(g, []); cells.forEach((sp) => { for (const x of sp) groupSpans.get(g).push(x); }); });
       const groupAmb = new Map();
-      groupSpans.forEach((sp, g) => { const r = collectPropagation(sp, cfg); groupAmb.set(g, r ? r.ambiguous : null); });
+      groupSpans.forEach((sp, g) => { const r = collectPropagation(sp, cfg, null, true); groupAmb.set(g, r ? r.ambiguous : null); });
       ctx.rowAmbiguousList = firstPass.map((_, ri) => groupAmb.get(groupOf(ri)) || null);
     }
     // Document text for surrogate collision avoidance
@@ -5162,6 +5296,13 @@
     if (addDerived) { outHeaders.push('Age (derived)'); outRows.forEach((r, i) => { r.push(details[i].derivedAge || ''); }); }
     if (cfg.auditColumn) { outHeaders.push('DeID Audit'); outRows.forEach((r, i) => { r.push(details[i].audit || ''); }); }
 
+    // the names this input found are kept for the session (written only now, after every row went through: a run that fails
+    // half way leaves nothing behind); the oldest go first when a very long session collects more than the scan should carry
+    if (cfg.layers.propagate && ctx.propagateRegex && ctx.propagateRegex.carry && ctx.propagateRegex.carry.length) {
+      if (!(registry.aliasTerms instanceof Map)) registry.aliasTerms = new Map();
+      ctx.propagateRegex.carry.forEach((t) => { const k = t.toLowerCase(); if (!registry.aliasTerms.has(k)) registry.aliasTerms.set(k, t); });
+      if (registry.aliasTerms.size > 4000) [...registry.aliasTerms.keys()].slice(0, registry.aliasTerms.size - 4000).forEach((k) => registry.aliasTerms.delete(k));
+    }
     const mapping = sur.mapping;
     // the registry is the session-wide key: every patient linked so far, with codes, surrogates and offsets, and every
     // provider, third-party name, organization, place and identifier replaced in any input of the session
@@ -5327,7 +5468,9 @@
         }
       }
       // the preferred name or nickname from the patient's own column
-      if (p.entity && p.entity.nicks) p.entity.nicks.forEach((n) => String(n).split(/[\s,]+/).forEach((w) => { if (w.length > 200) return; const c = w.replace(/^[^\p{L}]+/u, '').replace(/[^\p{L}]+$/u, ''); if (c.length >= 3) toks.add(c); }));
+      if (p.entity && p.entity.nicks) p.entity.nicks.forEach((n) => String(n).split(/[\s,]+/).forEach((w) => { if (w.length > 200) return; const c = w.replace(/^[^\p{L}]+/u, '').replace(/[^\p{L}]+$/u, ''); if (c.length >= 3) { toks.add(c); if (/-/.test(c)) joinForms(c).forEach((x) => { if (x.length >= 4) toks.add(x); }); } }));
+      // every token also in its accent-free spelling ("Bronislawa" for Bronisława)
+      [...toks].forEach((t) => { const ft = foldName(t); if (ft !== t && ft.length >= 3) toks.add(ft); });
       if (p.entity && p.entity.code) studyCodes.add(String(p.entity.code));
       for (const t of toks) {
         // a common token (an ordinary or clinical word: May, Will, Rose) counts only as the census wrote it and in the patient's
@@ -5343,9 +5486,40 @@
     const fuzzy = surnameIndex([...census.patients.values(), ...(census.known ? census.known.values() : [])]);
     return { digitKeys, tokenIndex, tokenScan, initialPairs, stemsByInitial, studyCodes, unnamed, fuzzy };
   }
+  // The names of other people the session has found (a relative, a visitor, an outside provider: registry.aliasTerms, see
+  // processTableCore), as the self-check looks for them: in any letter case, hyphenated, spaced or run together, with or
+  // without accents. Only a name that is no ordinary, clinical or made-up word is looked for this way.
+  const ALIAS_CHECK = new WeakMap();
+  // (a name the user allowlisted is not looked for: the detector leaves it on purpose)
+  function aliasCheckKeys(registry, allow) {
+    const all = aliasCheckKeysAll(registry);
+    if (!allow || !allow.size || !all.length) return all;
+    const kept = all.filter((k) => !allow.has(k) && !k.split(/[-\s]+/).some((h) => allow.has(h)));
+    return kept.length === all.length ? all : kept;
+  }
+  function aliasCheckKeysAll(registry) {
+    const terms = registry && registry.aliasTerms instanceof Map ? registry.aliasTerms : null;
+    if (!terms || !terms.size) return [];
+    const taken = registry.taken instanceof Set ? registry.taken : new Set();
+    let last = ''; for (const k of terms.keys()) last = k;
+    const c = ALIAS_CHECK.get(registry);
+    if (c && c.n === terms.size && c.last === last && c.taken === taken.size) return c.keys;
+    const keys = new Set();
+    terms.forEach((t) => {
+      if (/[\s,.]/.test(t) || t.length > 60 || !/^\p{Lu}/u.test(t)) return; // the words of a full name are terms of their own
+      const lc = t.toLowerCase();
+      if (!givenNotWord(t) || LEX.isDictWord(t) || LEX.isAmbiguous(t) || DRUG_STEM.test(t) || taken.has(lc) || lc.split('-').some((h) => taken.has(h))) return;
+      [lc, ...(/-/.test(lc) ? joinForms(lc) : [])].forEach((x) => { if (x.length < 4 || taken.has(x)) return; keys.add(x); const fx = foldName(x); if (fx !== x && !taken.has(fx)) keys.add(fx); });
+    });
+    const out = [...keys];
+    ALIAS_CHECK.set(registry, { n: terms.size, last, taken: taken.size, keys: out });
+    return out;
+  }
   function selfCheckScan(result, o, census, cfg, ix) {
     const { hits, providerHits, coincidences, unnamed, digitKeys, tokenIndex, tokenScan, initialPairs, stemsByInitial, studyCodes, fuzzy, outRows, headers, digitsOf, dobHasYear, isMonthOfDate } = ix;
     void digitsOf;
+    const aliasKeys = aliasCheckKeys(result.registry, cfg && cfg.allowSet instanceof Set ? cfg.allowSet : null);
+    const aliasScan = aliasKeys.length ? (aliasKeys.scan || (aliasKeys.scan = makeScan(aliasKeys))) : null;
     const ageAfterName = /(?:\b[A-Z][a-z]+,?\s|\b(?:turned|turning|is|now|age|aged)\s)(9\d|1[01]\d)(?![\d+\/%:]|\.\d|\s*(?:mg|mcg|kg|lb|lbs|ml|mL|cc|units?|%|mmhg|bpm|min|hrs?|yo|y\/o|yrs?|years?|day|days|x))/g;
     const vitalBefore = /\b(?:hr|bp|spo2|o2|sat|sats|pulse|wt|weight|glucose|bg|temp|k|na|cr|plt|hgb|wbc|anc|rate|dose|level|count|score|mg|egfr|inr|ldh|auc|room|chair|bay|ext|x|cycle|day|grade|stage|pain)\s*$/i;
     // one cell of the output; a header cell (ri = -1) has no row patient, and a common word (Ward, Bay, May) is never read as a
@@ -5401,6 +5575,9 @@
           }
         }
       }
+      // 3b. a name of another person that the tool removed somewhere in this session and that is still written here
+      // (a four-letter word in capitals is left to the detector, which reads it as an abbreviation: see propagationForms)
+      if (aliasScan) for (const m of scanLookup(s, aliasScan)) { if (!tokenIndex.has(m[0].toLowerCase()) && !(m[0].length < 5 && m[0] === m[0].toUpperCase())) push(m[0], 'NAME_OTHER', rowKey, 'alias'); }
       // a file name glues name parts with capitals ("ConsentMbekiLarsson.pdf"): its CamelCase pieces, alone and run together
       if (tokenScan && /[a-z][A-Z]/.test(s) && FILE_EXT_RE.test(s)) {
         const ft = new RegExp(FILE_TOKEN_RE.source, 'gi'); let fm;
@@ -5471,6 +5648,14 @@
         last.split(/[\s\-]+/).forEach((t) => { const w = t.replace(/[^A-Za-zÀ-ÿ'’]/g, ''); if (w.length >= 4 && !LEX.isEnglishWord(w) && !LEX.isDictWord(w) && !LEX.isClinical(w)) nameSet.add(w.toLowerCase()); });
       }
     }));
+    // the names a patient goes by (learned from a nickname column or from "goes by ..." in a note) and the names of other
+    // people found in this session: a survivor in any letter case is an identifier left in the output
+    const rareName = (w) => w.length >= 4 && !LEX.isEnglishWord(w) && !LEX.isDictWord(w) && !LEX.isClinical(w);
+    const rc = result.census && result.census.patients;
+    if (rc && typeof rc.forEach === 'function') rc.forEach((p) => { if (p && p.entity && p.entity.nicks) p.entity.nicks.forEach((n) => String(n).split(/[\s,]+/).forEach((t) => { const w = t.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, ''); if (rareName(w)) { nameSet.add(w.toLowerCase()); if (/-/.test(w)) joinForms(w.toLowerCase()).forEach((x) => { if (x.length >= 4) nameSet.add(x); }); } })); });
+    // (from five letters on: a four-letter name in capitals is left to the detector as an abbreviation, and a needle is
+    // matched in any letter case)
+    aliasCheckKeys(result.registry, allow).forEach((k) => { if (k.length >= 5 && rareName(k)) nameSet.add(k); });
     out.needles.digits = [...digitSet]; out.needles.names = [...nameSet];
     const hits = findNeedles(result.headers ? [result.headers, ...result.rows] : result.rows, out.needles);
     hits.forEach((h) => out.identifiers.push({ row: h.row - (result.headers ? 1 : 0), col: h.col, header: cellToString((result.headers || [])[h.col]), text: h.text, type: h.type }));
