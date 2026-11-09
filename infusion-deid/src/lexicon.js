@@ -298,6 +298,7 @@
     Atezolizumab Durvalumab Ipilimumab Cetuximab Panitumumab Daratumumab Bortezomib
     Carfilzomib Lenalidomide Dexamethasone Ondansetron Palonosetron Fosaprepitant
     Diphenhydramine Famotidine Acetaminophen Lorazepam Prochlorperazine Metoclopramide
+    Epi EpiPen
     Methotrexate Leucovorin Bendamustine Azacitidine Decitabine Venetoclax Zoledronic
     Denosumab Filgrastim Pegfilgrastim Epoetin Darbepoetin Ferumoxytol Venofer Injectafer
     Feraheme Infed Monoferric Ocrevus Entyvio Remicade Inflectra Renflexis Avsola Stelara
