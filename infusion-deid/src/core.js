@@ -4696,6 +4696,9 @@
         const hs = segsOf(lines[i]);
         if (hs.length < 2 || !hs.every((x) => TILE_LABEL.test(x.text))) { out.push(lines[i]); i++; continue; }
         const k = hs.length, cols = hs.map(() => []);
+        // a row under the labels with more cells than there are labels: a label was not read, so the tiles cannot be cut
+        { let over = false; for (let q = i + 1; q < lines.length && q <= i + 4; q++) { const sg = segsOf(lines[q]); if (sg.length >= 2 && sg.every((x) => TILE_LABEL.test(x.text))) break; if (sg.length > k) { over = true; break; } }
+          if (over) { out.push(lines[i]); i++; continue; } }
         let n = i + 1;
         for (; n < lines.length; n++) {
           const line = lines[n];
