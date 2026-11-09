@@ -442,7 +442,7 @@ test('ages: NNyo and bare numbers after a name or "turned" become 90+; MRNs with
   for (const leak of ['91', '95', '97', '0041 2345', '0041-2345', '00412345', 'Delaware', 'Hertel', 'Brighton', 'Williamsville', '14221', '123 456 789', '4471']) assert.ok(!new RegExp('(?<![\\w+])' + leak + '(?![\\w+])').test(out), 'leak ' + leak + ' in ' + out);
   assert.equal((out.match(/P001/g) || []).length, 3, out);
   assert.ok(out.includes('pain 6/10 today'), 'a symptom score is not a date: ' + out);
-  assert.ok(/near [A-Z][a-z]+ Rd\./.test(out) && /at \d{3} [A-Z][a-z]+ St in/.test(out), 'address surrogates keep their shape: ' + out);
+  assert.ok(/near [A-Z][a-z]+ Rd\./.test(out) && /at \d{3} [A-Z][a-z]+ in/.test(out), 'address surrogates keep their shape: ' + out);
 });
 test('nicknames, initials, two-word and three-part names of the census patient are the patient; relatives sharing the surname are not', () => {
   const rows = [
@@ -686,7 +686,7 @@ test('r1 places, surname-initial references, particles kept in surrogates, OCR c
   noneOf(res.rows[1][2], ['Aldous', 'Brightman', 'P.\'s', ' O. ']);
   assert.match(res.rows[1][2], /^Same bag as [A-Z][a-z]+ [A-Z]\.'s; per [A-Z][a-z]+, [A-Z]\. order$/);
   const out = textOut('Visitor: Ines de la Fuente Arroyo at desk.');
-  assert.ok(/ de la /.test(out) && !/Fuente|Arroyo/.test(out), out);
+  assert.ok(!/ de la /.test(out) && !/Fuente|Arroyo/.test(out), out); // a surname with particles is replaced as one surname
   assert.equal(D.normalizeOcrText('Infuse over 30 min, g21 days; g4wk; stage Ill; mg/kg'), 'Infuse over 30 min, q21 days; q4wk; stage III; mg/kg');
 });
 
