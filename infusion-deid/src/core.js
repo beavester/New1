@@ -1120,6 +1120,120 @@
     run(RULES.AGE_APPOS, 'AGE', (m) => !/\b(?:hr|bp|spo2|o2|sat|sats|pulse|wt|weight|glucose|bg|temp|k|na|cr|plt|hgb|wbc|anc|rate|dose|level|count|score|mg|egfr|inr|ldh|auc|room|chair|bay|ext|x)\s*$/i.test(text.slice(Math.max(0, m.index - 10), m.index)));
     RULES.AGE_TURNS.lastIndex = 0; let at;
     while ((at = RULES.AGE_TURNS.exec(text))) { const val = at[1]; const start = at.index + at[0].length - val.length; if (!spans.some((x) => x.type === 'AGE' && x.start <= start && x.end >= start + val.length)) spans.push({ start, end: start + val.length, type: 'AGE', source: 'rule', text: val }); }
+    // Identifier families written the way people type them, each checked on both sides against its look-alikes: a phone as
+    // 3+4 digits with a space ("callback 555 0138"), ZIP codes after a ZIP word or a town ("ZIP on file 01234 ... updated to
+    // 01236"), and a bare age of 90 or more ("Age verified 94", "still driving at 94", "her mother, 99,"). A number that a
+    // lab, vital, dose, rate, room, chair, lot or order word governs, or that carries a unit, is never one of these.
+    {
+      const within = (a, b, type) => spans.some((x) => (!type || x.type === type) && x.start <= a && x.end >= b);
+      const overlaps = (a, b) => spans.some((x) => x.start < b && a < x.end);
+      const clauseLeft = (i, max) => text.slice(Math.max(0, i - (max || 60)), i).split(/[.;!?](?:\s|$)|\n/).pop();
+      const FILLER = '(?:\\s*(?:is|was|of|at|to|now|still|about|approx\\.?|around|only|verified|confirmed|today|currently|=|:|~))*';
+      // a measurement word governs the number: its label right before it, with at most a linking word between
+      const MEASURE_BEFORE = new RegExp('(?<![A-Za-z])(?:hr|bp|rr|spo2|o2|sat|sats|saturation|pulse|wt|weight|weights|ht|height|glucose|bg|fsbg|temp|k|na|cl|co2|bun|cr|creat|creatinine|plt|plts|platelets?|hgb|hb|hct|wbc|anc|alc|rbc|mcv|inr|ptt|ldh|egfr|gfr|crcl|ef|lvef|qtc|map|bmi|a1c|tsh|psa|cea|ferritin|tsat|iron|albumin|alb|ast|alt|bili|bilirubin|calcium|ca|mg|phos|sodium|potassium|upcr|calprotectin|crp|esr|rate|dose|doses|level|levels|counts?|score|labs?|values?|results?|vitals?|volume|vol|total|infused|infusing|running|runs|ran|titrat(?:e|ed|ing)|pump|flush|bolus|gave|given|steps|cycle|day|week|grade|stage|pain|ecog|kps)' + FILLER + '\\s*$', 'i');
+      // a label of some other numbered thing: an order, a lot, a room, a chair, an extension, a billing code
+      const OTHER_LABEL = /(?<![A-Za-z])(?:order|lot|ref|reference|auth|claim|invoice|rx|ndc|serial|sn|acct|account|mrn|csn|har|fin|id|code|codes|cpt|icd|hcpcs|drg|room|rm|chair|bay|bed|pod|suite|ste|apt|unit|floor|ext|extension|x|page|pg|box|ticket|case|conf|confirmation|batch|model|part|item|tracking|protocol|study|trial|pin|badge|exp|expires?|pump|device|invoice|check)\s*(?:#|no\.?|num(?:ber)?)?\s*[:#]?\s*$/i;
+      // the second number of a pair ("555 0138 or 555 0142", "01234 and 01236", "96365 and 96366") is whatever the first one is:
+      // the type of the span that ends right before the joining word, or null when the first number was left alone
+      const JOINED = /(\d)\s*(?:,|\/|;|&|\+|and|or|then|to|vs\.?)\s*$/i;
+      const pairType = (a) => { const jm = text.slice(Math.max(0, a - 12), a).match(JOINED); if (!jm) return undefined; const endPrev = a - jm[0].length + 1; const sp = spans.find((x) => x.end === endPrev); return sp ? sp.type : null; };
+      const UNIT_NEXT = /^\s*(?:mg|mcg|ug|g|gm|kg|lbs?|oz|ml|cc|l|dl|units?|iu|meq|mmol|mmhg|bpm|%|percent|°|deg|degrees|cells|copies|k|x|min|mins|minutes|hrs?|hours?|days?|weeks?|wks?|months?|mos?|doses?|tabs?|caps?|cycles?|times|steps|ns|d5w?|over|on\s+ra|ra)(?![A-Za-z])|^\s*\//i;
+      const prevWordOf = (i) => (text.slice(Math.max(0, i - 40), i).match(/([A-Za-z][A-Za-z'’\-]*)[^A-Za-z]*$/) || [])[1] || '';
+      const governed = (a, b) => { const left = clauseLeft(a), after = text.slice(b); return MEASURE_BEFORE.test(left) || OTHER_LABEL.test(left) || UNIT_NEXT.test(after) || /\d[ \t]+$/.test(left) || /^[ \t]+\d/.test(after); };
+
+      // --- phones: seven digits as 3+4 with a space, or run together, with a phone word before them or standing free ---
+      const PHONE_CUE = /(?<![A-Za-z])(?:call(?:s|ed|ing)?(?:[ -]?back)?|callback|cb|reach(?:ed|able)?|contact(?:ed)?|phone|ph|tel|telephone|cell|mobile|mob|landline|home|work|fax|pager|text(?:s|ed|ing)?|voicemail|vm|number|num|line|dial|daytime|evenings?|#)\s*(?:#|no\.?|number|num)?\s*[:.]?\s*(?:(?:is|was|at|on|to|for|of|her|his|their|him|them|me|us|pt|patient|back|now|new|best|alt|alternate|updated?|changed)\s+){0,3}(?:\p{L}[\p{L}'’\-]*\s+){0,2}[:#(]?\s*$/iu;
+      { const re = /(?<![\d\w\/.\-$#:,])(\d{3})[ ](\d{4})(?![\d\w]|[.\-\/:,]\d|\s*%)/g; let m;
+        while ((m = re.exec(text))) {
+          const a = m.index, b = a + m[0].length;
+          if (overlaps(a, b)) continue;
+          const left = clauseLeft(a, 70), after = text.slice(b);
+          const pt = pairType(a);
+          if (pt === 'PHONE') { spans.push({ start: a, end: b, type: 'PHONE', source: 'rule', text: m[0], conf: 0.85 }); continue; }
+          if (pt === null) continue;
+          if (MEASURE_BEFORE.test(left) || OTHER_LABEL.test(left) || UNIT_NEXT.test(after) || /\d[ \t]+$/.test(left) || /^[ \t]+\d/.test(after)) continue;
+          const pw = prevWordOf(a);
+          const cued = PHONE_CUE.test(left);
+          // with no phone word: an exchange a real number can have (not 0xx or 1xx), no clinical word right before it
+          // a number after an ordinary lower-case word ("took 400 0800", "gave 325 0915") is no phone without a phone word
+          const afterWord = /[A-Za-z][ \t]*$/.test(left) && /^[a-z]/.test(pw) && !relWord(pw) && (LEX.isEnglishWord(pw) || LEX.isDictWord(pw) || COMMON_LOWER.has(pw));
+          const free = /^[2-9]/.test(m[1]) && !afterWord && !(pw && ((LEX.isClinical(pw) && !relWord(pw) && !/^(?:pharmacy|office|clinic|home|work|cell|phone)$/i.test(pw)) || /^(?:at|x|of|to|in|on|by|from|over|about|approx|total|and|or|then|plus|minus)$/i.test(pw)));
+          if (cued || free) spans.push({ start: a, end: b, type: 'PHONE', source: 'rule', text: m[0], conf: cued ? 0.9 : 0.75 });
+        }
+      }
+      { const re = /(?<![\d\w\/.\-$#:,])\d{7}(?![\d\w\/\-:,]|\.\d)/g; let m;
+        while ((m = re.exec(text))) {
+          const a = m.index, b = a + 7;
+          if (within(a, b, 'PHONE')) continue;
+          const left = clauseLeft(a, 70);
+          if (OTHER_LABEL.test(left) || MEASURE_BEFORE.test(left) || UNIT_NEXT.test(text.slice(b))) continue;
+          if (/(?<![A-Za-z])(?:call(?:s|ed|ing)?(?:[ -]?back)?|callback|cb|reach(?:ed|able)?|phone|ph|tel|telephone|cell|mobile|mob|landline|fax|pager|text(?:s|ed|ing)?|voicemail|vm|dial)\s*(?:#|no\.?|number|num)?\s*[:.]?\s*(?:(?:is|was|at|on|to|her|his|their|him|them|me|us|pt|patient|back|now|new)\s+){0,3}[:#(]?\s*$/i.test(left)) spans.push({ start: a, end: b, type: 'PHONE', source: 'rule', text: m[0] });
+        }
+      }
+
+      // --- ZIP codes ---
+      const zipTok = () => /(?<![\w\/.\-$#:])\d{5}(?:-\d{4})?(?![\w\/:%]|\.\d|-\d|,\d{3})/g;
+      const pushZip = (a, v, conf) => { if (within(a, a + v.length, 'ZIP') || spans.some((x) => x.type !== 'ZIP' && x.type !== 'ID_OTHER' && x.start < a + v.length && a < x.end && x.rule !== 'zipfam')) return; spans.push({ start: a, end: a + v.length, type: 'ZIP', source: 'rule', text: v, conf: conf || 0.85, rule: 'zipfam' }); };
+      // every five-digit number in the rest of the sentence after a ZIP word: "ZIP on file 01234 wrong - updated to 01236",
+      // "zip changed from 01040 to 01041", "new zip code is 01060"
+      { const cue = /(?<![A-Za-z])(?:zip(?:[ \t]*codes?)?|zipcodes?|postal[ \t]*codes?)(?![A-Za-z])/gi; let c;
+        while ((c = cue.exec(text))) {
+          const from = c.index + c[0].length;
+          const seg = text.slice(from, from + 90).split(/[.;!?](?:\s|$)|\n/)[0];
+          const re = zipTok(); let z;
+          while ((z = re.exec(seg))) { const a = from + z.index; if (OTHER_LABEL.test(clauseLeft(a, 30)) && !/zip|postal/i.test(clauseLeft(a, 30))) continue; if (UNIT_NEXT.test(text.slice(a + z[0].length))) continue; pushZip(a, z[0], 0.9); }
+        }
+      }
+      // a ZIP that starts with zero (New England, New Jersey) is no count, time or dose: a ZIP unless a label or a unit claims it
+      { const re = /(?<![\w\/.\-$#:])0\d{4}(?:-\d{4})?(?![\w\/:%]|\.\d|-\d|,\d{3})/g; let z;
+        while ((z = re.exec(text))) { const a = z.index, b = a + z[0].length; const pw = prevWordOf(a); const pt = pairType(a); if (pt === 'ZIP') { pushZip(a, z[0], 0.75); continue; } if (pt === null || governed(a, b) || (pw && LEX.isClinical(pw) && /[A-Za-z][^A-Za-z]{0,2}$/.test(text.slice(Math.max(0, a - 3), a)))) continue; pushZip(a, z[0], 0.75); }
+      }
+      // a five-digit number after a state name, or after a town of the place list that is no ordinary word: "Vermont 05401",
+      // "Chicopee 01013", "Amherst, 01002"
+      { const re = /(?<![\p{L}\d])(\p{Lu}[\p{L}'’]+(?:[ \t]\p{Lu}[\p{L}'’]+)?),?[ \t]+(\d{5}(?:-\d{4})?)(?![\w\/:%]|\.\d|-\d|,\d{3})/gu; let z;
+        const PLd = placeData();
+        while ((z = re.exec(text))) {
+          const words = z[1].split(/[ \t]+/), lastW = words[words.length - 1];
+          const a = z.index + z[0].length - z[2].length;
+          re.lastIndex = z.index + z[1].length; // the next town may start at this match's second word
+          if (UNIT_NEXT.test(text.slice(a + z[2].length))) continue;
+          const isState = LEX.STATE_NAME_SET.has(z[1].toLowerCase()) || LEX.STATE_NAME_SET.has(lastW.toLowerCase());
+          const isTown = [z[1], lastW].some((w) => (LEX.CITY_SET.has(w.toLowerCase()) || (PLd && PLd.has(w))) && !LEX.isClinical(w) && !w.split(/[ \t]+/).some((x) => COMMON_CAP.has(x.toLowerCase()) || (LEX.isEnglishWord(x) && !LEX.CITY_SET.has(x.toLowerCase()) && !/,/.test(z[0]))));
+          if (isState || isTown) pushZip(a, z[2], 0.8);
+        }
+      }
+
+      // --- bare ages of 90 and over ---
+      const LIFE = /(?<![A-Za-z])(?:still|alone|independent(?:ly)?|driv(?:es?|ing)|liv(?:es?|ed|ing)|work(?:s|ed|ing)|active|sharp|frail|spry|gardens?|gardening|walk(?:s|ing)|died|passed|widow(?:ed)?|retired|diagnosed|even|age|aged|old|young|birthday|bday|healthy|strong|well|mother|father|mom|dad|grandm\w+|grandf\w+|husband|wife)(?![A-Za-z])/i;
+      const MEASURE_NEAR = /(?<![A-Za-z])(?:rate|infus\w+|running|ran|runs|pump|sats?|saturation|pulse|hr|bp|map|titrat\w+|set|started|start|drip|ml|temp|weight|wt|o2|spo2|glucose|bg|dose|dosed|hgb|plt|wbc|anc|level|flow|bolus|maintained|holding|held|capped|maxed|max|min|goal|target|increase[ds]?|decrease[ds]?|up|down|dropped|rose|peaked)(?![A-Za-z])/i;
+      const personWord = (w) => !!w && (/^(?:pt|patient|he|she|they|who)$/i.test(w) || relWord(w) || (/^\p{Lu}\p{Ll}/u.test(w) && !LEX.isClinical(w) && !monthIndex(w) && !COMMON_CAP.has(w.toLowerCase()) && !FIELD_WORD_ALL.test(w) && (LEX.isFirstName(w) || LEX.isSurname(w) || !LEX.isDictWord(w))));
+      { const re = /(?<![\d\w\/.\-$#:%+,])(9\d|1[01]\d)(?=\s*-?\s*(?:y\/?o|y\.o\.?|yrs?|y)\s?[MmFf](?![A-Za-z]))/g; let m;
+        while ((m = re.exec(text))) { if (!within(m.index, m.index + m[1].length, 'AGE')) spans.push({ start: m.index, end: m.index + m[1].length, type: 'AGE', source: 'rule', text: m[1], conf: 0.9 }); }
+      }
+      { const re = /(?<![\d\w\/.\-$#:%+,])(9\d|1[01]\d)(?![\d\w\/%:+]|[.,]\d|-\d)/g; let m;
+        while ((m = re.exec(text))) {
+          const a = m.index, b = a + m[0].length;
+          if (overlaps(a, b)) continue;
+          const left = clauseLeft(a, 70), after = text.slice(b);
+          if (UNIT_NEXT.test(after) || OTHER_LABEL.test(left) || /\d[ \t]+$/.test(left) || /^[ \t]+\d/.test(after)) continue;
+          let age = false;
+          // an age word with what was done about it in between: "Age verified 94", "age on file is 96", "age per chart 93"
+          if (/(?<![A-Za-z])age[ds]?\s*[:=]?\s*(?:(?:verified|confirmed|documented|listed|recorded|reported|given|stated|corrected|updated|on\s+file|in\s+chart|per\s+\w+|is|was|as|of|now|at|about|approx\.?|actually|really|~)\s*[:=]?\s*){0,3}$/i.test(left) && !MEASURE_BEFORE.test(left)) age = true;
+          // in apposition to a person: "pt, 94,", "her mother, 99, called", "Mr. Lee (94)"
+          else if ((/,\s*$/.test(left) && /^\s*(?:[,;.]|$)/.test(after)) || (/\(\s*$/.test(left) && /^\s*\)/.test(after))) age = personWord((left.match(/([\p{L}'’\-]+)\s*[,(]\s*$/u) || [])[1]);
+          // a point in a life: "still driving at 94", "at 94 she still gardens", "lived to 102", "made it to 95"
+          else if (/(?<![A-Za-z])(?:(?:at|by|until|till|past|nearly|almost|approaching|reach(?:ed|es|ing)?|hit|hitting|hits)|(?:lived?|lives|living|made\s+it|make\s+it|makes\s+it)\s+to(?:\s+be)?)\s+$/i.test(left)) {
+            const body = left.replace(/\s*\S+\s+$/, ' ');
+            age = !MEASURE_NEAR.test(left) && (LIFE.test(body) || /(?:lived?|lives|living|made\s+it|make\s+it|makes\s+it)\s+to(?:\s+be)?\s+$/i.test(left) || /^\s*,?\s*(?:he|she|they|pt|patient|and\s+(?:still|living|lives|alone|independent))(?![A-Za-z])/i.test(after));
+          }
+          // a person and the age with nothing between, or with a contracted "is": "She's 94", "he's 92 now", "pt 94, frail",
+          // "father 91 lives with her"
+          else if (/(?<![A-Za-z])[\p{L}\-]+['’]s\s+(?:(?:now|only|almost|nearly|about|already|just)\s+)?$/iu.test(left)) age = personWord((left.match(/([\p{L}\-]+)['’]s\s+(?:\w+\s+)?$/u) || [])[1]) && /^\s*(?:[,;.!)]|$|now\b|and\b|but\b|years?\b|yrs?\b|this\b|today\b|next\b|in\b)/i.test(after);
+          else if (/(?<![A-Za-z])[\p{L}\-]+\s+$/u.test(left)) { const sw = (left.match(/([\p{L}\-]+)\s+$/u) || [])[1]; age = (/^(?:pt|patient)$/i.test(sw) || relWord(sw)) && /^\s*(?:[,;.)]|$|(?:and|who|lives?|living|still|with|has|had|was|is|called|came|here|presents?|arrived|accompan\w+|drove|drives|brought|reports?|states?|denies|c\/o|s\/p|w\/)(?![A-Za-z]))/i.test(after); }
+          if (age) spans.push({ start: a, end: b, type: 'AGE', source: 'rule', text: m[0], conf: 0.85 });
+        }
+      }
+    }
     run(RULES.MBI, 'ID_OTHER');
     // labelled record numbers, including ones broken by spaces/hyphens/OCR confusables; the span is the value only
     RULES.MRN_LABEL.lastIndex = 0; let mm;
@@ -1251,7 +1365,7 @@
     if (cfg.accountRegex) run(cfg.accountRegex, 'ACCOUNT', notPhoneExt);
     // Fallback for pasted/OCR text with no learned MRN pattern: a standalone 6-9 digit integer in clinical free text is
     // an identifier (MRN, account, order, claim) far more often than anything else. Money, units and formatted numbers are excluded.
-    run(RULES.ID_BARE, 'ID_OTHER', (m) => notPhoneExt(m) && !/^[ \t]*(?:mg|mcg|g|ml|mL|units?|cells|copies|iu|mEq|cc|pts?|steps|k)\b/i.test(text.slice(m.index + m[0].length)) && !/[$€£]\s*$/.test(text.slice(Math.max(0, m.index - 3), m.index)));
+    run(RULES.ID_BARE, 'ID_OTHER', (m) => notPhoneExt(m) && !/(?<![A-Za-z])(?:plt|plts|platelets?|wbc|anc|alc|rbc|ferritin|ldh|bnp|copies|viral\s+load|vl|counts?|steps|cells)\s*(?:is|was|of|at|to|now|=|:)?\s*$/i.test(text.slice(Math.max(0, m.index - 24), m.index)) && !/^[ \t]*(?:mg|mcg|g|ml|mL|units?|cells|copies|iu|mEq|cc|pts?|steps|k)\b/i.test(text.slice(m.index + m[0].length)) && !/[$€£]\s*$/.test(text.slice(Math.max(0, m.index - 3), m.index)));
     (cfg.extraRegexes || []).forEach((r) => run(r, 'ID_OTHER'));
     run(RULES.PHONE_PLAIN, 'PHONE');
     // a date cut off by a line wrap ("1970-02-" then "09" on the next line, "3/26/" then "1976"): still a date
@@ -4638,6 +4752,63 @@
       return words.join(' ');
     };
     const nameWordBad = (w) => !w || LINE_LABEL_WORD.test(w) || NOT_NAME.test(w) || LEX.isClinical(w) || !!monthIndex(w) || COMMON_CAP.has(w.toLowerCase()) || LEX.CREDENTIAL_SET.has(w.toLowerCase()) || LEX.HONORIFIC_SET.has(w.toLowerCase()) || LEX.ORG_SUFFIX_SET.has(w.toLowerCase()) || LEX.STATE_ABBR_SET.has(w);
+    // Is a "Last, First" pair a person? A score over the evidence, not a pattern: what each part is (a name of some tier,
+    // or positively something else: a drug, lab, month, weekday, insurer, state, place, label or ordinary word) plus what
+    // stands beside the pair (a record number, birthdate, age and sex, a column gap, a patient label) and how the line goes
+    // on (running prose after the pair counts against it). Unknown capitalised words score like rare names, so a name on
+    // no list still makes a heading; a pair is refused only on positive evidence that a part is not a person.
+    const HEADING_MIN = 2;
+    const HEAD_PAYER = /^(?:aetna|cigna|humana|anthem|bcbs|highmark|excellus|fidelis|univera|tricare|wellcare|molina|centene|kaiser|emblem|healthfirst|metroplus|caresource|medicare|medicaid|uhc|united|unitedhealthcare|optum|amerigroup|ambetter|carefirst|geisinger|premera|regence|cvs|caremark|express|walgreens|accredo|champva|va)$/i;
+    const HEAD_WEEKDAY = /^(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|yesterday|am|pm|noon|weekly|daily|monthly)$/i;
+    const headPartScore = (w, slot, pairCaps) => {
+      const lw = w.toLowerCase();
+      if (!w) return 0;
+      const curated = LEX.isCuratedName(w);
+      // Negative evidence yields to the name lists, by slot: "May" and "June" are given names, "Virginia" and "Georgia" too,
+      // "Washington", "Molina", "Kaiser" and "Parkinson" are surnames. What is on no good name list for its slot stays refused
+      // ("Dec", "Monday", "Mississippi", "Aetna", "Ocrevus", "Labs").
+      const strong = LEX.isStrongName(w), listed = curated || strong;
+      if (HEAD_WEEKDAY.test(w)) return -3;
+      if (monthIndex(w)) return slot === 'first' ? (LEX.isFirstName(w) && listed ? (curated ? 1 : 0.5) : -3) : (curated ? -1 : -3);
+      if (LINE_LABEL_WORD.test(w) || NOT_NAME.test(w) || LEX.ORG_SUFFIX_SET.has(lw) || LEX.CREDENTIAL_SET.has(lw)) return -3;
+      if (HEAD_PAYER.test(w)) return listed ? 1 : -3;
+      if (LEX.STATE_NAME_SET.has(lw)) return listed && (slot === 'last' || LEX.isFirstName(w)) ? 1 : -3;
+      // "Hill", "Rose" are names first; "Parkinson", "Addison" and "Hodgkin" are surnames that named a disease; "Ocrevus", "CBC", "Labs" never are
+      if (LEX.isClinical(w)) return curated ? 1 : strong ? 0.5 : (LEX.isSurname(w) && !LEX.isEnglishWord(w) && !LEX.isDictWord(w) && /^\p{Lu}\p{Ll}{3,}$/u.test(w)) ? 0 : -3;
+      // a short all-capitals token beside a Title-case part is an abbreviation ("Bristol, ZIP", "Dec, CBC")
+      if (!pairCaps && /^[A-Z]{2,5}$/.test(w) && !LEX.isStrongName(w)) return -3;
+      const PL = placeData();
+      const place = LEX.CITY_SET.has(lw) || (PL && PL.has(w) && (PL.isMajor ? PL.isMajor(w) : false));
+      if (slot === 'first' && place && !LEX.isFirstName(w)) return -2; // "Buffalo, Rochester": a city in the given-name slot that is no given name
+      if (LEX.isStrongName(w)) return 2;
+      if (curated) return 1;
+      if (slot === 'first' && !LEX.isFirstName(w) && (place || (PL && PL.has(w) && LEX.isEnglishWord(w)))) return -2; // "Lakeshore, Angola", "Buffalo, Rochester"
+      if (slot === 'last' && place) return 0;
+      if (LEX.isFirstName(w) || LEX.isSurname(w)) return LEX.isEnglishWord(w) ? 0.5 : 1;
+      if (LEX.isEnglishWord(w) || LEX.isDictWord(w)) return /(?:shore|wood|view|side|field|crest|land|ville|burg|port|haven|dale|brook|mont|ridge|vale)$/i.test(w) ? -1 : -2; // an ordinary word on no name list
+      return 1; // on no list at all: what a rare name looks like
+    };
+    const headingScore = (last, first, line, mIndex, mEnd, hasInitial) => {
+      const before = line.slice(Math.max(0, mIndex - 80), mIndex), after = line.slice(mEnd);
+      const pairCaps = last === last.toUpperCase() && first === first.toUpperCase();
+      const lastParts = last.split(/[ -]/).filter((w) => w && !NAME_PARTICLE.test(w.replace(/\.$/, '')));
+      const ls = lastParts.map((w) => headPartScore(w, 'last', pairCaps));
+      // a compound surname is judged by its worst part when one is positively not a name, else by its best
+      let score = (ls.length ? (Math.min(...ls) <= -2 ? Math.min(...ls) : Math.max(...ls)) : 0) + headPartScore(first, 'first', pairCaps);
+      // beside the pair
+      if (/^\s*[,(\-–—:|]?\s*\(?\s*(?:MRN|MR#|DOB|D\.O\.B|Acct|CSN)\b|^\s*[,(|]?\s*#?\s*[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w])|^\s*[,(|]?\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/i.test(after)) score += 3;
+      else if (/^\s*[,(|]?\s*\d{1,3}\s*(?:-\s*)?(?:y\/?o\b|y\.o\.?|yrs?\b|years?\b|year-old|[yY]?\s?[MF]\b)/.test(after)) score += 3; // "67F", "72 yo M", "(58 y/o"
+      else if (/^(?:\s{2,}|\s*[|\t])/.test(after)) score += 2; // the next column
+      else if (/^\s*[.;:]?\s*$/.test(after)) score += mIndex === 0 || /^\s*(?:(?:\d{3,4}|\d{1,2}:\d{2})\s*)?[|\[\]'!.]*\s*$/.test(before) ? 2 : 1; // the pair ends (or is) the line
+      else if (/^\s+[a-z]/.test(after)) score -= 1; // the sentence runs on
+      if (/\b(?:pt|patient|name)\s*[:#\-]?\s*$/i.test(before)) score += 2;
+      else if (/\b(?:re|regarding|for|contact)\s*[:#\-]?\s*$/i.test(before)) score += 1;
+      else if (/(?:\s{2,}|[|\t]\s*)$/.test(before) && mIndex > 0) score += 2; // the column before
+      else if (mIndex === 0 || /^\s*(?:(?:\d{3,4}|\d{1,2}:\d{2})\s*)?[|\[\]'!.]*\s*$/.test(before)) score += 1; // starts the line, or follows only its time
+      if (hasInitial) score += 1;
+      if (pairCaps && /\p{Ll}/u.test(line)) score += 1; // "GARCIA, MARIA" set in capitals in a mixed-case line
+      return score;
+    };
     // every "Last, First" on a line that has the structure of a census entry (first is the line's patient)
     const lineNames = (line) => {
       const out = [];
@@ -4682,6 +4853,7 @@
         if (/^[A-Z]{1,3}$/.test(first) && !m[3] && /^\s*:/.test(after)) continue;
         // structural evidence: a column gap, pipe, identifier, DOB or label right beside the pair. It overrides the
         // word lists, so "Bell, Kevin  MRN 032767781" and "Hill, Rose  84445786" are captured.
+        if (headingScore(last, first, line, mIndex, mIndex + mText.length, !!m[3]) < HEADING_MIN) continue;
         const structural = mIndex === 0 || /\b(?:from|message|msg|re|for|regarding)\b[^.]{0,40}\(\s*$/i.test(before) && /^\s*\)/.test(after) || /^\s{2,}|^\s*[|\t]|^\s*\(?\s*(?:MRN|DOB|Acct|CSN|ID|MR#)\b|^\s*#?\s*[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w])|^\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/i.test(after) || LINE_LABEL_BEFORE.test(before) || /(?:\s{2,}|[|\t]\s*)$/.test(before);
         if (!structural && (LEX.isClinical(last) || LEX.isClinical(first) || LEX.CITY_SET.has(last.toLowerCase()))) continue;
         out.push({ text: mText.trim(), index: mIndex, structural, hasIdOnLine });
@@ -4700,11 +4872,15 @@
       scan(LINE_MRN_LABEL_RE, 1);
       if (mrnRe) scan(mrnRe, 0);
       scan(LINE_ID_RE, 1);
+      // seven digits after a phone word ("call 5550138") are a phone number; a number a lab word governs or a unit follows
+      // ("plt 150000", "250000 units") is a value. Neither is a record number.
+      const phone7 = (t) => !t.labeled && /^\d{7}$/.test(t.norm) && /(?<![A-Za-z])(?:call(?:s|ed|ing)?(?:[ -]?back)?|callback|cb|reach(?:ed|able)?|phone|ph|tel|telephone|cell|mobile|mob|landline|fax|pager|text(?:s|ed|ing)?|voicemail|vm|dial)\s*(?:#|no\.?|number|num)?\s*[:.]?\s*(?:(?:is|was|at|on|to|her|his|their|him|them|me|us|pt|patient|back|now|new)\s+){0,3}[:#(]?\s*$/i.test(line.slice(Math.max(0, t.index - 40), t.index));
+      const measured = (t) => !t.labeled && /^\d+$/.test(t.raw) && (/(?<![A-Za-z])(?:plt|plts|platelets?|wbc|anc|alc|rbc|ferritin|ldh|bnp|copies|viral\s+load|vl|counts?|steps|cells|units|iu|dose|total|level)\s*(?:is|was|of|at|to|now|=|:)?\s*$/i.test(line.slice(Math.max(0, t.index - 24), t.index)) || /^\s*(?:mg|mcg|ml|units?|iu|cells|copies|steps|\/\s*(?:ul|µl|mm3|ml|l))(?![A-Za-z])/i.test(line.slice(t.index + t.raw.length)));
       const phoneLike = (t) => /^\d{10}$/.test(t.norm) && (/\d{3}[-.\s]\d{3}[-.\s]\d{4}|\(\d{3}\)/.test(line) || /\b(?:fax|phone|ph|tel|cell|mobile|home|work|call|text|pager)\s*[:#.]?\s*$/i.test(line.slice(Math.max(0, t.index - 12), t.index)));
       // a number labelled as some other identifier (ref, SN, member/insurance ID, DL, auth, claim, CSN, account) is not the
       // patient's record number, so it does not make a patient whose name was "not read"
       const otherLabel = (t) => !t.labeled && /\b(?:ref|reference|sn|s\/n|serial|member|subscriber|policy|insurance|aetna|bcbs|medicaid|medicare|mbi|id|dl|lic|license|licence|plate|placard|auth|authorization|claim|conf|confirmation|order|lot|ndc|csn|har|acct|account|fin|encounter|group|grp|npi|dea|badge|tracking|invoice|rx)\s*(?:#|no\.?|num\.?|number)?\s*[:#]?\s*$/i.test(line.slice(Math.max(0, t.index - 24), t.index));
-      return ids.filter((t) => !phoneLike(t) && !otherLabel(t) && !/^\d{4}-\d{2}-\d{2}$/.test(t.raw));
+      return ids.filter((t) => !phoneLike(t) && !phone7(t) && !measured(t) && !otherLabel(t) && !/^\d{4}-\d{2}-\d{2}$/.test(t.raw));
     };
     const lineDates = (line) => ruleSpans(line, { mrnRegex: null, accountRegex: null, extraRegexes: [] }).filter((sp) => (sp.type === 'DATE' || sp.type === 'DOB') && sp.date && sp.date.hasYear && !/^(?:My|my|ord)$/.test(sp.date.kind) && sp.date.y <= thisYear - 1 && sp.date.y >= 1900);
     const info = lines.map((line) => isMarker(line) ? null : { names: lineNames(line), segs: segmentNames(line), ids: lineIds(line), dates: lineDates(line) });
