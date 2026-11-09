@@ -3207,7 +3207,7 @@
   // those need place context — a state that really has a place of that name ("Normal, IL"), a ZIP, a place preposition
   // ("lives in Flint"), a site word ("the Reading area", "Canton office"), a bracket with a specialty ("(derm,
   // Burlington)") or a list beside another place. A word that is neither a dictionary word nor a given name (Akron,
-  // Burlington, Spokane) fires without context, at a confidence that puts the line on the review list.
+  // Burlington, Spokane) fires without context (never at the start of a sentence), at a confidence that puts the line on the review list.
   // ---------------------------------------------------------------------
   let PLACE_DATA;
   const placeData = () => {
@@ -3219,9 +3219,12 @@
   // what may follow a place that is also an ordinary word or a given name: the end of the phrase, never a noun it could describe
   const PLACE_FOLLOW = /^(?:['’]s)?(?:\s*(?:[,.;:)!?\]]|$)|\s+(?:in|on|at|for|by|this|today|yesterday|tomorrow|last|next|and|or|to|with|who|where|but|so|since|until|every|each|weekly|monthly|daily|area|visiting|coming|will|would|is|was|has|had|who|that|x\d|w\/|&|[-–(]|\d)(?![\p{L}]))/u;
   // an ordinary word after a preposition is a place only when the phrase is about where someone lives, works, travels or is seen ("lives in Reading"; never "tip confirmation in Media")
-  const PLACE_LEFT = /(?<![\p{L}])(?:lives?|living|resides?|residing|moved|moving|relocat\w*|born|raised|grew|stay(?:s|ing|ed)?|visit(?:s|ing|ed)?|based|located|home|house|apartment|apt|condo|cabin|farm|family|sister|brother|son|daughter|mother|father|mom|dad|parents|husband|wife|friends?|kids|children|pcp|office|clinic|hospital|doctor|oncologist|provider|pharmacy|works?|working|worked|job|dr[io]ves?|driving|commut\w*|travel\w*|trips?|fl(?:y|ew|ying|ies)|vacation|originally|retired|comes|came|back|return\w*|pt|patient|is|was|are|were|here|way|town|address)(?:['’]s)?\s+(?:[\p{L}'’\-]+\s+){0,3}(?:in|from|near|outside|around|to|of|toward|towards)\s$/iu;
+  const PLACE_LEFT = new RegExp('(?<![\\p{L}])(?:'
+    + "(?:lives?|living|resides?|residing|moved|moving|relocat\\w*|born|raised|grew|stay(?:s|ing|ed)?|visit(?:s|ing|ed)?|based|located|home|house|apartment|condo|cabin|farm|family|sister|brother|son|daughter|mother|father|mom|dad|parents|husband|wife|friends?|kids|children|pcp|works?|working|worked|job|dr[io]ves?|driving|commut\\w*|travel\\w*|trips?|fl(?:y|ew|ying|ies)|vacation|retired|comes|came|return\\w*|town)(?:['’]s)?\\s+(?:[\\p{L}'’\\-]+\\s+){0,3}(?:in|from|near|outside|around|to|of|toward|towards)"
+    + '|(?:office|clinic|doctor|oncologist|provider|pharmacy|address)\\s+(?:in|near|outside)'
+    + '|(?:is|are|was|were|pt|patient|originally|here|back|way)\\s+from)\\s$', 'iu');
   const PLACE_SITE = /^\s+(?:area|region|metro|suburbs?|office|offices|clinic|location|site|campus|branch|satellite|facility|County|Co\.|Township|Twp|Parish)(?![\p{L}])/u;
-  const PLACE_SPECIALTY = /(?<![\p{L}])(?:derm|dermatology|cards|cardiology|cardio|onc|oncology|heme|hem\/onc|hematology|neuro|neurology|gi|gastro|pulm|pulmonology|pulmonary|rheum|rheumatology|endo|endocrine|endocrinology|nephro|nephrology|renal|uro|urology|gyn|ob\/gyn|obgyn|ent|ophtho|ophthalmology|optho|psych|psychiatry|ortho|orthopedics|surgery|surg|surgeon|radiology|rad\s?onc|pcp|primary\s+care|id|pain|palliative|allergy|immunology|hepatology|transplant|podiatry|dental|dentist|pharmacy|office|clinic|campus|site|location|branch|satellite|practice|hospital|lives|home|based|local|outside|area)(?![\p{L}])/i;
+  const PLACE_SPECIALTY = /(?<![\p{L}])(?:derm|dermatology|cards|cardiology|cardio|onc|oncology|heme|hem\/onc|hematology|neuro|neurology|gi|gastro|pulm|pulmonology|pulmonary|rheum|rheumatology|endo|endocrine|endocrinology|nephro|nephrology|renal|uro|urology|gyn|ob\/gyn|obgyn|ent|ophtho|ophthalmology|optho|psych|psychiatry|ortho|orthopedics|surgery|surg|surgeon|radiology|rad\s?onc|pcp|primary\s+care|palliative|allergy|immunology|hepatology|transplant|podiatry|dental|dentist|pharmacy|office|clinic|campus|site|location|branch|satellite|practice|hospital)(?![\p{L}])/i;
   // countries, regions and peoples that are also the names of US towns: larger than a state, so no identifier on their own
   const PLACE_COUNTRY = /^(?:england|scotland|ireland|wales|britain|mexico|canada|belgium|norway|denmark|sweden|finland|poland|holland|germany|france|spain|portugal|italy|greece|russia|ukraine|turkey|egypt|lebanon|israel|jordan|syria|iran|iraq|persia|palestine|india|china|japan|korea|vietnam|cuba|peru|chile|brazil|panama|jamaica|trinidad|malta|sudan|samoa|greenland|scandinavia|europe|asia|africa|america|midwest|atlantic|pacific|canadian|yukon|patagonia|darfur|falkland|christmas|easter)$/i;
   const PLACE_WORDISH_ST = /^(?:OK|IN|OR|ME|HI|DE|PA|MD|ID|MA|MO|OH|AL|AR|GA|LA|MS|MT|NE|VA|WA|CO|CT)$/;
@@ -3312,7 +3315,7 @@
         }
         // no context at all: only a word that is no dictionary word and no given name, and that the name logic left alone
         // (a surname the strict pass would take stays a name; a common surname is a place only when a large city has the name)
-        if (!c.conf && !clinical && !given && !allDict && !(capsCell && letters < 5) && !(single && PLACE_COUNTRY.test(name)) && (!single || !LEX.isSurname(name) || (LEX.isEnglishWord(name) && (!LEX.isStrongName(name) || LEX.CITY_SET.has(lname) || PL.isMajor(name))))) { c.conf = sentenceStart ? 0.45 : 0.5; c.why = 'bare'; }
+        if (!c.conf && !sentenceStart && !clinical && !given && !allDict && !(capsCell && letters < 5) && !(single && PLACE_COUNTRY.test(name)) && (!single || !LEX.isSurname(name) || (LEX.isEnglishWord(name) && (!LEX.isStrongName(name) || LEX.CITY_SET.has(lname) || PL.isMajor(name))))) { c.conf = 0.5; c.why = 'bare'; }
       }
       cands.push(c); i = e - 1;
     }

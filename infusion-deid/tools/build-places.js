@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Build src/places.js: two Bloom filters over the US place lists in vendor/places/ (see vendor/places/README.md).
+/* Build src/places.js: three Bloom filters over the US place lists in vendor/places/ (see vendor/places/README.md).
  *   names: every city, town, village and post-office place name, normalised (lower case, "St"/"Ft"/"Mt" spelled out,
  *          hyphens and apostrophes folded), in every spelling the list gives ("Mc Kinney" and "McKinney").
  *   major: the names of the 1,000 most populous cities, to settle a name that is also a common surname (Rochester, Durham).

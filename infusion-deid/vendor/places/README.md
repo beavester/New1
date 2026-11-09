@@ -1,6 +1,6 @@
 # Place data for the place-name detector
 
-Compiled into `src/places.js` by `tools/build-places.js` (two Bloom filters: place names, and "name|state" pairs).
+Compiled into `src/places.js` by `tools/build-places.js` (three Bloom filters: place names, "name|state" pairs, and the names of the 1,000 largest cities).
 None of this is patient data. The raw files are kept here so the build is reproducible.
 
 | File | What | Origin and licence |
