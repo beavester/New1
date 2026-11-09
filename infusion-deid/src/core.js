@@ -1132,7 +1132,7 @@
       // a measurement word governs the number: its label right before it, with at most a linking word between
       const MEASURE_BEFORE = new RegExp('(?<![A-Za-z])(?:hr|bp|rr|spo2|o2|sat|sats|saturation|pulse|wt|weight|weights|ht|height|glucose|bg|fsbg|temp|k|na|cl|co2|bun|cr|creat|creatinine|plt|plts|platelets?|hgb|hb|hct|wbc|anc|alc|rbc|mcv|inr|ptt|ldh|egfr|gfr|crcl|ef|lvef|qtc|map|bmi|a1c|tsh|psa|cea|ferritin|tsat|iron|albumin|alb|ast|alt|bili|bilirubin|calcium|ca|mg|phos|sodium|potassium|upcr|calprotectin|crp|esr|rate|dose|doses|level|levels|counts?|score|labs?|values?|results?|vitals?|volume|vol|total|infused|infusing|running|runs|ran|titrat(?:e|ed|ing)|pump|flush|bolus|gave|given|steps|cycle|day|week|grade|stage|pain|ecog|kps)' + FILLER + '\\s*$', 'i');
       // a label of some other numbered thing: an order, a lot, a room, a chair, an extension, a billing code
-      const OTHER_LABEL = /(?<![A-Za-z])(?:order|lot|ref|reference|auth|claim|invoice|rx|ndc|serial|sn|acct|account|mrn|csn|har|fin|id|code|codes|cpt|icd|hcpcs|drg|room|rm|chair|bay|bed|pod|suite|ste|apt|unit|floor|ext|extension|x|page|pg|box|ticket|case|conf|confirmation|batch|model|part|item|tracking|protocol|study|trial|pin|badge|exp|expires?|pump|device|invoice|check)\s*(?:#|no\.?|num(?:ber)?)?\s*[:#]?\s*$/i;
+      const OTHER_LABEL = /(?<![A-Za-z])(?:order|lot|group|grp|plan|policy|member|subscriber|ref|reference|auth|claim|invoice|rx|ndc|serial|sn|acct|account|mrn|csn|har|fin|id|code|codes|cpt|icd|hcpcs|drg|room|rm|chair|bay|bed|pod|suite|ste|apt|unit|floor|ext|extension|x|page|pg|box|ticket|case|conf|confirmation|batch|model|part|item|tracking|protocol|study|trial|pin|badge|exp|expires?|pump|device|invoice|check)\s*(?:#|no\.?|num(?:ber)?)?\s*[:#]?\s*$/i;
       // the second number of a pair ("555 0138 or 555 0142", "01234 and 01236", "96365 and 96366") is whatever the first one is:
       // the type of the span that ends right before the joining word, or null when the first number was left alone
       const JOINED = /(\d)\s*(?:,|\/|;|&|\+|and|or|then|to|vs\.?)\s*$/i;
@@ -4889,7 +4889,8 @@
     // A name that wrapped over two or three lines of a narrow first column: "0800 Kowalczyk-" / "Hartley, Rosalind |MRN" /
     // "Esperanza   40071823", or "1000 | Ibarrondo   01/05/1962" / "Etxeberria,   MRN" / "Teodoro   40115569".
     const FRAG_TOK = `(?!(?:DOB|MRN|MR#|ID|Acct|CSN)\\b)(?!${MONTH_NC_CAP}\\.?\\s+\\d)(?:[A-Z][a-z]{1,3}\\.(?!\\S)|[A-Z][A-Za-z'’]*(?:-[A-Z][A-Za-z'’]*)*-?,?)`;
-    const LEAD_RE = new RegExp(`^\\s*(?:(?:\\d{1,2}:\\d{2}|\\d{3,4}|\\d[\\d\\/.\\-]{0,10}\\s)\\s*)?[|\\[\\]'!.]*\\s*(${FRAG_TOK}(?:\\s${FRAG_TOK}){0,3})(?=\\s{2,}|\\s*[|\\[\\]'!]|\\s+\\d|\\s*$|\\s+(?:DOB|MRN|MR#)\\b|\\s+${MONTH_NC_CAP}\\.?\\s+\\d)`);
+    const SLOT_CELL = `[A-Za-z]{2,10}\\.?\\s?#?\\d{1,3}[A-Z]?(?=\\s{2,}|\\s*[|])`; // "Chair 4", "Bay 12", "Rm 3B" as the first cell
+    const LEAD_RE = new RegExp(`^\\s*(?:(?:\\d{1,2}:\\d{2}|\\d{3,4}|\\d[\\d\\/.\\-]{0,10}\\s|${SLOT_CELL})\\s*)?[|\\[\\]'!.]*\\s*(${FRAG_TOK}(?:\\s${FRAG_TOK}){0,3})(?=\\s{2,}|\\s*[|\\[\\]'!]|\\s+\\d|\\s*$|\\s+(?:DOB|MRN|MR#)\\b|\\s+${MONTH_NC_CAP}\\.?\\s+\\d)`);
     const TIME_LED = /^\s*(?:\d{3,4}|\d{1,2}:\d{2})\s*[|\[\]'!]*\s*[A-Z]/;
     // a record line of a grid whose first cell is a time or a (possibly wrapped) date
     const CELL_LED = /^\s*(?:\d{3,4}|\d{1,2}:\d{2}|\d[\d\/.\-]{0,10}\s)\s*[|\[\]'!]*\s*[A-Z]/;
@@ -4904,6 +4905,20 @@
       const w = m[1].replace(/[-,]+$/, '').split('-')[0];
       if ((w.length >= 3 && (COMMON_LOWER.has(w) || LEX.isClinical(w))) || /^(?:mg|mcg|ml|kg|hr|hrs|min|via|po|iv|sc|im|q\d\w*|x\d*|am|pm|cc|in|on|at|to|of|or|is)$/.test(w)) return null;
       return { text: m[1], rest: lines[li].slice(m.index + m[0].length), cont: true, start: m.index + m[0].length - m[1].length };
+    };
+    // The next piece of a name that is already open, on a line the reader set with single spaces ("6 Chapman, mg IV",
+    // ". Chapman, :", "Deborah C4"): one word, where the open name needs it. A surname part must end in its comma or
+    // hyphen; a given name must be on the given-name list or be no word of the language at all.
+    const LOOSE_RE = /^\s*(?:(?:\d{1,2}:\d{2}|\d[\d\/.\-]{0,10})\s+)?[|\[\]'!.:]*\s*([A-Z][A-Za-z'’]*(?:-[A-Z][A-Za-z'’]*)*(-|,)?)(?=\s+\S)/;
+    const looseLead = (li, acc) => {
+      if (li >= lines.length || !info[li] || info[li].ids.length || tileHeads.has(li)) return null;
+      const m = lines[li].match(LOOSE_RE); if (!m) return null;
+      const words = m[1].replace(/[-,]+$/, '').split('-');
+      if (words.some((w) => nameWordBad(w) || w.length < 2 || relWord(w))) return null;
+      if (/-$/.test(acc)) { if (!m[2]) return null; }
+      else if (/,$/.test(acc)) { if (m[2] || !words.every((w) => LEX.isFirstName(w) || (!LEX.isEnglishWord(w) && !LEX.isDictWord(w)))) return null; }
+      else return null;
+      return { text: m[1], rest: lines[li].slice(m.index + m[0].length), start: m.index + m[0].length - m[1].length, loose: true };
     };
     const lead = (li) => {
       if (li >= lines.length || !info[li]) return null;
@@ -4921,7 +4936,7 @@
       const midWord = (acc, n) => /[A-Za-z]$/.test(acc) && !acc.includes(',') && led && contLead(n);
       // one junk line may stand between an unfinished name and its next piece
       const n1 = (/[-,]$/.test(L.text) && li + 2 < lines.length && info[li + 1] && junkLed(lines[li + 1]) && !lead(li + 1)) ? li + 2 : li + 1;
-      const N1 = lead(n1) || (midWord(L.text, n1) ? contLead(n1) : null); if (!N1) continue;
+      const N1 = lead(n1) || (midWord(L.text, n1) ? contLead(n1) : null) || (info[li].ids.length ? looseLead(n1, L.text) : null); if (!N1) continue;
       // a surname whose comma the reader lost ("10:00 Featherstonehaugh Jun 11, 40902287" over "Dmitri   1957"): a single
       // surname on a record line with its number, and a known given name alone under it
       const commaLost = TIME_LED.test(lines[li]) && !/[-,\s]/.test(L.text) && info[li].ids.length > 0 && !N1.cont && n1 === li + 1 && /^[A-Z][a-z'’]+$/.test(N1.text) && LEX.isFirstName(N1.text) && info[li + 1] && !info[li + 1].ids.length && !info[li + 1].names.length;
@@ -4935,7 +4950,7 @@
         if (tileHeads.has(n)) break;
         const dateRest = DATE_LED.test(lines[li]) && /^\s*\d{1,4}\s/.test(lines[n]) && info[n] && !info[n].ids.length && !info[n].dates.length;
         if ((TIME_LED.test(lines[n]) || (CELL_LED.test(lines[n]) && info[n] && info[n].ids.length > 0)) && !dateRest && !(aboveRecord && n === li + 1)) break; // the next record line of the grid
-        const N = lead(n) || ((/[A-Za-z]$/.test(acc) && led) ? contLead(n) : null);
+        const N = lead(n) || ((/[A-Za-z]$/.test(acc) && led) ? contLead(n) : null) || (info[li].ids.length ? looseLead(n, acc) : null);
         if (!N) { if (!skipped && /[-,]$/.test(acc) && info[n] && junkLed(lines[n])) { skipped = true; chain.push(n); continue; } break; }
         if (N.cont) acc += N.text; // a word broken mid-way
         else if (/-$/.test(acc)) acc += N.text;
