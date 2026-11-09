@@ -3037,6 +3037,55 @@
   // ---------------------------------------------------------------------
   // 5. Surrogation (hide in plain sight)
   // ---------------------------------------------------------------------
+  // the large lexicon's strong first names / surnames that are not English words, for a session that uses up a people pool
+  const BIG_NAMES = {};
+  const bigNames = (role) => {
+    if (BIG_NAMES[role]) return BIG_NAMES[role];
+    const B = LEX.BIG || {}, src = role === 'first' ? B.F2 : B.S2;
+    BIG_NAMES[role] = src ? [...src].filter((k) => /^[a-z]{4,12}$/.test(k) && !(B.EN && B.EN.has(k)) && !LEX.isCuratedAmbiguous(k) && !LEX.isClinical(k) && !LEX.isDictWord(k)).sort() : [];
+    return BIG_NAMES[role];
+  };
+  // The kind of an organization, from its own words and the words around it, so a hospital is replaced by a hospital and a
+  // supermarket by a supermarket. Unknown when nothing says (a neutral made-up name is used then).
+  const ORG_KIND_WORDS = [
+    ['nursing', /\b(?:nursing|rehab|rehabilitation|snf|alf|ltc|hospice|home care|assisted|senior living|manor|skilled)\b/i],
+    ['cancer', /\b(?:cancer|oncology|onc|hematology|heme|infusion)\b/i],
+    ['pharmacy', /\b(?:pharmacy|pharmacies|drugs?|apothecary|rx)\b/i],
+    ['insurer', /\b(?:insurance|health plan|mutual|assurance|blue cross|blue shield|bcbs|hmo|ppo|medicare|medicaid)\b/i],
+    ['hospital', /\b(?:hospital|hospitals|hosp|medical center|med ctr|general|memorial|mercy|health system|emergency)\b/i],
+    ['clinic', /\b(?:clinic|clinics|medical group|primary care|family practice|practice|physicians|associates|urgent care|imaging|radiology|dialysis|lab|labs|laboratory|surgical|specialists|urology|cardiology|neurology|dermatology|orthopedics)\b/i],
+    ['school', /\b(?:school|elementary|academy|college|university|kindergarten|preschool|daycare)\b/i],
+    ['church', /\b(?:church|parish|chapel|temple|synagogue|shul|mosque|masjid|cathedral|ministries|congregation|fellowship)\b/i],
+    ['shop', /\b(?:market|supermarket|grocery|groceries|foods|store|stores|mart|plaza|mall|bakery|deli)\b/i],
+    ['employer', /\b(?:inc|llc|corp|corporation|company|co|industries|manufacturing|motors|products|steel|plant|factory|works|bank|credit union|logistics|transport|transportation)\b/i],
+  ];
+  const ORG_KIND_BEFORE = [
+    ['employer', /\b(?:works?|worked|working|employed|employee|job|jobs|retired|laid off|shift|hired|boss|plant|works for|employer)\b[\w\s]{0,12}$/i],
+    ['hospital', /\b(?:transferred|transfer|admitted|admit|discharged|hospitalized|inpatient|ed|er|icu|ambulance|ems|taken)\b[\w\s]{0,12}$/i],
+    ['pharmacy', /\b(?:filled|refill|refilled|pick(?:ed)? up|rx|script|sent)\b[\w\s]{0,12}$/i],
+    ['insurer', /\b(?:insurance|insurer|ins|plan|coverage|covered|denied|auth|copay|member|payer|payor|primary|secondary)\b[\w\s]{0,12}$/i],
+    ['nursing', /\b(?:snf|resident|placed|placement|facility|nursing home|lives at)\b[\w\s]{0,12}$/i],
+    ['school', /\b(?:attends|student|teacher|teaches|grade|class|school)\b[\w\s]{0,12}$/i],
+    ['church', /\b(?:church|pastor|parish|worship|congregation|mass)\b[\w\s]{0,12}$/i],
+    ['shop', /\b(?:shops?|shopping|groceries|grocery|cashier|bought)\b[\w\s]{0,12}$/i],
+    ['clinic', /\b(?:seen|follows|follow up|f\/u|appt|appointment|clinic|pcp|referred)\b[\w\s]{0,12}$/i],
+  ];
+  function orgKind(orig, before, after) {
+    const o = String(orig).replace(/[’']s\b/g, '');
+    const local = LEX.LOCAL_ORG_KIND || {};
+    const lo = o.toLowerCase().trim();
+    if (local[lo]) return local[lo];
+    for (const k of Object.keys(local)) if (k.length >= 4 && new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(lo)) return local[k];
+    for (const [kind, re] of ORG_KIND_WORDS) if (re.test(o)) return kind;
+    const a = String(after || '').slice(0, 30);
+    for (const [kind, re] of ORG_KIND_WORDS) if (kind !== 'hospital' && kind !== 'employer' && re.test((a.match(/^\s*([A-Za-z]+(?:\s+[A-Za-z]+)?)/) || ['', ''])[1])) return kind; // "Roswell infusion"
+    const b = String(before || '').slice(-40);
+    for (const [kind, re] of ORG_KIND_BEFORE) if (re.test(b)) return kind;
+    return 'unknown';
+  }
+  // the kind words a name ends in ("Medical Center", "Pharmacy", "Elementary School"): kept as written after a made-up stem
+  const ORG_TAIL = /(?:\s+(?:of\s+)?(?:Medical|Health|Cancer|Community|Regional|General|Memorial|University|Children['’]?s|Women['’]?s|Family|Primary|Urgent|Senior|Assisted|Skilled|Home|Nursing|Rehabilitation|Rehab|Care|Center|Centre|Ctr|Hospital|Hospitals|Hosp|Clinic|Clinics|Institute|Oncology|Hematology|Infusion|Imaging|Radiology|Dialysis|Associates|Group|Partners|Practice|Physicians|Specialists|System|Network|Pharmacy|Drugs?|Insurance|Plan|Hospice|Living|Manor|Village|School|Elementary|Middle|High|Academy|College|Church|Chapel|Parish|Temple|Synagogue|Mosque|Market|Supermarket|Grocery|Foods|Company|Co\.?|Inc\.?|LLC|Corp\.?|Corporation|Industries|Products|Motors|Bank|Credit\s+Union|Services|Agency|Foundation|Fund|Society|Association|Labs?|Laboratory|Laboratories)\b\.?)+$/i;
+
   function Surrogator(cfg, census, documentText) {
     // The registry is the session-wide allocator: every made-up token handed out so far (to a patient, a provider, a
     // relative, a street or an organization) is recorded there, so one fake name never stands for two real people,
@@ -3045,7 +3094,13 @@
     const rng = mulberry32((cfg.seed + 7919 * registry.allocations) >>> 0);
     registry.allocations++;
     // Words present in the document: a surrogate must never be a real token from the report.
-    const docWords = new Set(((documentText || '').toLowerCase().match(/[a-z][a-z'’\-]+/g) || []));
+    // (each half of a hyphenated word too: a real "Wisniewski-Kaminski" rules out a made-up Wisniewski; and a word with its
+    // possessive or apostrophe dropped: O'Brien, Obrien)
+    const docWords = new Set();
+    for (const w of ((documentText || '').toLowerCase().match(/[a-z][a-z'’\-]+/g) || [])) {
+      docWords.add(w);
+      if (/[-'’]/.test(w)) { w.split(/[-]+/).forEach((h) => { if (h) { docWords.add(h); docWords.add(h.replace(/['’]s$/, '')); } }); docWords.add(w.replace(/['’]/g, '')); }
+    }
     const taken = registry.taken;
     registry.entities.forEach((e) => { if (e.fakeFirst) taken.add(e.fakeFirst.toLowerCase()); if (e.fakeLast) taken.add(e.fakeLast.toLowerCase()); });
     const realWords = registry.realWords;
@@ -3059,40 +3114,92 @@
       });
       if (p.entity && p.entity.nicks) p.entity.nicks.forEach((n) => String(n).toLowerCase().split(/[\s,]+/).forEach((h) => { if (h) censusWords.add(h); }));
     }
+    // The made-up pools are ordinary names (Smith, Garcia, Maria), so a real person of the input or the session may carry
+    // one. Every real word is therefore excluded explicitly, before anything is handed out:
+    //   docWords      every word of this input (rows and headers): real patients, providers, relatives, and also any real
+    //                 name the detectors missed, which a coinciding made-up name would otherwise appear to confirm
+    //   realWords     every word of the earlier inputs of the session
+    //   realNames     every name word the session knows: census patients (with diminutives), registry patients, providers,
+    //                 and third-party name tokens already replaced (tokenMap keys)
+    //   nearReal      anything one letter away from those (a made-up "Mara" would read as a misspelled real Maria)
+    // and `taken` keeps one made-up word to one real thing for the whole session (so a lone made-up token maps back to one
+    // real token, and one word is never a person here and a street there).
+    const realNames = new Set(censusWords);
+    const addNameWords = (s) => String(s || '').toLowerCase().split(/[^a-z'’\-]+/).forEach((h) => { if (h) h.split('-').concat(h).forEach((x) => x && realNames.add(x)); });
+    registry.entities.forEach((e) => { e.parsed.forEach((pn) => { addNameWords(pn.first); addNameWords(pn.last); addNameWords(pn.middle); }); if (e.nicks) e.nicks.forEach(addNameWords); });
+    registry.providers.forEach((pr) => { addNameWords(pr.first); addNameWords(pr.last); });
+    registry.tokenMap.forEach((fake, real) => addNameWords(real));
+    const isReal = (k) => docWords.has(k) || realWords.has(k) || realNames.has(k) || nearReal(k);
+    // a real name of this input that is a made-up word handed out by an earlier input of the session: that earlier output
+    // already printed it for someone else. It cannot be taken back; it is reported (result.surrogateCollisions).
+    const collisions = [...docWords].filter((w) => taken.has(w) && realNames.has(w));
     // once a pool is exhausted, invent a plain capitalized word from two pool entries (Ash+well → Ashwell)
     const invent = (pool) => {
       for (let tries = 0; tries < 200; tries++) {
-        const a = pool[Math.floor(rng() * pool.length)], b = pool[Math.floor(rng() * pool.length)];
+        const a = pool[Math.floor(rng() * pool.length)].split(' ')[0], b = pool[Math.floor(rng() * pool.length)].split(' ')[0];
         const w = a.slice(0, Math.max(2, Math.ceil(a.length / 2))) + b.slice(Math.floor(b.length / 2)).toLowerCase();
         const x = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
         const k = x.toLowerCase();
-        if (x.length >= 4 && x.length <= 12 && !taken.has(k) && !docWords.has(k) && !realWords.has(k) && !censusWords.has(k) && !nearReal(k) && !LEX.isFirstName(x) && !LEX.isSurname(x) && !LEX.isAmbiguous(x) && !LEX.isClinical(x)) return x;
+        if (x.length >= 4 && x.length <= 12 && !taken.has(k) && !isReal(k) && !LEX.isFirstName(x) && !LEX.isSurname(x) && !LEX.isAmbiguous(x) && !LEX.isClinical(x)) return x;
       }
       // nothing left: a pool entry with a number, still never one carrying a patient's name word
       const safe = pool.filter((x) => !censusWords.has(x.toLowerCase()) && !censusWordIn(x.toLowerCase()));
       const base = safe.length ? safe[Math.floor(rng() * safe.length)] : 'Name';
       return base + String(Math.floor(rng() * 90) + 10);
     };
+    // once a people pool is exhausted (a session with hundreds of patients), draw from the large name lexicon (Census
+    // surnames, SSA first names) instead: still an ordinary-looking name, never an English word, never a real word of the session
+    const lexFallback = (role) => {
+      const arr = bigNames(role);
+      for (let tries = 0; tries < 400 && arr.length; tries++) {
+        const k = arr[Math.floor(rng() * arr.length)];
+        if (!taken.has(k) && !isReal(k)) return k.charAt(0).toUpperCase() + k.slice(1);
+      }
+      return null;
+    };
     // a made-up name one letter away from a real word of the session (Gwendolen for a real Gwendolyn) reads as a misspelled
-    // real name, so it is avoided too: every real word of 5+ letters and its one-letter deletions, compared with the candidate's
+    // real name, so it is avoided too: every real word of 4+ letters and its one-letter deletions, compared with the candidate's
+    // (4 letters, not 5: a made-up "Mara" is one letter from a real "Maria")
     let near = null;
     const nearReal = (k) => {
-      if (k.length < 5) return false;
+      if (k.length < 4) return false;
       // (the session's real words and every name word of a listed patient: a made-up "Okonkow" would read as a misspelled
       // real patient's name, and the self-check looks for those)
-      if (!near) { near = new Set(); for (const w of [...realWords, ...censusWords]) { if (w.length < 4 || w.length > 40) continue; /* a 30,000-letter "word" would cost 30,000 copies of itself */ near.add(w); for (let i = 0; i < w.length; i++) near.add(w.slice(0, i) + w.slice(i + 1)); } }
+      if (!near) { near = new Set(); for (const w of [...realWords, ...realNames]) { if (w.length < 4 || w.length > 40) continue; /* a 30,000-letter "word" would cost 30,000 copies of itself */ near.add(w); for (let i = 0; i < w.length; i++) near.add(w.slice(0, i) + w.slice(i + 1)); } }
       if (near.has(k)) return true;
       for (let i = 0; i < k.length; i++) if (near.has(k.slice(0, i) + k.slice(i + 1))) return true;
       return false;
     };
     // a pool entry of several words (an organization: "Brightwater Insurance") must not carry a patient's name word either
     const censusWordIn = (k) => /[\s\-]/.test(k) && k.split(/[^a-z'’]+/).some((w) => w && censusWords.has(w));
-    const pick = (pool) => {
-      const fresh = pool.filter((x) => { const k = x.toLowerCase(); return !docWords.has(k) && !taken.has(k) && !realWords.has(k) && !censusWords.has(k) && !censusWordIn(k) && !nearReal(k); });
-      const x = fresh.length ? fresh[Math.floor(rng() * fresh.length)] : invent(pool);
-      taken.add(x.toLowerCase());
+    // The pools list the most common names first; one draw leans toward the head (index = n·r^1.5), so the made-up names are
+    // as ordinary as the real ones around them. An entry of several words (an organization: "Pinecrest Cancer Center") is
+    // checked and marked by its own first word: the kind words after it ("Cancer Center") are shared by design.
+    // role: 'first' / 'last' fall back to the name lexicon when the pool is used up, anything else to an invented word.
+    const keyOfEntry = (x) => x.split(' ')[0].toLowerCase();
+    const pick = (pool, role) => {
+      const fresh = pool.filter((x) => { const k = keyOfEntry(x); return !taken.has(k) && !isReal(k) && !censusWords.has(x.toLowerCase()) && !censusWordIn(x.toLowerCase()); });
+      const x = fresh.length ? fresh[Math.floor(Math.pow(rng(), 1.5) * fresh.length)] : typeof role === 'function' ? role() : ((role === 'first' || role === 'last') && lexFallback(role)) || invent(pool);
+      taken.add(keyOfEntry(x));
       return x;
     };
+    // a given name of the same sex when the text says which (wife, son, Mrs.) or the real name is one of the pool's own
+    const pickFirst = (sex) => pick(sex === 'f' ? LEX.FAKE_FIRST_F : sex === 'm' ? LEX.FAKE_FIRST_M : LEX.FAKE_FIRST, 'first');
+    const FEMALE_CUE = /^(?:wife|mother|mom|mum|mama|daughter|sister|aunt|niece|grandmother|grandma|granny|granddaughter|girlfriend|fiancee|fiancée|stepmother|stepdaughter|godmother|stepsister|dtr|dghtr|dau|sis|gma|gdaughter|granddtr|ex-wife|daughter-in-law|mother-in-law|sister-in-law|mrs|ms|miss)$/i;
+    const MALE_CUE = /^(?:husband|father|dad|papa|son|brother|uncle|nephew|grandfather|grandpa|grandson|boyfriend|fiance|fiancé|stepfather|stepson|godfather|stepbrother|hus|husb|bro|gpa|gson|ex-husband|son-in-law|father-in-law|brother-in-law|mr)$/i;
+    const sexOf = (first, before, after) => {
+      const prev = ((before || '').match(/([A-Za-z][A-Za-z\-']*)\.?[\s:,(]*$/) || [])[1];
+      // "Thu (daughter)", "Linh, her daughter"
+      const next = ((after || '').match(/^\s*(?:\(|,)\s*(?:pt['’]?s\s+|patient['’]?s\s+|her\s+|his\s+|the\s+)?([A-Za-z][A-Za-z\-]*)/) || [])[1];
+      for (const x of [prev, next]) {
+        const w = x ? x.replace(/['’]s$/, '') : '';
+        if (w && FEMALE_CUE.test(w)) return 'f';
+        if (w && MALE_CUE.test(w)) return 'm';
+      }
+      const k = String(first || '').toLowerCase();
+      return LEX.FAKE_FEMALE.has(k) ? 'f' : LEX.FAKE_MALE.has(k) ? 'm' : null;
+    };
+    const pickLast = () => pick(LEX.FAKE_LAST, 'last');
     const randDigits = (n) => { let s = ''; for (let i = 0; i < n; i++) s += Math.floor(rng() * 10); return s; };
     // digit strings of 7+ digits written in the document (phones, record numbers), separators removed
     let digitRuns = null;
@@ -3144,22 +3251,23 @@
     const docOffset = cfg.surrogate.dateShift ? registry.docOffset : 0;
     const mapping = { patients: [], providers: [], others: [] };
     // real words of this document are never handed out as surrogates, now or in a later input of the session
-    for (const w of docWords) if (w.length >= 3 && w.length <= 40) realWords.add(w);
+    for (const w of docWords) if (w.length >= 2 && w.length <= 40) realWords.add(w);
 
     const ensurePatient = (key) => {
       let info = patientInfo.get(key);
       if (!info) {
         const p = census.patient ? census.patient(key) : census.patients.get(key);
         const e = p && p.entity ? p.entity : registry.get(key) || null;
+        const sex = sexOf((p && p.parsed && p.parsed.first) || (e && e.parsed && e.parsed[0] && e.parsed[0].first) || '');
         if (e) {
           // identity persists across inputs: reuse what the registry already assigned
-          if (!e.fakeFirst) e.fakeFirst = pick(LEX.FAKE_FIRST); else taken.add(e.fakeFirst.toLowerCase());
-          if (!e.fakeLast) e.fakeLast = pick(LEX.FAKE_LAST); else taken.add(e.fakeLast.toLowerCase());
+          if (!e.fakeFirst) e.fakeFirst = pickFirst(sex); else taken.add(e.fakeFirst.toLowerCase());
+          if (!e.fakeLast) e.fakeLast = pickLast(); else taken.add(e.fakeLast.toLowerCase());
           if (e.offset == null) e.offset = cfg.surrogate.dateShift ? randOffset() : 0;
           info = { key, code: e.code, fakeFirst: e.fakeFirst, fakeLast: e.fakeLast, offset: e.offset };
         } else {
           const idx = p ? p.order : patientInfo.size;
-          info = { key, code: `P${String(idx + 1).padStart(3, '0')}`, fakeFirst: pick(LEX.FAKE_FIRST), fakeLast: pick(LEX.FAKE_LAST), offset: cfg.surrogate.dateShift ? randOffset() : 0 };
+          info = { key, code: `P${String(idx + 1).padStart(3, '0')}`, fakeFirst: pickFirst(sex), fakeLast: pickLast(), offset: cfg.surrogate.dateShift ? randOffset() : 0 };
         }
         patientInfo.set(key, info);
         // a relative who shares the surname gets the patient's fake surname with a fresh first name
@@ -3175,8 +3283,8 @@
         const idx = providerInfo.size;
         const parsed = pr && pr.parsed ? pr.parsed : parseName(key.replace('|', ', '));
         // the surname may already have a fake from free text (a relative or a bare "Dr. Lee"): keep one fake per real token
-        const fakeLast = (parsed && parsed.last && tokenMap.get(parsed.last.toLowerCase())) || pick(LEX.FAKE_LAST);
-        const fakeFirst = (parsed && parsed.first && tokenMap.get(parsed.first.toLowerCase())) || pick(LEX.FAKE_FIRST);
+        const fakeLast = (parsed && parsed.last && tokenMap.get(parsed.last.toLowerCase())) || pickLast();
+        const fakeFirst = (parsed && parsed.first && tokenMap.get(parsed.first.toLowerCase())) || pickFirst(sexOf(parsed && parsed.first));
         info = { key, code: `Dr. ${String.fromCharCode(65 + (idx % 26))}${idx >= 26 ? Math.floor(idx / 26) : ''}`, fakeFirst, fakeLast, last: parsed ? parsed.last : key, first: parsed ? parsed.first : '', credentials: parsed ? parsed.credentials : '' };
         providerInfo.set(key, info);
         if (parsed) { if (parsed.last) tokenMap.set(parsed.last.toLowerCase(), info.fakeLast); if (parsed.first) tokenMap.set(parsed.first.toLowerCase(), info.fakeFirst); }
@@ -3229,13 +3337,46 @@
     // labelled or dotted initials (P.R., J.R.): same punctuation, different letters, one fake per real set of initials
     const fakeInitials = (orig) => {
       const key = orig.replace(/\.$/, '');
-      const fake = stringSurrogate('NAME', key, () => { let i = 0; return key.replace(/[A-Z]/g, () => { const f = i++ === 0 ? pick(LEX.FAKE_FIRST) : pick(LEX.FAKE_LAST); return f[0].toUpperCase(); }); });
+      const fake = stringSurrogate('NAME', key, () => { let i = 0; return key.replace(/[A-Z]/g, () => { const f = i++ === 0 ? pickFirst() : pickLast(); return f[0].toUpperCase(); }); });
       return orig.endsWith('.') && !fake.endsWith('.') ? fake + '.' : fake;
     };
-    // Third-party names: consistent per token.
-    const renderOtherName = (origText) => {
+    // Is a lone name token a given name or a surname? A first name is replaced by a first name and a surname by a surname.
+    // The words before it decide first: an honorific ("Mrs. Kowalski", "Dr. Lee") or a credential after it means a surname;
+    // a kin word ("wife Bernadette", "pt's son Jose", "Thu (daughter)") or a call verb ("Called Terry", "spoke with Linh")
+    // means a given name. Otherwise the name lexicon: a name that is only a given name, or only a surname, is that; a name
+    // that is both (Terry, Jose) is read as a given name, since a surname alone in a note nearly always carries an honorific.
+    const KIN = /^(?:son|daughter|wife|husband|spouse|partner|mother|father|mom|dad|mum|mama|papa|sister|brother|grandson|granddaughter|grandmother|grandfather|grandma|grandpa|granny|aunt|uncle|niece|nephew|cousin|friend|neighbor|neighbour|fiance|fiancee|fiancé|fiancée|boyfriend|girlfriend|roommate|housemate|companion|caregiver|stepson|stepdaughter|stepmother|stepfather|godmother|godfather|dtr|dghtr|dau|hus|husb|bro|sis|gma|gpa|gson|gdaughter|granddtr|grandchild|twin|ex-wife|ex-husband|son-in-law|daughter-in-law|mother-in-law|father-in-law|sister-in-law|brother-in-law|stepbrother|stepsister|child|kid|baby|sibling|parent|coworker)$/i;
+    const CALL_BEFORE = /(?:^|[^A-Za-z])(?:called|calling|call|phoned|texted|messaged|emailed|spoke|speaking|talked|talking|met|lvm|vm|voicemail|message|msg|hi|hello|dear|thanks|thank you|asked|told|informed|notified|updated)(?:\s+(?:with|to|for|from|w\/))?\s*[:,]?\s*$/i;
+    const HONORIFIC_BEFORE = /(?:^|[^A-Za-z])(?:mr|mrs|ms|miss|mx|dr|doctor|prof|rev|fr|sr|nurse)\.?\s*$/i;
+    const lonePartIsFirst = (tok, before, after, cred, preferLast) => {
+      if (cred || HONORIFIC_BEFORE.test(before)) return false;
+      const prev = (before.match(/([A-Za-z][A-Za-z\-']*)[\s:,(]*$/) || [])[1];
+      if (prev && KIN.test(prev.replace(/['’]s$/, ''))) return true;
+      const nextKin = (after.match(/^[\s,]*\(?\s*(?:pt['’]?s\s+|patient['’]?s\s+|her\s+|his\s+|the\s+)?([A-Za-z][A-Za-z\-]*)/) || [])[1];
+      if (nextKin && /^[\s,]*\(/.test(after) && KIN.test(nextKin)) return true; // "Thu (daughter)"
+      if (nextKin && /^\s*,\s*/.test(after) && KIN.test(nextKin)) return true; // "Linh, her daughter"
+      if (CALL_BEFORE.test(before)) return true;
+      if (preferLast) return false; // a provider named alone ("per Nguyen", "f/u w/ Patel") is named by surname
+      const k = tok.toLowerCase();
+      const curF = LEX.FIRST_SET.has(k), curL = LEX.LAST_SET.has(k);
+      if (curF !== curL) return curF;
+      const B = LEX.BIG || {}, f2 = !!(B.F2 && B.F2.has(k)), s2 = !!(B.S2 && B.S2.has(k));
+      if (f2 !== s2) return f2;
+      const f = LEX.isFirstName(tok), l = LEX.isSurname(tok);
+      if (f !== l) return f;
+      return f; // both: a given name; neither: a surname
+    };
+    // Third-party names: consistent per token, in the shape written (Last, First stays Last, First; initials stay initials).
+    const renderOtherName = (origText, before, after, preferLast) => {
+      before = before || ''; after = after || '';
       const parsed = parseName(origText);
-      if (!parsed) return pick(LEX.FAKE_FIRST);
+      if (!parsed) return pickFirst();
+      // an honorific written inside the span ("Mrs. Kowalski") stays, and the name after it is a surname
+      if (parsed.format === 'first_last' && LEX.HONORIFIC_SET.has(parsed.first.replace(/\.$/, '').toLowerCase()) && !parsed.middle) {
+        const lead = origText.slice(0, origText.indexOf(parsed.first) + parsed.first.length);
+        const rest = renderOtherName(origText.slice(lead.length).trim(), lead, after, preferLast);
+        return lead + (/\s$/.test(lead) || !/\s/.test(origText.charAt(lead.length)) ? '' : ' ') + rest;
+      }
       const cred = parsed.credentials ? ' ' + parsed.credentials : '';
       const tok = (t, asFirst) => {
         if (!t) return '';
@@ -3247,12 +3388,12 @@
         const pm = t.match(/^((?:al|el|ad|ar|as|ash|at|az|an|bin|ibn|ben|bint|abu|ould)-)(.+)$/); if (pm && !tokenMap.has(k)) return pm[1] + tok(pm[2], asFirst); // al-Harbi
         // Haddad-Khalil: each half on its own, so the half shared with a patient keeps that patient's fake surname
         if (k.includes('-') && !tokenMap.has(k)) return k.split('-').map((h, i) => tok(t.split('-')[i] || h, false)).join('-');
-        if (!tokenMap.has(k)) tokenMap.set(k, asFirst ? pick(LEX.FAKE_FIRST) : pick(LEX.FAKE_LAST));
+        if (!tokenMap.has(k)) tokenMap.set(k, asFirst ? pickFirst(sexOf(t, before, after)) : pickLast());
         return matchCase(t, tokenMap.get(k));
       };
       let out;
-      if (parsed.format === 'last_first') out = `${tok(parsed.last, false)}, ${tok(parsed.first, true)}${parsed.middle ? ' ' + parsed.middle : ''}`;
-      else if (parsed.format === 'single') out = tok(parsed.last, LEX.isFirstName(parsed.last) && !LEX.isSurname(parsed.last));
+      if (parsed.format === 'last_first') out = `${tok(parsed.last, false)}, ${tok(parsed.first, true)}${parsed.middle ? ' ' + parsed.middle.split(' ').map((m) => tok(m, true)).join(' ') : ''}`;
+      else if (parsed.format === 'single') out = tok(parsed.last, lonePartIsFirst(parsed.last.replace(/[.,]/g, ''), before, after, parsed.credentials, preferLast));
       else out = [tok(parsed.first, true), ...(parsed.middle ? parsed.middle.split(' ').map((m) => tok(m, true)) : []), tok(parsed.last, false)].join(' ');
       return out + cred;
     };
@@ -3281,8 +3422,29 @@
       if (orig.replace(/\D/g, '').length === 10 && !/[A-Za-z]/.test(orig)) { const d = ('555010' + randDigits(4)).split(''); let i = 0; return orig.replace(/\d/g, () => d[i++]); }
       return orig.replace(/\d/g, () => randDigits(1)).replace(/^(\D*)\d/, '$19').replace(/[A-Z]/g, () => String.fromCharCode(65 + Math.floor(rng() * 26)));
     }));
+    // Organizations: a made-up name of the same kind (hospital, cancer center, pharmacy, insurer, nursing home or rehab,
+    // school, employer, shop, church; a neutral name when nothing says). A name with kind words of its own keeps them after
+    // a made-up stem ("Kenmore Mercy Hospital" → "Brookdale Hospital"); an acronym stays an acronym (ECMC → NMC).
+    const ORG_DEFAULT_TAIL = { hospital: 'Hospital', cancer: 'Cancer Center', clinic: 'Medical Group', pharmacy: 'Pharmacy', insurer: 'Health Plan', nursing: 'Care Center', school: 'Elementary School', employer: 'Industries', shop: 'Market', church: 'Community Church', unknown: 'Associates' };
+    const stem = () => pick(LEX.FAKE_ORG_STEMS);
+    const fakeOrg = (orig, before, after) => {
+      const poss = (orig.match(/['’]s$/) || [''])[0];
+      const base = poss ? orig.slice(0, -poss.length) : orig;
+      const kind = orgKind(base, before, after);
+      const tail = (base.match(ORG_TAIL) || [''])[0];
+      const head = tail ? base.slice(0, base.length - tail.length) : base;
+      let out;
+      if (tail && /[A-Za-z]/.test(head)) out = stem() + tail;
+      else out = pick(LEX.FAKE_ORG_POOLS[kind] || LEX.FAKE_ORG_POOLS.unknown, () => `${stem()} ${ORG_DEFAULT_TAIL[kind] || ORG_DEFAULT_TAIL.unknown}`);
+      if (/^[A-Z]{2,6}$/.test(base.trim())) {
+        out = out.split(/[\s\-]+/).filter((w) => w && !/^(?:and|of|the|&)$/i.test(w)).map((w) => w[0].toUpperCase()).join('');
+        if (out === base.trim()) out = out.slice(0, -1) + (out.slice(-1) === 'X' ? 'Y' : 'X'); // never the real acronym again
+      }
+      return out + poss;
+    };
 
     return {
+      collisions,
       mapping, patientInfo, providerInfo, docOffset,
       offsetFor(patientKey) { return patientKey ? ensurePatient(patientKey).offset : docOffset; },
       patient(key) { return ensurePatient(key); },
@@ -3290,6 +3452,9 @@
       replace(span, text, rowPatientKey) {
         const orig = text.slice(span.start, span.end);
         const mode = cfg.surrogate.patients;
+        // the words around the span (a kin word before a lone name, "works at" before an organization)
+        const ctxBefore = () => text.slice(Math.max(0, span.start - 48), span.start);
+        const ctxAfter = () => text.slice(span.end, span.end + 32);
         switch (span.type) {
           case 'NAME_PATIENT': {
             if (span.entity && span.fragment) { const info = ensurePatient(span.entity); if (mode === 'code') return span.fragment === 'cont' ? '' : info.code; return span.fragment === 'cont' ? '' : matchCase(orig, span.fragment === 'first' ? info.fakeFirst : info.fakeLast); } // a piece of a word broken by a narrow column
@@ -3297,21 +3462,21 @@
             const lf = span.entity && span.lastFirst && span.lastFirst.len === orig.length ? span.lastFirst : null;
             if (lf) { const info = ensurePatient(span.entity); if (mode === 'code') return info.code; const tail = orig.slice(lf.tailAt); return matchCase(orig.slice(0, lf.lastLen), info.fakeLast) + orig.slice(lf.lastLen, lf.tailAt) + (lf.initial ? info.fakeFirst[0].toUpperCase() + (tail.endsWith('.') ? '.' : '') : matchCase(tail, info.fakeFirst)); }
             if (span.entity) { const info = ensurePatient(span.entity); const p = census.patient ? census.patient(span.entity) : census.patients.get(span.entity); return renderName(orig, p && p.parsed, info, mode); }
-            return renderOtherName(orig);
+            return renderOtherName(orig, ctxBefore(), ctxAfter());
           }
           case 'NAME_PROVIDER': {
             if (span.entity) { const info = ensureProvider(span.entity); const pr = census.providers.get(span.entity); return renderName(orig, pr && pr.parsed, info, cfg.surrogate.providers); }
             if (cfg.surrogate.providers === 'code') return stringSurrogate('PROVIDER', orig, () => `Dr. ${String.fromCharCode(65 + (providerInfo.size + stringMap.size) % 26)}`);
-            return renderOtherName(orig);
+            return renderOtherName(orig, ctxBefore(), ctxAfter(), true);
           }
           case 'NAME_OTHER': {
             if (/^[A-Z]\.?\s?[A-Z]\.?(?:\s?[A-Z]\.?)?$/.test(orig) && (orig.includes('.') || span.initials)) return fakeInitials(orig);
-            return renderOtherName(orig);
+            return renderOtherName(orig, ctxBefore(), ctxAfter());
           }
           case 'MRN': { if (span.entity) return ensurePatient(span.entity).code; return fakeDigits('MRN', orig); }
           case 'ACCOUNT': { if (span.entity) return `A-${ensurePatient(span.entity).code}`; return fakeDigits('ACCOUNT', orig); }
           case 'PHONE': return fakePhone(orig);
-          case 'EMAIL': return stringSurrogate('EMAIL', orig, () => `${pick(LEX.FAKE_FIRST).toLowerCase()}.${pick(LEX.FAKE_LAST).toLowerCase()}@example.com`);
+          case 'EMAIL': return stringSurrogate('EMAIL', orig, () => `${pickFirst().toLowerCase()}.${pickLast().toLowerCase()}@example.com`);
           case 'SSN': return stringSurrogate('SSN', orig, () => `9${randDigits(2)}-${randDigits(2)}-${randDigits(4)}`);
           case 'URL': return '[url]';
           case 'IP': return '[ip]';
@@ -3329,12 +3494,12 @@
           }
           case 'AGE': return orig.replace(/(?<!\d)(9\d|1[0-2]\d)(?:st|nd|rd|th)?(?!\d)/, '90+').replace(/\b(9|10)0s\b/, '90s+').replace(/nonagenarian|centenarian/i, '90+ y/o')
             .replace(/\b(?:ninety|one[-\s]hundred)(?:(?:[-\s]|\s+and\s+)(?:one|two|three|four|five|six|seven|eight|nine))?/i, '90+');
-          case 'ADDRESS': return stringSurrogate('ADDRESS', orig, () => {
+          case 'ADDRESS': return matchCase(orig, stringSurrogate('ADDRESS', orig, () => {
             if (/\bbox\b/i.test(orig)) return orig.replace(/\d+(?!.*\d)/, () => String(Math.floor(rng() * 9000) + 1000)).replace(/^(?:RR|R\.R\.|Rural\s+Route|HC)\s*\d+/i, (m) => m.replace(/\d+/, () => String(Math.floor(rng() * 9) + 1)));
-            if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${(Math.floor(rng() * 880) + 120)} ${pick(LEX.FAKE_LAST)} Rd`; const suf = (orig.match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway)\.?(?=\W*$|\s)/) || [])[1] || (/^\d/.test(orig) ? 'St' : 'Rd'); return `${/^\d/.test(orig) ? (Math.floor(rng() * 880) + 120) + ' ' : ''}${pick(LEX.FAKE_LAST)} ${suf}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; });
+            if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${(Math.floor(rng() * 880) + 120)} ${pick(LEX.FAKE_STREETS)} Rd`; const suf = (orig.match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway)\.?(?=\W*$|\s)/) || [])[1] || (/^\d/.test(orig) ? 'St' : 'Rd'); return `${/^\d/.test(orig) ? (Math.floor(rng() * 880) + 120) + ' ' : ''}${pick(LEX.FAKE_STREETS)} ${suf}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; })); // stored as made, written in the case of each mention
           case 'ZIP': return orig.replace(/\d{5}(-\d{4})?/, (z) => zip3(z));
-          case 'ORG': return stringSurrogate('ORG', orig, () => pick(LEX.FAKE_ORGS));
-          case 'LOCATION': return stringSurrogate('LOCATION', orig, () => pick(LEX.FAKE_CITIES));
+          case 'ORG': return matchCase(orig, stringSurrogate('ORG', orig, () => fakeOrg(orig, ctxBefore(), ctxAfter()))); // the case of this mention (TOPS, tops)
+          case 'LOCATION': return matchCase(orig, stringSurrogate('LOCATION', orig, () => pick(LEX.FAKE_CITIES)));
         }
         return '[redacted]';
       },
@@ -4127,7 +4292,8 @@
       ctx.rowAmbiguousList = firstPass.map((_, ri) => groupAmb.get(groupOf(ri)) || null);
     }
     // Document text for surrogate collision avoidance
-    const docText = rows.map((r) => r.map(cellToString).join(' ')).join('\n');
+    // (the headers too: a sheet laid out as label/value pairs puts names there)
+    const docText = [headers.map(cellToString).join(' '), ...rows.map((r) => r.map(cellToString).join(' '))].join('\n');
     const sur = Surrogator(cfg, census, docText);
     // Register patients in census order so codes are stable
     [...census.patients.values()].sort((a, b) => a.order - b.order).forEach((p) => sur.patient(p.key));
@@ -4253,7 +4419,7 @@
     mapping.providers = registry.toProviderRows();
     mapping.others = registry.toOtherRows();
     mapping.meta = { seed: cfg.seed, processedAt: new Date().toISOString(), documentOffsetDays: sur.docOffset, mrnPattern: cfg.inferredMrnPattern || cfg.mrnPattern || '', columns: columns.map((c, i) => (outHeaders[i] !== c.header ? { header: c.header, role: c.role, output: outHeaders[i] } : { header: c.header, role: c.role })) };
-    return { headers: outHeaders, rows: outRows, columns, census, details, stats, mapping, cfg, registry, errors };
+    return { headers: outHeaders, rows: outRows, columns, census, details, stats, mapping, cfg, registry, errors, surrogateCollisions: sur.collisions };
   }
 
   // Re-identify: reverse the mapping on a de-identified table.
@@ -4281,7 +4447,7 @@
       add(p.SurrogateName, realBare); if (f) { add(`${f} ${l}`, rp.first ? `${rp.first} ${rp.last}` : rp.last); add(l, rp.last); add(f, rp.first); add(`${f[0]}. ${l}`, rp.first ? `${rp.first[0]}. ${rp.last}` : ''); }
       if (p.Code) add(p.Code, realBare);
     });
-    (mapping.others || []).forEach((o) => add(o.Surrogate, o.Original, o.Type === 'NAME'));
+    (mapping.others || []).forEach((o) => add(o.Surrogate, o.Original, o.Type === 'NAME' || o.Type === 'ORG' || o.Type === 'LOCATION' || o.Type === 'ADDRESS')); // these are written in the case of the note (tops, TOPS): restored the same way
     reverse.sort((a, b) => b[0].length - a[0].length);
     const re = reverse.length ? new RegExp(`(?<![A-Za-z0-9])(?:${reverse.map((r) => escapeRe(r[0])).join('|')})(?![A-Za-z0-9])`, 'gi') : null;
     const lookup = new Map(); for (const r of reverse) if (!lookup.has(r[0])) lookup.set(r[0], r);

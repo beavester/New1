@@ -495,57 +495,147 @@
     anneliese: ['Anne', 'Liese', 'Anna'], devika: ['Devi'], bartholomew: ['Bart', 'Barty'], rosa: ['Rosie'], fiona: ['Fi'],
     rafiqul: ['Rafi'], jean: ['Jeannie'], thandiwe: ['Thandi'], luz: ['Lucecita'], ana: ['Anita'], rose: ['Rosie'], joao: ['Jo'], pedro: ['Pete'],
   };
-  // Surrogate pools. Disjoint from everything above would be ideal but the
-  // generator also excludes anything that appears in the document being processed.
+  // Surrogate pools (hide in plain sight). A made-up name must read like the real names around it, so the people pools are
+  // ordinary, ethnically mixed US names, most common first (the Surrogator draws with a lean toward the head of each list).
+  // Ordinary words (Will, Rose, Brown, Hill), eponym-prone or clinical words and names under four letters are left out: such
+  // a surrogate would read as a word, and a short one does not survive a lower-case round trip. The Surrogator never hands
+  // out an entry that is a word of the input or of the session (so a real "Smith, Maria" never meets a made-up Smith or
+  // Maria). The pools are used only for replacement: no detector reads them. People, streets, cities and organizations
+  // are disjoint, so one made-up word never plays two roles.
   const FAKE_FIRST = words(`
-    Alden Bettina Caspian Delia Everett Flora Gideon Hollis Ivo Juniper Leander Maren Nils Orla Perrin Quill
-    Rosalie Soren Tamsin Ulric Verity Xander Yara Zeph Ansel Brigid Cato Dahlia Elio Greer Idris Jolene Kerrigan
-    Lowell Mirabel Odette Pascal Quinlan Rhoswen Sorrel Thora Umber Wilder Xanthe Yvaine Zane Adair Blythe Corin
-    Dorian Elowen Faye Garnet Inigo Jessamine Kieran Merritt Neve Oren Ansgar Cosima Esme Gwendolen Hesper Ilsa
-    Jory Keturah Linnea Nerys Oswin Petra Quentin Rafferty Saskia Tobiah Una Vesper Wendeline Yannick Zelie Aurelio
-    Beatrix Cyprian Emrys Gilda Alaric Brunhild Cedric Dagny Eberhard Godfrey Hedwig Ingram Jocasta Kasimir
-    Leopoldine Marius Nerissa Octavian Philomena Quintus Romilly Sigrid Thaddea Ulrika Valentin Wilhelmine Ximena
-    Yolande Zbigniew Anselma Bertram Clothilde Eulalia Fabrice Gisela Isolde Jerome Kristof Lucasta
-    Morwenna Noelle Peregrine Quenild Rosamund Sylvester Theodora Urban Vivienne Winthrop Yseult Zephyrine
-    Amadeus Benedikta Drusilla Elspeth Florentin Guinevere Hyacinth Jemima Kasper
-    Melisande Nikolaus Oriel Persis Reinhold Seraphine Tancred Ursula Vitus Wolfram Yorick Zinnia Ambrosine
-    Barnabas Clemency Dorothea Ephraim Fulvia Gerhardt Honorine Ivor Josiane Konstantin Marcelline
-    Nathanael Ottavia Radegund Sebastienne Tiberius Ulysse Valery Wenceslas Zenobia Aurelian
-    Bellamy Dulcie Evander Fiorella Gaspard Hildegard Isidore Jolyon Kerensa Maud Norbert Olympe
-    Percival Rhiannon Sabina Torvald Udo Veronika Wystan Zora Anneke Bram Cordelia Dimitra Ewan Freya Gunnar Hanne
+    James Mary Michael Patricia Robert Jennifer John Linda David Elizabeth William Barbara Richard Susan Joseph Jessica
+    Thomas Sarah Christopher Karen Charles Lisa Daniel Nancy Matthew Betty Anthony Sandra Donald Margaret Steven Ashley
+    Paul Kimberly Andrew Emily Joshua Donna Kenneth Michelle Kevin Brian Amanda Timothy Melissa Ronald Deborah George
+    Stephanie Jason Rebecca Edward Sharon Jeffrey Laura Ryan Cynthia Jacob Kathleen Gary Nicholas Angela Eric Shirley
+    Jonathan Brenda Stephen Emma Larry Anna Justin Pamela Scott Nicole Brandon Samantha Benjamin Katherine Samuel
+    Christine Gregory Debra Alexander Rachel Patrick Carolyn Janet Raymond Maria Catherine Dennis Jerry Diane Tyler Olivia
+    Aaron Julie Jose Joyce Adam Victoria Nathan Kelly Henry Christina Zachary Lauren Douglas Joan Peter Evelyn Kyle
+    Judith Noah Andrea Ethan Hannah Jeremy Megan Walter Cheryl Jacqueline Keith Martha Roger Teresa Sean Gloria Gerald
+    Sara Carl Janice Harold Dylan Kathryn Arthur Abigail Lawrence Sophia Frances Jesse Jean Bryan Alice Billy Judy Bruce
+    Isabella Gabriel Julia Logan Denise Alan Juan Doris Albert Marilyn Willie Danielle Elijah Beverly Wayne Charlotte
+    Natalie Vincent Theresa Diana Brittany Ralph Kayla Bobby Alexis Russell Lori Bradley Marie Philip Eugene Luis Carlos
+    Miguel Jorge Antonio Manuel Pedro Alejandro Ricardo Fernando Javier Rafael Sergio Eduardo Roberto Mario Hector Ramon
+    Guadalupe Rosa Carmen Lucia Elena Sofia Gabriela Adriana Veronica Yolanda Marisol Alma Leticia Silvia Beatriz
+    Esperanza Linh Minh Huong Tuan Hung Thanh Ming Jian Xiao Hiroshi Kenji Yuki Akiko Hyun Priya Anjali Deepak
+    Rajesh Sanjay Ravi Sunil Arjun Neha Pooja Kavita Vijay Amit Rahul Sunita Ahmed Mohammed Omar Fatima Aisha Hassan
+    Yusuf Layla Khalid Tariq Samir Nadia Leila Darnell Tyrone Jamal Deshawn Terrell Latoya Keisha Tamika Shanice Aaliyah
+    Malik Andre Marcus Reginald Cedric Lamar Monique Tanisha Kendra Yvonne Bernard Stanley Leonard Francis Herbert Melvin
+    Agnes Irene Dorothy Mildred Helen Ruth Virginia Marjorie Lois Phyllis Norma Wanda Gladys Peggy Tammy Tina Rhonda
+    Wendy Krzysztof Tomasz Piotr Andrzej Pawel Marek Agnieszka Katarzyna Malgorzata Dmitri Sergei Ivan Olga Natalia Irina
+    Svetlana Giovanni Giuseppe Salvatore Angelo Vincenzo Francesca Rosalie Kwame Kofi Chidi Amara Emeka
+    Tigist Mehmet Ayse Caitlin Colleen Brendan Declan Siobhan Liam Connor Kieran Maeve Erin Shannon Kristen
+    Courtney Heidi Gretchen Ingrid Lars Erik Hans Klaus Greta Dolores Ernesto Rodrigo Armando Alfredo Raul Ignacio Julio
+    Cesar Arturo Gilberto Rogelio Esteban Diego Mateo Santiago Camila Valentina Daniela Paola Lorena Mariana Ximena Rocio
+    Consuelo Graciela Martina Abril Isabel Leonor
   `);
+  // which of them read as a woman's or a man's name, so "wife Bernadette" gets a woman's name and "Mr. Jones's son" a man's
+  // (the rest, Kelly, Jesse, Jean, Alexis, Thanh, Yuki, are drawn when nothing says)
+  const FAKE_FEMALE = setOf(words(`
+    Mary Patricia Jennifer Linda Elizabeth Barbara Susan Jessica Sarah Karen Lisa Nancy Betty Sandra Margaret Ashley
+    Kimberly Emily Donna Michelle Amanda Melissa Deborah Stephanie Rebecca Sharon Laura Cynthia Kathleen Angela Shirley
+    Brenda Emma Anna Pamela Nicole Samantha Katherine Christine Debra Rachel Carolyn Janet Maria Catherine Diane Olivia
+    Julie Joyce Victoria Christina Lauren Joan Evelyn Judith Andrea Hannah Megan Cheryl Jacqueline Martha Teresa Gloria
+    Sara Janice Kathryn Abigail Sophia Frances Alice Judy Isabella Julia Denise Doris Marilyn Danielle Beverly Charlotte
+    Natalie Theresa Diana Brittany Kayla Lori Marie Guadalupe Rosa Carmen Lucia Elena Sofia Gabriela Adriana Veronica
+    Yolanda Marisol Alma Leticia Silvia Beatriz Esperanza Linh Huong Akiko Priya Anjali Neha Pooja Kavita Sunita Fatima
+    Aisha Layla Nadia Leila Latoya Keisha Tamika Shanice Aaliyah Monique Tanisha Kendra Yvonne Agnes Irene Dorothy Mildred
+    Helen Ruth Virginia Marjorie Lois Phyllis Norma Wanda Gladys Peggy Tammy Tina Rhonda Wendy Agnieszka Katarzyna
+    Malgorzata Olga Natalia Irina Svetlana Francesca Rosalie Amara Tigist Ayse Caitlin Colleen Siobhan Maeve Erin
+    Shannon Kristen Courtney Heidi Gretchen Ingrid Greta Dolores Camila Valentina Daniela Paola Lorena Mariana Ximena Rocio
+    Consuelo Graciela Martina Abril Isabel Leonor
+  `));
+  const FAKE_MALE = setOf(words(`
+    James Michael Robert John David William Richard Joseph Thomas Christopher Charles Daniel Matthew Anthony Donald Steven
+    Paul Andrew Joshua Kenneth Kevin Brian Timothy Ronald George Jason Edward Jeffrey Ryan Jacob Gary Nicholas Eric
+    Jonathan Stephen Larry Justin Scott Brandon Benjamin Samuel Gregory Alexander Patrick Raymond Dennis Jerry Tyler Aaron
+    Jose Adam Nathan Henry Zachary Douglas Peter Kyle Noah Ethan Jeremy Walter Keith Roger Sean Gerald Carl Harold Dylan
+    Arthur Lawrence Bryan Billy Bruce Gabriel Logan Alan Juan Albert Willie Elijah Wayne Vincent Ralph Bobby Russell
+    Bradley Philip Eugene Luis Carlos Miguel Jorge Antonio Manuel Pedro Alejandro Ricardo Fernando Javier Rafael Sergio
+    Eduardo Roberto Mario Hector Ramon Minh Tuan Hung Jian Hiroshi Kenji Deepak Rajesh Sanjay Ravi Sunil Arjun Vijay
+    Amit Rahul Ahmed Mohammed Omar Hassan Yusuf Khalid Tariq Samir Darnell Tyrone Jamal Deshawn Terrell Malik Andre Marcus
+    Reginald Cedric Lamar Bernard Stanley Leonard Francis Herbert Melvin Krzysztof Tomasz Piotr Andrzej Pawel Marek Dmitri
+    Sergei Ivan Giovanni Giuseppe Salvatore Angelo Vincenzo Kwame Kofi Chidi Emeka Mehmet Brendan Declan Liam
+    Connor Kieran Lars Erik Hans Klaus Ernesto Rodrigo Armando Alfredo Raul Ignacio Julio Cesar Arturo Gilberto Rogelio
+    Esteban Diego Mateo Santiago
+  `));
+  const FAKE_FIRST_F = FAKE_FIRST.filter((w) => FAKE_FEMALE.has(w.toLowerCase()));
+  const FAKE_FIRST_M = FAKE_FIRST.filter((w) => FAKE_MALE.has(w.toLowerCase()));
   const FAKE_LAST = words(`
-    Ashgrove Brightwell Calloway Dunmore Ellery Fairchild Greenhalgh Holloway Jessop Kingsley Lockhart Marlowe
-    Northcote Oakes Pembridge Quayle Ravenscroft Stanmore Thorne Underhill Vance Westbrook Yardley Aldridge
-    Blackwood Carrow Danforth Eastwick Farrow Glenmore Hartwell Islington Jarrow Kestrel Lindell Moorcroft
-    Nightingale Orchardson Prescott Quenby Redfern Sallow Tennant Upton Vickery Whitmore Yeoman Ashby Bramwell
-    Colfax Dunstable Everleigh Fenwick Grantham Hollingsworth Iredale Jessamy Kittredge Lanchester Mortlake
-    Nethercott Oxley Pennington Quarrington Rowntree Selwyn Thackeray Umberfield Vanbrugh Wakefield Yelverton
-    Ashdown Beaumont Crewe Abbotsley Barrowcliffe Chadwell Dalrymple Elphinstone Gainsford Hatherley
-    Ingleby Jocelyn Kenworthy Lanyon Marchbank Netherby Ormerod Pelham Quilliam Ridgeway Sandringham Tollemache
-    Uppingham Verlander Wentworth Yaxley Ambleside Birkdale Cottingham Dovercourt Egerton Fulwood Garsington
-    Hurlingham Ivinghoe Jevington Kelmscott Lydgate Melbury Northallerton Oakhurst Petworth Quantock Rydal
-    Stavely Tredegar Upwell Vexley Wimpole Yardwick Allerton Bexley Clavering Dunsford Elmhurst Fairlie Godolphin
-    Harcourt Inchbald Jerningham Kirkbride Lancing Mowbray Nunnery Orwell Pelletier Quincey Rosedale Silvester
-    Tremaine Ulverston Vanterpol Wrexham Yelland Ashcombe Brindley Cavendish Doverley Eskdale Fenchurch Gresham
-    Hawkesbury Ingleton Josselin Kenilworth Lindisfarne Marchmont Newbold Osterley Pickering Quenington Ravensworth
-    Shelbourne Thirlwall Urquhart Vanstone Wethersfield Yellowley Ambridge Blakeney Charlbury Dunwich Elsworth
-    Fontwell Gillingham Haverstock Ickworth Jesmond Kingswood Lambourne Milbrook Nettlebed Oxenford Pangbourne
-    Quorn Ramsbury Stoneleigh Tilbrook Ullswater Verwood Whitacre Yarrowby Amherley Bilsdale Cressley Dunholme
-    Ettrick Fernleigh Gatcombe Hartsby Ingoldsby Jarvisley Keswick Lavenham Marwood Nethershaw Ottery Penhallow
-    Quarmby Rushbrook Sedgwick Tarrant Underwood Vanbury Wyndham Yeovil Ashwell Bradworthy Cheverell Draycott
-    Ellingham Farncombe Glynde Hambleden Iffley Kelsall Lisle Marlston Norbury Ottershaw Pyecombe Ramsgate Stanwick
-    Thornleigh Upcott Villiers Wrayburn Yateley Ashperton Boscastle Chilcombe Dunkeswell Exford Fowey Godrevy Hallsands
+    Smith Williams Garcia Miller Davis Rodriguez Martinez Hernandez Lopez Gonzalez Anderson Taylor Moore Jackson Martin
+    Perez Thompson Harris Sanchez Ramirez Lewis Robinson Walker Allen Wright Torres Nguyen Flores Adams Nelson Rivera
+    Campbell Mitchell Carter Roberts Gomez Phillips Evans Diaz Parker Cruz Edwards Collins Reyes Stewart Morris Morales
+    Rogers Gutierrez Ortiz Morgan Cooper Peterson Bailey Howard Ramos Richardson Watson Brooks Chavez Bennett Mendoza
+    Ruiz Hughes Alvarez Castillo Sanders Patel Myers Ross Foster Jimenez Powell Jenkins Perry Sullivan Coleman Henderson
+    Barnes Gonzales Vasquez Simmons Romero Patterson Hamilton Graham Reynolds Griffin Wallace Moreno Hayes Bryant Herrera
+    Gibson Ellis Tran Medina Aguilar Murray Castro Marshall Owens Harrison Fernandez McDonald Kennedy Vargas Chen Freeman
+    Webb Tucker Guzman Burns Crawford Olson Simpson Gordon Mendez Silva Shaw Snyder Dixon Munoz Hicks Holmes Palmer Wagner
+    Robertson Boyd Salazar Meyer Schmidt Garza Daniels Ferguson Nichols Stephens Soto Weaver Payne Dunn Kelley Spencer
+    Hawkins Arnold Pierce Vazquez Hansen Peters Santos Elliott Cunningham Armstrong Carroll Riley Andrews Delgado Berry
+    Perkins Hoffman Johnston Matthews Pena Richards Contreras Willis Sandoval Guerrero Chapman Rios Estrada Ortega Watkins
+    Greene Nunez Wheeler Valdez Harper Burke Larson Maldonado Morrison Carlson Dominguez Carr Lawson Jacobs Singh
+    Vega Montgomery Oliver Jensen Harvey Williamson Gilbert Espinoza Wong Reid Hanson McCoy Garrett Burton Fuller Wang
+    Rojas Lucas Marquez Yang Padilla Walsh Bowman Schultz Luna Mejia Davidson Acosta Holland Juarez Newman Pearson Curtis
+    Cortez Schneider Navarro Figueroa Keller Avila Molina Hopkins Campos Barnett Caldwell Lambert Miranda Byrd Craig Ayala
+    Frazier Carrillo Sutton Fleming Shelton Schwartz Norris Jennings Watts Duran Cohen McDaniel Moran Parks Vaughn Becker
+    Deleon Leon Benson Haynes Horton Lyons Pham Thornton Warner Cabrera McKinney Mann Zimmerman Dawson Lara Fletcher
+    Kowalski Nowak Wisniewski Wojcik Kowalczyk Kaminski Lewandowski Zielinski Szymanski Mazur Krawczyk Dabrowski Novak
+    Petrov Ivanov Kozlov Popov Volkov Romano Russo Esposito Ricci Marino Greco Bruno Gallo Conti Costa Rizzo Lombardi
+    Moretti Colombo Ferrari Mancini Okafor Okonkwo Adeyemi Mensah Owusu Boateng Abdi Hussein Khan Rahman Ibrahim Mahmoud
+    Haddad Nasser Sharma Gupta Kumar Shah Mehta Reddy Iyer Desai Joshi Chowdhury Nair Huang Zhang Zhao Zhou Tanaka
+    Yamamoto Nakamura Suzuki Watanabe Sato Choi Kang Jung Yoon Hoang Phan Huynh Dang Duong Truong Schmitt Fischer
+    Hoffmann Krueger Johansson Larsen Nielsen Andersen Petersen Byrne Doyle Gallagher Quinn Brennan McMahon
+    Fitzgerald Donovan
   `);
-  const FAKE_ORGS = words(`
-    Riverside|Medical|Center Lakeview|Oncology|Associates Northgate|Regional|Hospital
-    Pinecrest|Cancer|Institute Harborview|Clinic Meadowbrook|Health Stonebridge|Hospice
-    Cedar|Hills|Infusion|Center Westfield|Memorial|Hospital Brookhaven|Hematology
-    Summit|Ridge|Medical|Group Oakdale|Community|Hospital Fairmont|Imaging
-    Silverlake|Pharmacy Elmwood|Home|Care Clearwater|University|Hospital Greywater|Industries
-    Tallmadge|Foods Halvorsen|Motors Brightwater|Insurance Ironbridge|Church Hillmere|Temple
-  `).map((s) => s.replace(/\|/g, ' '));
-  const FAKE_CITIES = words(`Ashford Brimley Coldwater Dunbar Eastmere Fallbrook Glenhaven Hartsfield Ivydale Kessler Larkspur Millbrook Northfield Oakridge Pinehurst Quarryville Redmond Stonehaven Thornbury Wexley`);
+  // street names (written with a suffix the original had: "Maple Ave", "412 Cedar St")
+  const FAKE_STREETS = words(`
+    Maple Cedar Pine Walnut Chestnut Spruce Birch Hickory Sycamore Poplar Cherry Magnolia
+    Mill Union Market Spring Prospect Pleasant Ridge Sunset Railroad Meadow Orchard Forest River Lake Hillside Valley
+    Bridge Academy Broad Liberty Jefferson Monroe Locust Mulberry Dogwood Aspen Cottonwood Beech Linden Grove Highland
+    Fairview Woodland Lakeview Ridgewood Edgewood Glenwood Sherwood Kenwood Brookside Railway Juniper Hemlock
+  `);
+  // towns: ordinary US place names from outside the region the tool is used in (no Western New York or upstate names)
+  const FAKE_CITIES = words(`
+    Springfield Riverton Milford Georgetown Salem Ashland Greenville Dover Bristol Burlington Camden Dayton Easton
+    Lebanon Manchester Newport Plymouth Richmond Shelbyville Trenton Windsor Arlington Bedford Canton Centerville Clayton
+    Dalton Elkton Glendale Hanover Lexington Marysville Newton Oakland Princeton Bloomington Columbia Fayetteville
+    Frankfort Hillsboro Lakewood Smyrna Waverly Westminster Winchester Brookfield Danville Farmington Greenwood
+    Harrisburg Fremont Rockford Wheaton Dublin Medford Concord Sedalia Tupelo Ocala Yuma Visalia Bozeman Missoula
+  `);
+  // organizations by kind: a hospital is replaced by a hospital, a pharmacy by a pharmacy. The first word of each is its
+  // own (it is what the Surrogator checks against the input and marks as handed out); the words after it are the kind.
+  const FAKE_ORG_POOLS = {
+    hospital: ['Lakeshore General Hospital', 'Northside Medical Center', 'Valleybrook Regional Hospital', 'Crestview Community Hospital', 'Southpoint Medical Center', 'Riverbend Hospital', 'Bayfield Memorial Hospital', 'Eastbrook General Hospital'],
+    cancer: ['Pinecrest Cancer Center', 'Hillcrest Cancer Institute', 'Northpoint Oncology', 'Meadowbrook Cancer Center', 'Westbury Cancer Institute', 'Clearbrook Oncology Associates'],
+    clinic: ['Brookhaven Family Clinic', 'Westgate Medical Group', 'Eastview Primary Care', 'Parkside Health Clinic', 'Lakemont Medical Associates', 'Stonegate Family Practice'],
+    pharmacy: ['Clearwater Pharmacy', 'Oakmont Pharmacy', 'Lakeside Drugs', 'Sunnyside Pharmacy', 'Bellmont Pharmacy', 'Kingsley Drug'],
+    insurer: ['Bayview Health Plan', 'Summitview Mutual Insurance', 'Fairhaven Insurance', 'Northstar Health Plan', 'Ridgeline Benefits', 'Silvercrest Insurance'],
+    nursing: ['Stonebridge Nursing and Rehabilitation', 'Kingsbridge Rehab Center', 'Willowbrook Senior Living', 'Maplecrest Nursing Home', 'Oakhaven Rehabilitation Center', 'Briarwood Care Center'],
+    school: ['Eastfield Elementary School', 'Northridge High School', 'Lakeland Middle School', 'Westhaven Community College', 'Rivermont Academy', 'Crestwood Elementary'],
+    employer: ['Crestline Manufacturing', 'Ridgeway Logistics', 'Summitline Packaging', 'Northgate Distribution', 'Bayside Electric', 'Harborline Freight', 'Keystone Machining', 'Tri-County Builders'],
+    shop: ['Freshway Market', 'Hilltop Grocery', 'Greenleaf Market', 'Fairmart Foods', 'Corner Pantry', 'Sunfield Market'],
+    church: ['Trinity Lutheran Church', 'Calvary Baptist Church', 'Bethany Community Church', 'Shiloh Baptist Church', 'Emmanuel Lutheran Church', 'Covenant Fellowship Church'],
+    unknown: ['Lakehurst Associates', 'Northbay Services', 'Brookline Center', 'Westbrook Partners', 'Clearview Group', 'Ridgefield Community Services'],
+  };
+  // a name with a kind word of its own ("Kenmore Mercy Hospital", "Delaware Pharmacy") keeps that word after a made-up stem
+  const FAKE_ORG_STEMS = words(`
+    Lakemoor Northfield Brookdale Westmont Pinegrove Hollybrook Clearfield Oakview Riverside Parkview Lakeridge Bayshore
+    Sunridge Crestmont Southgate Eastlake Valleyview Stonecrest Glenbrook Kingsgate Fairlawn Elmhurst Ashbrook Cedarcrest
+    Highpoint Silverbrook Greenbriar Meadowview Hazelwood Larchmont Thornbury Wildwood Foxhall Ironwood Bramblewood
+  `);
+  // the kind of a known local organization (detection lists it in LOCAL_ORGS; this map is read only for replacement)
+  const LOCAL_ORG_KIND = {
+    moog: 'employer', geico: 'insurer', elderwood: 'nursing', sumitomo: 'employer', praxair: 'employer', linde: 'employer', 'delaware north': 'employer',
+    'rich products': 'employer', tops: 'shop', wegmans: 'shop', kaleida: 'hospital', 'catholic health': 'hospital', 'erie county medical center': 'hospital',
+    ecmc: 'hospital', roswell: 'cancer', 'roswell park': 'cancer', 'brothers of mercy': 'nursing', 'canterbury woods': 'nursing', 'weinberg campus': 'nursing',
+    amberleigh: 'nursing', beechwood: 'nursing', 'terrace view': 'nursing', schofield: 'nursing', 'father baker': 'unknown', absolut: 'nursing',
+    'hospice buffalo': 'nursing', 'mercy flight': 'unknown', 'mcguire group': 'nursing', 'garden gate': 'nursing', 'harris hill': 'nursing',
+    'autumn view': 'nursing', 'ellicott center': 'nursing', 'kenmore mercy': 'hospital', 'sisters hospital': 'hospital', 'buffalo general': 'hospital',
+    'millard fillmore': 'hospital', 'mercy hospital': 'hospital', oishei: 'hospital', 'independent health': 'insurer', univera: 'insurer', fidelis: 'insurer',
+    highmark: 'insurer', excellus: 'insurer', 'blue cross': 'insurer', bcbs: 'insurer', medicaid: 'insurer', medicare: 'insurer', humana: 'insurer', aetna: 'insurer',
+    cigna: 'insurer', cvs: 'pharmacy', walgreens: 'pharmacy', 'rite aid': 'pharmacy', aldi: 'shop', walmart: 'shop', target: 'shop',
+  };
+  // the union, for code that wants every made-up organization
+  const FAKE_ORGS = Object.values(FAKE_ORG_POOLS).flat();
 
   // accents folded away for lexicon lookups: Nguyễn → nguyen, Bríd → brid, Đặng → dang
   const fold = (w) => String(w).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
@@ -595,7 +685,7 @@
     isWeakName: (w) => { const k = keyOf(w); return (anyTier(k) || FIRST_SET.has(k) || LAST_SET.has(k)) && !strongName(k); },
     FIRST_NAMES, SURNAMES, AMBIGUOUS, CLINICAL_ALLOWLIST, RELATION_CUES, HONORIFICS,
     CREDENTIALS, ORG_SUFFIXES, US_STATES, US_CITIES, HOLDOUT_FIRST, HOLDOUT_LAST,
-    FAKE_FIRST, FAKE_LAST, FAKE_ORGS, FAKE_CITIES,
+    FAKE_FIRST, FAKE_FIRST_F, FAKE_FIRST_M, FAKE_FEMALE, FAKE_MALE, FAKE_LAST, FAKE_ORGS, FAKE_CITIES, FAKE_STREETS, FAKE_ORG_POOLS, FAKE_ORG_STEMS, LOCAL_ORG_KIND,
     FIRST_SET, LAST_SET, CITY_SET, RELATION_SET, HONORIFIC_SET, CREDENTIAL_SET,
     ORG_SUFFIX_SET, ORG_NAMEWORDS, ORG_NAMEWORD_SET, STATE_ABBR_SET, STATE_NAME_SET, CA_PROVINCES,
     GEO_SUFFIXES, GEO_SUFFIX_SET, PLACE_PREFIXES, PLACE_PREFIX_SET, ONES_WORDS, ORG_PREFIXES, ORG_PREFIX_SET,
