@@ -4787,7 +4787,7 @@
   // source and in the output, why) and counted in result.residue, so the page can make the line one that needs a look and
   // cannot vouch for the result until a person has looked.
   //   why: 'hidden-elsewhere'  the same word (or one letter off) was replaced as a name or place somewhere in this input
-  //        'listed-name'       a word from the name lists, left because the words around it read like a drug or a dose
+  //        'listed-name'       a word from the name lists that was not replaced here
   //        'unknown-caps'      an ALL-CAPS word that is in no list and is not shared vocabulary of this input
   //        'unknown-cap'       a capitalised word that is in no list
   //        'unknown-lower'     a lower-case word of 4+ letters that is in no list

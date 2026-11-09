@@ -933,7 +933,7 @@
   // be green and its lines need a look.
   const RESIDUE_WHY = {
     'hidden-elsewhere': 'the same word, or one a letter off, was replaced as a name or place elsewhere in this input',
-    'listed-name': 'it is in the name lists, and was left only because the words around it read like a drug or a dose',
+    'listed-name': 'it is in the name lists and was not replaced here',
     'unknown-caps': 'a word in capitals that is in no word list and is not used across several patients here',
     'unknown-cap': 'a capitalised word that is in no word list',
     'unknown-lower': 'a word that is in no word list',
