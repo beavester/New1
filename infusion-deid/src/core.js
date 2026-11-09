@@ -2751,6 +2751,33 @@
       if (last && /^\s+(?:\p{L}\.?\s+)?$/u.test(text.slice(last.end, t.start)) && last.type === (placeCue ? 'LOCATION' : last.type)) { last.end = t.end; continue; }
       add.push({ start: t.start, end: t.end, type: placeCue || LEX.CITY_SET.has(t.core.toLowerCase()) ? 'LOCATION' : 'NAME_OTHER', source: 'strict', conf: 0.5 });
     }
+    const free = (a, b) => !spans.some((sp) => sp.start < b && a < sp.end) && !add.some((x) => x.start < b && a < x.end);
+    let m;
+    // a labelled place: "City   Springfield", "Hometown: Cedar Falls", "Town of residence Lowell"
+    const PLACE_LABEL = /\b(?:City|Town|Hometown|Home\s+town|Residence|Town\s+of\s+residence|Lives\s+in|Birthplace|Place\s+of\s+birth|County)\b\s*[:\-]?[ \t]+((?:\p{Lu}[\p{L}'’.\-]*)(?:[ \t]\p{Lu}[\p{L}'’.\-]*){0,2})/gu;
+    while ((m = PLACE_LABEL.exec(text))) {
+      const v = m[1], a = m.index + m[0].length - v.length;
+      if (/^(?:Chair|Bay|Pod|Room|Rm|Unit|Floor|State|Zip|Phone|Relationship|Name|Address|Ok|Yes|No|N\/A|Na|None|Unknown)$/i.test(v.split(/\s/)[0])) continue;
+      if (free(a, a + v.length)) add.push({ start: a, end: a + v.length, type: 'LOCATION', source: 'strict', conf: 0.5 });
+    }
+    // a line of ALL-CAPS "LAST, FIRST" names (a census tile row): when one is already a name, the others are names too
+    if (spans.some((sp) => /^NAME/.test(sp.type) && /^\p{Lu}{2,}[\p{Lu}'’\-]*,\s?\p{Lu}{2,}/u.test(text.slice(sp.start, sp.end + 12)))) {
+      const CAPS_NAME = /(?<![\p{L}\d])(\p{Lu}[\p{Lu}'’\-]+),[ \t]?(\p{Lu}[\p{Lu}'’\-]+)(?![\p{L}\d])/gu;
+      while ((m = CAPS_NAME.exec(text))) {
+        const before = text.slice(Math.max(0, m.index - 2), m.index), after = text.slice(m.index + m[0].length, m.index + m[0].length + 2);
+        if (!(/^(?:\s{2}|\t)|^$/.test(after) || /\s{2}$|\t$|^$/.test(before) || m.index === 0)) continue;
+        if ([m[1], m[2]].some((w) => /^(?:MRN|DOB|CSN|FIN|ID|MD|DO|RN|NP|PA|AM|PM|IV|PO|LT|RT|AND|OR|THE|NA|NKDA)$/.test(w))) continue;
+        if (free(m.index, m.index + m[0].length)) add.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+      }
+    }
+    // an age of 90 or more said in words around it: "mom is 97 now", "she turned 93", "will be 91 next week"
+    const AGE_SAID = /\b(?:is|turned|turns|will\s+be|was)\s+(9\d|1[01]\d)(?=\s+(?:now|today|this|next|last|years?|yrs?|y\.?o\.?|year[-\s]old)\b|\s*(?:[.,;!]|$))/gi;
+    while ((m = AGE_SAID.exec(text))) {
+      const a = m.index + m[0].length - m[1].length;
+      const lead = text.slice(Math.max(0, m.index - 30), m.index);
+      if (/(?:sat|spo2|o2|pulse|hr|heart\s+rate|bp|temp|weight|wt|glucose|bg|sugar|score|level|count|plt|platelets?|rate|%)\W*$/i.test(lead)) continue;
+      if (free(a, a + m[1].length)) add.push({ start: a, end: a + m[1].length, type: 'AGE', source: 'strict', conf: 0.5 });
+    }
     if (!add.length) return spans;
     add.forEach((x) => { x.text = text.slice(x.start, x.end); });
     return spans.concat(add).sort((a, b) => a.start - b.start);
@@ -3187,7 +3214,7 @@
           case 'DATE': {
             const pd = span.date || (() => { for (const p of DATE_PATTERNS) { p.re.lastIndex = 0; const m = p.re.exec(orig); if (m && m[0] === orig) return parseDateMatch(p.kind, m); } return null; })();
             // a birthdate in free text follows the DOB setting, like the DOB column: removed (default), year only, or shifted
-            if (span.type === 'DOB' && cfg.surrogate.dob !== 'shift') return cfg.surrogate.dob === 'year' && pd && pd.hasYear ? String(pd.y) : '[dob]';
+            if (span.type === 'DOB' && cfg.surrogate.dob !== 'shift') return cfg.surrogate.dob === 'year' && pd && pd.hasYear && new Date().getFullYear() - pd.y < 90 ? String(pd.y) : '[dob]';
             if (!cfg.surrogate.dateShift) return span.type === 'DOB' ? '[dob]' : '[date]';
             if (!pd || pd.kind === 'ord') return '[date]'; // a bare day of the month: no month to shift it within
             const key = span.entity || rowPatientKey;
@@ -3199,7 +3226,7 @@
           case 'ADDRESS': return stringSurrogate('ADDRESS', orig, () => {
             if (/\bbox\b/i.test(orig)) return orig.replace(/\d+(?!.*\d)/, () => String(Math.floor(rng() * 9000) + 1000)).replace(/^(?:RR|R\.R\.|Rural\s+Route|HC)\s*\d+/i, (m) => m.replace(/\d+/, () => String(Math.floor(rng() * 9) + 1)));
             if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${Math.floor(rng() * 900 + 100)} ${pick(LEX.FAKE_LAST)} Rd`; const suf = (orig.match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway)\.?(?=\W*$|\s)/) || [])[1] || (/^\d/.test(orig) ? 'St' : 'Rd'); return `${/^\d/.test(orig) ? Math.floor(rng() * 900 + 100) + ' ' : ''}${pick(LEX.FAKE_LAST)} ${suf}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; });
-          case 'ZIP': return orig.replace(/\d{5}(-\d{4})?/, (z) => z.slice(0, 3) + '00');
+          case 'ZIP': return orig.replace(/\d{5}(-\d{4})?/, (z) => zip3(z));
           case 'ORG': return stringSurrogate('ORG', orig, () => pick(LEX.FAKE_ORGS));
           case 'LOCATION': return stringSurrogate('LOCATION', orig, () => pick(LEX.FAKE_CITIES));
         }
@@ -3208,6 +3235,11 @@
     };
   }
 
+  // HIPAA Safe Harbor: the first three ZIP digits may stay only where that 3-digit area holds more than 20,000 people (2000
+  // Census); these 17 prefixes do not, so they become 000.
+  const RESTRICTED_ZIP3 = new Set(['036', '059', '063', '102', '203', '556', '692', '790', '821', '823', '830', '831', '878', '879', '884', '890', '893']);
+  const isRestrictedZip3 = (z) => RESTRICTED_ZIP3.has(String(z).slice(0, 3));
+  const zip3 = (z) => (isRestrictedZip3(z) ? '000' : z.slice(0, 3)) + '00';
   function applySpans(text, spans, replacer) {
     // surrogates are drawn last span first (the allocation order the session key depends on); the text is assembled in one
     // pass, so a long cell with thousands of spans costs linear time, not one copy of the cell per span
@@ -3305,6 +3337,24 @@
     const reg = {
       entities, taken, realWords, providers, tokenMap, strings, allocations: 0, docOffset: null,
       get size() { return entities.length; },
+      // A transaction: checkpoint() returns a function that puts the registry back exactly as it was (same entity objects,
+      // same codes, same offsets), so a run that fails half way leaves no half-learned patient behind.
+      checkpoint() {
+        const cpVal = (v) => (v instanceof Set ? new Set(v) : v instanceof Map ? new Map(v) : Array.isArray(v) ? v.slice() : v);
+        const cpObj = (o) => { const c = {}; for (const k of Object.keys(o)) c[k] = cpVal(o[k]); return c; };
+        const keep = (v) => (v instanceof Set ? { set: new Set(v) } : v && typeof v === 'object' && !Array.isArray(v) ? { ref: v, copy: cpObj(v) } : { val: cpVal(v) });
+        const back = (k) => (k.set ? new Set(k.set) : k.ref ? (Object.keys(k.ref).forEach((x) => { if (!(x in k.copy)) delete k.ref[x]; }), Object.assign(k.ref, cpObj(k.copy)), k.ref) : cpVal(k.val));
+        const ents = entities.map((e) => keep(e));
+        const maps = [byMrn, providers, tokenMap, strings, byLast, byDob, byId, byLastDel].map((m) => [m, [...m].map(([k, v]) => [k, keep(v)])]);
+        const sets = [taken, realWords].map((st) => [st, new Set(st)]);
+        const scal = { next, allocations: reg.allocations, docOffset: reg.docOffset };
+        return () => {
+          entities.length = 0; ents.forEach((k) => entities.push(back(k)));
+          maps.forEach(([m, entries]) => { m.clear(); entries.forEach(([k, v]) => m.set(k, back(v))); });
+          sets.forEach(([st, copy]) => { st.clear(); copy.forEach((x) => st.add(x)); });
+          next = scal.next; reg.allocations = scal.allocations; reg.docOffset = scal.docOffset;
+        };
+      },
       toProviderRows() {
         return [...providers.values()].map((pr) => ({ Code: pr.code, SurrogateName: `${pr.fakeLast}, ${pr.fakeFirst}`, RealName: pr.first ? `${pr.last}, ${pr.first}` : pr.last, Credential: pr.credentials || '' }));
       },
@@ -4018,7 +4068,7 @@
           case 'dob': {
             const d = isDate(v) ? v : parseDateString(sv);
             if (cfg.surrogate.dob === 'drop' || !d) out[ci] = '';
-            else if (cfg.surrogate.dob === 'year') out[ci] = String(d.getFullYear());
+            else if (cfg.surrogate.dob === 'year') out[ci] = new Date().getFullYear() - d.getFullYear() >= 90 ? '90+' : String(d.getFullYear()); // Safe Harbor: no birth year for ages 90 and over
             else if (cfg.surrogate.dob === 'shift') out[ci] = isDate(v) ? shiftDate(d, offset) : sur.replace({ type: 'DOB', start: 0, end: sv.length }, sv, pk);
             else out[ci] = '';
             bump(stats.structured, 'DOB'); break;
@@ -4037,7 +4087,7 @@
             bump(stats.structured, 'DATE'); break;
           }
           case 'age': out[ci] = bandAge(v, cfg.surrogate.ages); bump(stats.structured, 'AGE'); break;
-          case 'zip': out[ci] = sv.replace(/\d{5}(-\d{4})?/, (z) => z.slice(0, 3) + '00'); bump(stats.structured, 'ZIP'); break;
+          case 'zip': out[ci] = sv.replace(/\d{5}(-\d{4})?/, (z) => zip3(z)); bump(stats.structured, 'ZIP'); break;
           case 'drop': out[ci] = ''; bump(stats.structured, 'DROP'); break;
           default: break;
         }
@@ -4375,12 +4425,85 @@
   }
 
   const VERSION = '0.1.0';
+  // Release scan: an independent check of the protected output against the SOURCE, written apart from the detectors so a
+  // miss in them is not repeated here. It never changes the output; it only reports.
+  //  identifiers: an identifier-column value (patient last name, MRN, account, phone) that still appears anywhere in the output
+  //  words:       a capitalised source word of 4+ letters that survived unchanged and is not a dictionary, clinical,
+  //               drug-stem or allowlisted word (the review queue)
+  //  needles:     the identifier values, kept so the written file can be re-read and checked again
+  function releaseScan(table, result, opts) {
+    const o = opts || {};
+    const out = { identifiers: [], words: [], needles: { digits: [], names: [] } };
+    if (!table || !result || !Array.isArray(result.rows) || !Array.isArray(table.rows)) return out;
+    const allow = new Set((o.allowlist || []).map((w) => String(w).toLowerCase()));
+    const cols = Array.isArray(result.columns) ? result.columns : [];
+    const roleAt = new Map(); cols.forEach((c, i) => roleAt.set(c.index != null ? c.index : i, c.role));
+    const digitSet = new Set(), nameSet = new Set();
+    table.rows.forEach((row) => roleAt.forEach((role, ci) => {
+      const v = cellToString(row && row[ci]).trim(); if (!v) return;
+      if (role === 'mrn' || role === 'account' || role === 'phone') { const d = v.replace(/\D/g, ''); if (d.length >= 6) digitSet.add(d); }
+      else if (role === 'patient_name') {
+        const pn = parseName(v); const last = pn && pn.last ? pn.last : '';
+        last.split(/[\s\-]+/).forEach((t) => { const w = t.replace(/[^A-Za-zÀ-ÿ'’]/g, ''); if (w.length >= 4 && !LEX.isEnglishWord(w) && !LEX.isDictWord(w) && !LEX.isClinical(w)) nameSet.add(w.toLowerCase()); });
+      }
+    }));
+    out.needles.digits = [...digitSet]; out.needles.names = [...nameSet];
+    const hits = findNeedles(result.headers ? [result.headers, ...result.rows] : result.rows, out.needles);
+    hits.forEach((h) => out.identifiers.push({ row: h.row - (result.headers ? 1 : 0), col: h.col, header: cellToString((result.headers || [])[h.col]), text: h.text, type: h.type }));
+    const ordinary = (w) => {
+      const lc = w.toLowerCase();
+      if (allow.has(lc) || /^[A-Z]{2,}s?$/.test(w) || monthIndex(w)) return true;
+      if (/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i.test(w)) return true;
+      if (LEX.isEnglishWord(w) || LEX.isDictWord(w) || LEX.isClinical(w) || DRUG_STEM.test(w) || MED_MORPH.test(w)) return true;
+      return w.split(/[-’']/).filter((x) => x.length >= 2).every((x) => LEX.isEnglishWord(x) || LEX.isDictWord(x) || LEX.isClinical(x)) && /[-]/.test(w);
+    };
+    const TOK = /[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'’\-]*[A-Za-zÀ-ÖØ-öø-ÿ]/g;
+    const seen = new Map();
+    result.rows.forEach((orow, ri) => {
+      const srow = table.rows[ri]; if (!srow) return;
+      roleAt.forEach((role, ci) => {
+        if (role !== 'text' && role !== 'keep') return;
+        const so = cellToString(orow[ci]); if (!so) return;
+        const outToks = new Set(so.match(TOK) || []);
+        const src = normalizeText(cellToString(srow[ci])); TOK.lastIndex = 0; let m;
+        while ((m = TOK.exec(src))) {
+          const w = m[0];
+          if (w.length < 4 || !/^[A-ZÀ-ÖØ-Þ]/.test(w) || !outToks.has(w) || ordinary(w)) continue;
+          // an eponym: "Lee Silverman voice", "Hunter syndrome", "Glasgow Coma scale"
+          if (/^\s+(?:[A-Z][a-z]+\s+)?(?:voice|syndrome|disease|sign|test|scale|score|criteria|classification|procedure|maneuver|manoeuvre|palsy|reflex|phenomenon|method|protocol|regimen|catheter|line|port|needle|stage|grade)\b/i.test(src.slice(m.index + w.length, m.index + w.length + 40))) continue;
+          const e = seen.get(w); if (e) { e.count++; continue; }
+          const rec = { row: ri, col: ci, header: cellToString((result.headers || [])[ci]), text: w, count: 1 }; seen.set(w, rec); out.words.push(rec);
+        }
+      });
+    });
+    return out;
+  }
+  // Look for identifier values in a grid of cells (any cell, any column): digit identifiers inside digit runs (separators
+  // allowed), last names as whole words in any case.
+  function findNeedles(aoa, needles) {
+    const hits = []; if (!needles) return hits;
+    const digits = (needles.digits || []).filter((d) => d.length >= 6);
+    const names = needles.names || [];
+    const nameRe = names.length ? new RegExp(`(?<![A-Za-zÀ-ÿ])(?:${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![A-Za-zÀ-ÿ])`, 'gi') : null;
+    (aoa || []).forEach((row, ri) => (Array.isArray(row) ? row : [row]).forEach((cell, ci) => {
+      const t = cell instanceof Date ? '' : cellToString(cell); if (!t) return;
+      if (digits.length && /\d{3}/.test(t)) {
+        for (const run of t.match(/\d[\d\-\s.()\/]*\d/g) || []) {
+          const d = run.replace(/\D/g, ''); if (d.length < 6) continue;
+          const hit = digits.find((n) => d.includes(n)); if (hit) { hits.push({ row: ri, col: ci, text: run, type: 'ID' }); break; }
+        }
+      }
+      if (nameRe) { nameRe.lastIndex = 0; const m = nameRe.exec(t); if (m) hits.push({ row: ri, col: ci, text: m[0], type: 'NAME_PATIENT' }); }
+    }));
+    return hits;
+  }
+
   return {
     VERSION, TYPES, COARSE, ROLES, ROLE_LABELS, classifyColumns, inferIdPattern, parseName, nameVariants, buildCensus,
     detectText, ruleSpans, lexiconSpans, censusSpans, resolveSpans, mergeAdjacentNames, collectPropagation,
     parseDateString, renderDate, shiftDate, dateRenderings, bandAge,
     Surrogator, applySpans, defaultConfig, compileConfig, processTable, reidentify, selfCheck,
     createRegistry, normalizeId, mrnKeyOf, dobKeyOf, levenshtein, parseTextDocument, normalizeOcrText,
-    cellToString, mulberry32, hashString, tokenize, normalizeText, safeCell,
+    cellToString, mulberry32, hashString, tokenize, normalizeText, safeCell, releaseScan, findNeedles, isRestrictedZip3,
   };
 });

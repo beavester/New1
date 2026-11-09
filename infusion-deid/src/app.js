@@ -46,6 +46,7 @@
     if (s === 'rule' || s === 'rules') return 'Found by: a pattern';
     if (s === 'lexicon' || s === 'cue') return 'Found by: a word clue (less certain)';
     if (s === 'propagate') return 'Found by: seen elsewhere in this file';
+    if (s === 'strict') return 'Found by: unrecognised word (strict check; may be an ordinary word)';
     return 'Found by: ' + (s || 'the tool');
   };
   const TYPE_UI = { NAME_PATIENT: 'patient name', NAME_PROVIDER: 'staff name', NAME_OTHER: 'name', MRN: 'MRN', ACCOUNT: 'account number', PHONE: 'phone number', DOB: 'birthdate', DATE: 'date', EMAIL: 'email', ORG: 'organization', LOCATION: 'place', ADDRESS: 'address', ZIP: 'ZIP', AGE: 'age', SSN: 'SSN', ID_OTHER: 'other ID', URL: 'web address', IP: 'network address' };
@@ -598,7 +599,7 @@
       mrnPattern: userMrnPattern() || (hasMrnCol ? null : session.mrnPattern) || null,
       seed: session.seed,
       registry: session.registry,
-      surrogate: { patients: $('optPatients').value, providers: $('optProviders').value, dob: $('optDob').value, ages: $('optAges').value, dateShift: $('optDates').value === 'shift', shiftRange: [isNaN(a) ? 30 : a, isNaN(b) ? 365 : b] },
+      surrogate: { patients: $('optPatients').value, providers: $('optProviders').value, dob: $('optDates').value === 'remove' && $('optDob').value === 'shift' ? 'year' : $('optDob').value, ages: $('optAges').value, dateShift: $('optDates').value === 'shift', shiftRange: [isNaN(a) ? 30 : a, isNaN(b) ? 365 : b] },
       denylist: lines('optDeny'), allowlist: lines('optAllow'),
       auditColumn: true, auditDetail: false, deriveAge: $('optDerive').checked,
       manual: item ? item.manual : {},
@@ -637,6 +638,13 @@
   // The same goes for any earlier input once the session knows a patient (name or record number) it did not know when that
   // input was protected: a later tile view can name a patient that an earlier table listed, and the earlier output is rescanned.
   const registryStamp = () => session.registry.entities.reduce((n, e) => n + e.names.size + e.mrns.size + 1, 0);
+  // What a result was made from: tool version, the session's patients, the item's settings, column roles and review edits.
+  // A download is allowed only while this still matches; anything changed since the check means the file would not be the
+  // one that was checked.
+  const resultKey = (item) => {
+    const c = collectConfig(item);
+    return JSON.stringify([DeID.VERSION, registryStamp(), c.columns, userMrnPattern() || '', c.surrogate, c.denylist, c.allowlist, c.deriveAge, c.manual, session.seed]);
+  };
 
   // One job at a time: every run, re-run and repair of an earlier input goes through this queue, so two runs never
   // interleave on the session's patient registry. A newer request for the same input supersedes an older one (item.gen),
@@ -856,11 +864,13 @@
     const gen = item.gen;
     const live = () => item.gen === gen && session.items.includes(item);
     const progress = typeof o.progress === 'function' ? o.progress : () => {};
+    let rollback = null;
     try {
       if (!item.table || !Array.isArray(item.table.rows) || !Array.isArray(item.table.headers)) throw new Error('there is nothing readable in this input');
       tableLimits(item.table.headers, item.table.rows);
       patientLimit(item.table.headers, item.table.rows, item.columns);
       const before = snapshotRegistry();
+      rollback = session.registry.checkpoint();
       const cfg = collectConfig(item);
       if (testHooks.process > 0) { testHooks.process--; throw new Error('forced test failure while protecting'); }
       const nRows = item.table.rows.length;
@@ -881,12 +891,16 @@
       }
       if (!live()) return false;
       if (!leak || !Array.isArray(leak.hits)) throw new Error('the check of the result returned no answer');
-      item.result = result; item.leak = leak; item.error = null;
+      const release = DeID.releaseScan(item.table, result, { allowlist: cfg.allowlist });
+      item.result = result; item.leak = leak; item.release = release; item.error = null;
       if (!session.mrnPattern && result.cfg.inferredMrnPattern) session.mrnPattern = result.cfg.inferredMrnPattern;
       item.linkedBy = computeLinks(item, before);
       item.flagged = result.details.filter(isFlagged).length;
       item.regStamp = registryStamp();
+      item.resultKey = resultKey(item);
     } catch (e) {
+      // a failed run leaves the session's patients as they were before it
+      if (rollback) { try { rollback(); } catch (e2) { console.warn(e2); } }
       if (!live()) return false;
       failItem(item, e);
     }
@@ -995,7 +1009,9 @@
   }
 
   // ------------------------------------------------------------ verdict + summary
-  const isRed = (item) => !!item && !!item.leak && item.leak.hits.length > 0;
+  const releaseIds = (item) => (item && item.release ? item.release.identifiers : []);
+  const isRed = (item) => !!item && ((!!item.leak && item.leak.hits.length > 0) || releaseIds(item).length > 0);
+  const surviving = (item) => (item && item.release ? item.release.words : []);
   // Green needs patients to check against: the input's own, or any the session already knows (patient list, earlier inputs).
   // With none at all the check had nothing to look for, so the verdict is amber, never green.
   const checkedAgainst = (item) => { const c = item && item.result && item.result.census; return c ? c.patients.size + (c.known ? c.known.size : 0) : 0; };
@@ -1004,6 +1020,10 @@
   // until a name or record number column is chosen (or the compliance override is on).
   const noOwnPatients = (item) => !!item && item.kind === 'table' && !!item.result && !!item.table && item.table.rows.length > 0 && !!item.result.census && item.result.census.patients.size === 0;
   const isAmber = (item) => !!item && !!item.result && !!item.leak && !item.error && !isRed(item) && (checkedAgainst(item) === 0 || noOwnPatients(item));
+  // Review required: text or a screenshot with no patient list (names found by rules alone), or source words that survived
+  // the protection and are not ordinary words. Downloads then need a person to say they looked, for this exact result.
+  const needsReview = (item) => !!item && !!item.result && !item.error && !isRed(item) && (isAmber(item) || surviving(item).length > 0);
+  const reviewed = (item) => !!item && !!item.resultKey && item.ackKey === item.resultKey;
   // Why an input may not be downloaded right now ('' when it may). Every export path asks this itself.
   function blockReason(it, override) {
     if (!it) return 'Nothing to download yet';
@@ -1011,8 +1031,10 @@
     if (it.running) return 'Still working…';
     if (!it.result || !it.leak) return 'Not protected yet';
     if (isGated(it)) return 'Confirm columns first';
+    if (!it.resultKey || it.resultKey !== resultKey(it)) return 'Something changed after this was checked (settings, patients or edits). Run it again first.';
     if (isRed(it) && !override) return 'Fix the identifiers that still appear first';
     if (noOwnPatients(it) && !override) return 'Choose the column that holds patient names or record numbers first';
+    if (needsReview(it) && !reviewed(it)) return 'Review required: look over the flagged text, then press "I have reviewed this"';
     return '';
   }
   const allBlockReason = (override) => (!session.items.length ? 'Nothing to download yet' : session.items.map((x) => blockReason(x, override)).find(Boolean) || '');
@@ -1028,13 +1050,13 @@
     set('dlAll', !!allReason, allReason);
     // amber: downloads stay allowed, but the buttons say what the check could not do
     const amber = !reason && isAmber(it);
-    $('dlNow').textContent = amber ? 'Download anyway (.xlsx): not checked against a patient list' : DL_LABEL;
-    $('dlXlsx').textContent = amber ? `${DL_LABEL}: not checked against a patient list` : DL_LABEL;
-    $('dlAmber').textContent = amber ? 'Not checked against a patient list: names were found by rules only. Add today\'s schedule under Patient list to make the check real.' : '';
+    $('dlNow').textContent = amber ? 'Download (.xlsx): reviewed, no patient list' : DL_LABEL;
+    $('dlXlsx').textContent = amber ? `${DL_LABEL}: reviewed, no patient list` : DL_LABEL;
+    $('dlAmber').textContent = amber ? 'Not checked against a patient list: names were found by rules only and a person reviewed the result. Add today\'s schedule under Patient list to make the check real.' : '';
   }
   function renderError(item) {
     $('verdict').classList.remove('hidden');
-    $('verdictBody').innerHTML = `<div class="verdict bad"><b>Stop: this input could not be processed.</b> Error: ${esc(item.error.message)}. Nothing from it can be downloaded, and Download all stays off, until it runs without an error. <span class="lnk" id="retryRun">Try again</span> · <span class="lnk" id="removeItem">Remove this input</span></div>`;
+    $('verdictBody').innerHTML = `<div class="verdict bad"><b>Blocked: this input could not be processed.</b> Error: ${esc(item.error.message)}. Nothing from it can be downloaded, and Download all stays off, until it runs without an error. <span class="lnk" id="retryRun">Try again</span> · <span class="lnk" id="removeItem">Remove this input</span></div>`;
     $('verdictActions').classList.add('hidden');
     $('summary').innerHTML = '';
     $('reviewCard').classList.add('hidden');
@@ -1058,24 +1080,31 @@
       $('verdictBody').innerHTML = `<div class="verdict amber"><b>No patient column</b> – no patient names or record numbers were found in this table, so the check had nothing to look for and names in it may pass through. Choose the column that holds them under <span class="lnk" data-cols="1">Columns</span>; downloads stay off until then.</div>`;
       $('verdictBody').querySelectorAll('[data-cols]').forEach((a) => a.addEventListener('click', () => { $('colsDetails').open = true; $('colsCard').scrollIntoView({ block: 'center' }); }));
       $('verdictActions').classList.add('hidden');
-    } else if (!L.hits.length && isAmber(item)) {
-      $('verdictBody').innerHTML = `<div class="verdict amber"><b>No patient list</b> – names were found by rules only. Paste today's schedule (<span class="lnk" data-roster="1">Patient list</span>) to make this check real.${item.kind === 'image' ? ' (from the text we could read)' : ''}</div>`;
+    } else if (!isRed(item) && needsReview(item)) {
+      const words = surviving(item);
+      const why = [isAmber(item) ? `no patient list, so names were found by rules only (paste today's schedule under <span class="lnk" data-roster="1">Patient list</span> to make the check real)${item.kind === 'image' ? '; the check covers only the text that could be read' : ''}` : '',
+        words.length ? `${plural(words.length, 'word from the source survived', 'words from the source survived')} that ${words.length === 1 ? 'is' : 'are'} not an ordinary or medical word: ${words.slice(0, 12).map((w) => `<span class="lnk" data-word="${esc(w.text)}">${esc(w.text)}</span>${w.count > 1 ? ` ×${w.count}` : ''}`).join(', ')}${words.length > 12 ? ', …' : ''}. If any is a name or place, mark it in the review below` : ''].filter(Boolean);
+      const done = reviewed(item);
+      $('verdictBody').innerHTML = `<div class="verdict amber"><b>Review required</b> – ${why.join('; and ')}.${item.flagged > 0 ? ` ${plural(item.flagged, 'line is', 'lines are')} flagged below.` : ''}<div style="margin-top:8px">${done ? '<span class="ok">Reviewed. Downloads are on for this result.</span>' : '<button id="ackReview" class="secondary">I have reviewed this</button> <span class="small muted">Downloads stay off until then. A new run needs a new review.</span>'}</div></div>`;
       $('verdictBody').querySelectorAll('[data-roster]').forEach((a) => a.addEventListener('click', openRoster));
-      $('verdictActions').classList.toggle('hidden', isGated(item));
+      $('verdictBody').querySelectorAll('[data-word]').forEach((a) => a.addEventListener('click', () => { $('reviewFilter').value = 'all'; $('reviewSearch').value = a.dataset.word; state.page = 1; renderReview(item); $('reviewCard').scrollIntoView({ block: 'start' }); }));
+      const ack = $('ackReview'); if (ack) ack.addEventListener('click', () => { item.ackKey = item.resultKey; item.viewedReview = true; renderVerdict(item); });
+      $('verdictActions').classList.toggle('hidden', isGated(item) || !done);
       $('toReview').textContent = item.flagged > 0 ? `${plural(item.flagged, 'line needs', 'lines need')} a look first` : 'Nothing needs a look';
-    } else if (!L.hits.length) {
-      $('verdictBody').innerHTML = `<div class="verdict ok"><b>Checked:</b> none of your ${plural(n, "patient's", "patients'")} names, nicknames, initials, MRNs, phone numbers, account numbers or birthdates appear in the output, in any spacing or spelling the page can predict.${item.kind === 'image' ? ' (from the text we could read)' : ''}${L.providerHits.length ? `<div class="small muted" style="margin-top:6px">${plural(L.providerHits.length, 'staff name still appears', 'staff names still appear')}; staff names are not patient identifiers but you may want to look.</div>` : ''}${L.coincidences.length ? `<div class="small muted" style="margin-top:6px">${plural(L.coincidences.length, 'shifted date', 'shifted dates')} in other patients' rows happen to equal a birthdate in the file (row ${L.coincidences.map((c) => c.row + 1).slice(0, 5).join(', ')}); nothing links them to that patient.</div>` : ''}</div>`;
+    } else if (!isRed(item)) {
+      $('verdictBody').innerHTML = `<div class="verdict ok"><b>Release check passed:</b> none of your ${plural(n, "patient's", "patients'")} names, nicknames, initials, MRNs, phone numbers, account numbers or birthdates appear in the output, in any spacing or spelling the page can predict.${item.kind === 'image' ? ' (from the text we could read)' : ''}${L.providerHits.length ? `<div class="small muted" style="margin-top:6px">${plural(L.providerHits.length, 'staff name still appears', 'staff names still appear')}; staff names are not patient identifiers but you may want to look.</div>` : ''}${L.coincidences.length ? `<div class="small muted" style="margin-top:6px">${plural(L.coincidences.length, 'shifted date', 'shifted dates')} in other patients' rows happen to equal a birthdate in the file (row ${L.coincidences.map((c) => c.row + 1).slice(0, 5).join(', ')}); nothing links them to that patient.</div>` : ''}</div>`;
       const gated = isGated(item);
       $('verdictActions').classList.toggle('hidden', gated);
       $('toReview').textContent = item.flagged > 0 ? `${plural(item.flagged, 'line needs', 'lines need')} a look first` : 'Nothing needs a look';
     } else {
-      const unnamed = L.hits.filter((h) => h.kind === 'unnamed'), others = L.hits.filter((h) => h.kind !== 'unnamed');
-      const list = L.hits.slice(0, 50).map((h, i) => h.kind === 'unnamed' ? `<li>Row ${h.row + 1}: the patient's name could not be read, only the record number. Check the line and add the name as patient info if it is there. <span class="lnk" data-show="${i}">Show</span></li>` : `<li>${h.row >= 0 ? `Row ${h.row + 1}, ${esc(h.header)}` : esc(h.header || 'Column heading')}: "${esc(h.text)}" (${TYPE_UI[h.type] || h.type}) <span class="lnk" data-show="${i}">Show</span></li>`).join('');
+      const allHits = L.hits.concat(releaseIds(item).map((h) => Object.assign({ kind: 'release' }, h)));
+      const unnamed = allHits.filter((h) => h.kind === 'unnamed'), others = allHits.filter((h) => h.kind !== 'unnamed');
+      const list = allHits.slice(0, 50).map((h, i) => h.kind === 'unnamed' ? `<li>Row ${h.row + 1}: the patient's name could not be read, only the record number. Check the line and add the name as patient info if it is there. <span class="lnk" data-show="${i}">Show</span></li>` : `<li>${h.row >= 0 ? `Row ${h.row + 1}, ${esc(h.header)}` : esc(h.header || 'Column heading')}: "${esc(h.text)}" (${TYPE_UI[h.type] || h.type}) <span class="lnk" data-show="${i}">Show</span></li>`).join('');
       const head = others.length ? `${plural(others.length, 'patient identifier still appears', 'patient identifiers still appear')} in the output.` : '';
       const head2 = unnamed.length ? ` ${plural(unnamed.length, "patient's name", "patients' names")} could not be read, so the check cannot vouch for ${unnamed.length === 1 ? 'it' : 'them'}.` : '';
-      $('verdictBody').innerHTML = `<div class="verdict bad"><b>Stop:</b> ${head}${head2} Fix this below before downloading.<ul>${list}</ul>${$('optOverride').checked ? '<div class="small warn" style="margin-top:6px">Compliance override is on: downloads are allowed and the run summary records it.</div>' : ''}</div>`;
+      $('verdictBody').innerHTML = `<div class="verdict bad"><b>Blocked:</b> ${head}${head2} Fix this below before downloading.<ul>${list}</ul>${$('optOverride').checked ? '<div class="small warn" style="margin-top:6px">Compliance override is on: downloads are allowed and the run summary records it.</div>' : ''}</div>`;
       $('verdictActions').classList.add('hidden');
-      $('verdictBody').querySelectorAll('[data-show]').forEach((a) => a.addEventListener('click', () => { const h = L.hits[+a.dataset.show]; $('reviewFilter').value = 'all'; $('reviewSearch').value = h.kind === 'unnamed' ? '' : h.text; state.page = 1; renderReview(item); const td = $('reviewTable').querySelector(`td[data-row="${h.row}"]`); if (td) td.scrollIntoView({ block: 'center' }); }));
+      $('verdictBody').querySelectorAll('[data-show]').forEach((a) => a.addEventListener('click', () => { const h = allHits[+a.dataset.show]; $('reviewFilter').value = 'all'; $('reviewSearch').value = h.kind === 'unnamed' ? '' : h.text; state.page = 1; renderReview(item); const td = $('reviewTable').querySelector(`td[data-row="${h.row}"]`); if (td) td.scrollIntoView({ block: 'center' }); }));
     }
     $('datesLine').textContent = datesLabel();
     setDownloadState();
@@ -1221,39 +1250,113 @@
   $('dlXlsx').addEventListener('click', () => {
     const item = state.current; if (exportBlocked(item)) return;
     if (item.flagged > 0 && !item.viewedReview) $('dlNudge').textContent = `You have not looked at the ${item.flagged} line${item.flagged === 1 ? '' : 's'} flagged above. The file downloaded anyway.`;
-    const ws = XLSX.utils.aoa_to_sheet(aoaOut(item), { cellDates: true });
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Protected');
-    XLSX.writeFile(wb, `${fileStamp(item)}.xlsx`, { cellDates: true });
+    releaseExport([item], 'xlsx');
   });
   // CSV written here, not by SheetJS: every field holding a quote, comma, line feed or a bare carriage return is quoted
   // (RFC 4180), so a line break inside a cell can never start a new record whose first cell is a formula; every field
   // goes through the formula guard as well
+  const csvValue = (v) => String(safeCell(v == null ? '' : v instanceof Date ? String(fmtDate(v)) : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : String(v)));
   function csvText(aoa) {
-    const field = (v) => {
-      let x = v == null ? '' : v instanceof Date ? String(fmtDate(v)) : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : String(v);
-      x = String(safeCell(x));
-      return /[",\r\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x;
-    };
+    const field = (v) => { const x = csvValue(v); return /[",\r\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
     return aoa.map((r) => (Array.isArray(r) ? r : [r]).map(field).join(',')).join('\r\n') + '\r\n';
   }
-  $('dlCsv').addEventListener('click', () => {
-    const item = state.current; if (exportBlocked(item)) return;
-    download(new Blob([csvText(aoaOut(item))], { type: 'text/csv' }), `${fileStamp(item)}.csv`);
-  });
-  $('dlTxt').addEventListener('click', () => {
-    const item = state.current; if (exportBlocked(item)) return;
+  // RFC 4180 reader, used only to read back what csvText wrote
+  function parseCsv(text) {
+    const rows = []; let row = [], f = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; continue; }
+      if (ch === '"') q = true; else if (ch === ',') { row.push(f); f = ''; }
+      else if (ch === '\r' && text[i + 1] === '\n') { row.push(f); rows.push(row); row = []; f = ''; i++; }
+      else f += ch;
+    }
+    if (f !== '' || row.length) { row.push(f); rows.push(row); }
+    return rows;
+  }
+  const txtOut = (item) => {
     const li = item.result.headers.indexOf('Line');
     // every line is guarded, including a line that starts after a break inside a cell
-    const text = item.result.rows.map((r) => DeID.cellToString(r[li < 0 ? 0 : li]).split(/\r\n|\r|\n/).map(safeCell).join('\n')).join('\n');
-    download(new Blob([text], { type: 'text/plain' }), `${fileStamp(item)}.txt`);
-  });
+    return item.result.rows.map((r) => DeID.cellToString(r[li < 0 ? 0 : li]).split(/\r\n|\r|\n/).map(safeCell).join('\n')).join('\n');
+  };
+  $('dlCsv').addEventListener('click', () => releaseExport([state.current], 'csv'));
+  $('dlTxt').addEventListener('click', () => releaseExport([state.current], 'txt'));
+
+  // ------------------------------------------------------------ release
+  // Every protected download goes through here. It asks again whether each input may leave (fresh result, check passed,
+  // review done), builds the file, reads the written bytes back with an independent reader, and checks them: same sheets,
+  // same cells, no formulas, and none of the identifier-column values (names, MRNs, accounts, phones) anywhere. Only then is
+  // the file handed to the browser. Any failure downloads nothing.
+  function mergedNeedles(items) {
+    const d = new Set(), n = new Set();
+    items.forEach((it) => { const nd = it.release && it.release.needles; if (!nd) return; nd.digits.forEach((x) => d.add(x)); nd.names.forEach((x) => n.add(x)); });
+    return { digits: [...d], names: [...n] };
+  }
+  function verifyGrid(expect, got, label) {
+    if (got.length < expect.length) throw new Error(`${label}: ${expect.length - got.length} rows missing after writing`);
+    let bad = 0;
+    expect.forEach((row, r) => (Array.isArray(row) ? row : [row]).forEach((v, c) => {
+      if (v == null || v === '' || v instanceof Date) return;
+      const g = (got[r] || [])[c];
+      if (typeof v === 'number' ? Number(g) !== v : String(g == null ? '' : g) !== String(v)) bad++;
+    }));
+    if (bad) throw new Error(`${label}: ${bad} cells differ after writing`);
+  }
+  function releaseExport(items, kind) {
+    items = items.filter(Boolean);
+    const override = $('optOverride').checked;
+    if (!items.length) { notice('Not downloaded: nothing to download yet', 'warn'); return false; }
+    for (const it of items) { const why = blockReason(it, override); if (why) { notice(`Not downloaded${items.length > 1 ? ` (input ${it.n})` : ''}: ${esc(why)}`, 'warn'); return false; } }
+    const needles = override && items.some(isRed) ? { digits: [], names: [] } : mergedNeedles(items);
+    try {
+      let blob, name;
+      if (kind === 'xlsx' || kind === 'all') {
+        const wb = XLSX.utils.book_new(); const expect = [];
+        items.forEach((it) => { const aoa = aoaOut(it); expect.push(aoa); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa, { cellDates: true }), kind === 'all' ? `Input ${it.n}` : 'Protected'); });
+        const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx', cellDates: true });
+        const back = XLSX.read(bytes, { type: 'array', cellFormula: true, cellDates: true });
+        if (back.SheetNames.join('|') !== wb.SheetNames.join('|')) throw new Error('the written workbook has different sheets');
+        back.SheetNames.forEach((sn, i) => {
+          const ws = back.Sheets[sn];
+          Object.keys(ws).forEach((k) => { if (k[0] !== '!' && ws[k] && ws[k].f) throw new Error(`a formula was found in ${sn}!${k}`); });
+          const got = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '', blankrows: true });
+          verifyGrid(expect[i], got, sn);
+          got.forEach((row) => row.forEach((v) => { if (typeof v === 'string' && FORMULA_START.test(v)) throw new Error(`a cell in ${sn} starts like a formula`); }));
+          const hits = DeID.findNeedles(got, needles); if (hits.length) throw new Error(`an identifier from the patient columns is in ${sn}, row ${hits[0].row + 1}`);
+        });
+        blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        name = kind === 'all' ? `protected_${today()}_all.xlsx` : `${fileStamp(items[0])}.xlsx`;
+      } else {
+        const item = items[0];
+        const text = kind === 'csv' ? csvText(aoaOut(item)) : kind === 'txt' ? txtOut(item) : reportLines(item).join('\n');
+        if (kind === 'csv') {
+          const exp = aoaOut(item).map((r) => (Array.isArray(r) ? r : [r]).map(csvValue));
+          const got = parseCsv(text);
+          if (got.length !== exp.length) throw new Error(`the written CSV has ${got.length} records, not ${exp.length}`);
+          verifyGrid(exp, got, 'CSV');
+          got.forEach((row) => row.forEach((v) => { if (FORMULA_START.test(v)) throw new Error('a CSV field starts like a formula'); }));
+        } else {
+          text.split('\n').forEach((l) => { if (FORMULA_START.test(l)) throw new Error('a line starts like a formula'); });
+        }
+        const hits = DeID.findNeedles(text.split(/\r?\n/).map((l) => [l]), needles); if (hits.length) throw new Error(`an identifier from the patient columns is in line ${hits[0].row + 1}`);
+        blob = new Blob([text], { type: kind === 'csv' ? 'text/csv' : 'text/plain' });
+        name = `${fileStamp(item)}${kind === 'csv' ? '.csv' : kind === 'txt' ? '.txt' : '_report.txt'}`;
+      }
+      download(blob, name);
+      items.forEach((it) => { it.releasedKey = it.resultKey; });
+      return true;
+    } catch (e) {
+      notice(`Not downloaded: the check of the written file failed (${esc((e && e.message) || e)}). Nothing was saved.`, 'danger');
+      return false;
+    }
+  }
   function reportLines(item) {
     const r = item.result, s = r.stats, L = item.leak;
     const kind = item.kind === 'image' ? 'screenshot' : item.kind === 'text' ? 'pasted text' : 'spreadsheet';
     const self = L.hits.length ? ($('optOverride').checked ? 'overridden' : `FAILED (${L.hits.length} identifiers)`) : noOwnPatients(item) ? 'no patient column (no names or record numbers to check against)' : isAmber(item) ? 'no patients to check against (no patient list; names found by rules only)' : 'passed';
     return [`Infusion De-ID run report · no patient data`, `Tool version: ${DeID.VERSION}`, `Run at: ${new Date().toISOString()}`,
       `Input ${item.n} of ${session.items.length}: ${kind}, ${s.rows} rows, ${r.headers.length} columns`,
-      `Dates: ${$('optDates').value === 'shift' ? 'shifted per patient (intervals kept)' : 'removed (Safe Harbor)'}`,
+      `Release profile: ${$('optDates').value === 'shift' ? 'research pseudonymization (dates shifted per patient, intervals kept). This is NOT HIPAA Safe Harbor: shifted dates are still dates.' : 'HIPAA Safe Harbor rules applied by the tool (every date removed; birth year only below age 90; ages 90+ grouped; ZIP to 3 digits, restricted areas to 000). Safe Harbor also requires that you have no actual knowledge the rest could identify someone.'}`,
+      `Release scan (independent of the detectors): ${releaseIds(item).length} identifier-column values found in the output; ${surviving(item).length} unrecognised source words survived${needsReview(item) ? `; review ${reviewed(item) ? 'done' : 'NOT done'}` : ''}`,
       `Self-check: ${self}`, `Self-check overridden: ${L.hits.length && $('optOverride').checked ? 'yes' : 'no'}`,
       `Patients in this input: ${r.census.patients.size}; patients in the session: ${session.registry.size}; on the patient list: ${session.roster.ids.size}; checked against: ${checkedAgainst(item)}; providers: ${r.census.providers.size}`, '',
       // the headings as they were written to the protected file, never the input's: a heading can hold patient information
@@ -1263,7 +1366,7 @@
       'Identifiers replaced in free text by type:', ...Object.entries(s.byType).map(([k, v]) => `  ${k}: ${v}`), 'By layer:', ...Object.entries(s.bySource).map(([k, v]) => `  ${k}: ${v}`), 'Structured columns:', ...Object.entries(s.structured).map(([k, v]) => `  ${k}: ${v}`), '',
       'This report contains no patient data. The session key does.'];
   }
-  $('dlReport').addEventListener('click', () => { const item = state.current; if (exportBlocked(item)) return; download(new Blob([reportLines(item).join('\n')], { type: 'text/plain' }), `${fileStamp(item)}_report.txt`); });
+  $('dlReport').addEventListener('click', () => releaseExport([state.current], 'report'));
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 
   // ------------------------------------------------------------ session strip, key, panel
@@ -1304,10 +1407,7 @@
     // all or nothing: one input that errored, is still running, is unconfirmed or fails its check stops the whole download
     const why = allBlockReason($('optOverride').checked);
     if (why) { notice(`Not downloaded: ${esc(why)}`, 'warn'); return; }
-    const wb = XLSX.utils.book_new();
-    session.items.forEach((it) => { XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoaOut(it), { cellDates: true }), `Input ${it.n}`); });
-    if (!wb.SheetNames.length) return;
-    XLSX.writeFile(wb, `protected_${today()}_all.xlsx`, { cellDates: true });
+    releaseExport(session.items.slice(), 'all');
   });
   function restoreSession(wb) {
     const toJson = (name) => (wb.Sheets[name] ? sheetObjects(wb.Sheets[name]).map((r) => mapValues(r, unsafeCell)) : []);
@@ -1362,7 +1462,7 @@
     }).join('');
     $('patientsTable').querySelectorAll('[data-same]').forEach((b) => b.addEventListener('click', () => { session.items.forEach((it) => { if (it.linkedBy) it.linkedBy[b.dataset.same] = 'confirmed'; }); renderSessionPanel(); }));
     $('sourcesList').innerHTML = session.items.map((it) => `<div class="row" style="margin-top:4px"><span>${it.n}. ${esc(it.name)} <span class="muted">(${it.kind === 'image' ? 'screenshot' : it.kind === 'text' ? 'text' : 'spreadsheet'}, ${it.table ? it.table.rows.length : 0} rows)</span></span>${it.error ? '<span class="bad">could not be processed</span>' : it.result ? `<span class="lnk" data-dl="${it.id}">Download</span>` : '<span class="muted">working…</span>'}<span class="lnk" data-showitem="${it.id}">Show</span></div>`).join('') || '<span class="muted">No sources yet.</span>';
-    $('sourcesList').querySelectorAll('[data-dl]').forEach((a) => a.addEventListener('click', () => { const it = session.items.find((x) => x.id === a.dataset.dl); const why = blockReason(it, $('optOverride').checked); if (why) { notice(`That source cannot be downloaded: ${esc(why)}`, 'warn'); return; } const ws = XLSX.utils.aoa_to_sheet(aoaOut(it), { cellDates: true }); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Protected'); XLSX.writeFile(wb, `${fileStamp(it)}.xlsx`, { cellDates: true }); }));
+    $('sourcesList').querySelectorAll('[data-dl]').forEach((a) => a.addEventListener('click', () => { const it = session.items.find((x) => x.id === a.dataset.dl); releaseExport([it], 'xlsx'); }));
     $('sourcesList').querySelectorAll('[data-showitem]').forEach((a) => a.addEventListener('click', () => { const it = session.items.find((x) => x.id === a.dataset.showitem); if (it) { showItem(it); if (it.result) { $('runInfo').textContent = 'Shown'; } window.scrollTo(0, 0); } }));
   }
   window.addEventListener('beforeunload', (e) => { if ((session.items.length > 0 || session.registry.size > session.roster.ids.size) && !session.keySaved) { e.preventDefault(); e.returnValue = 'The session key has not been saved. Leave anyway?'; } });

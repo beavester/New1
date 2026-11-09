@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src blob: data:; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <title>Infusion De-ID</title>
 <style>
 :root{
@@ -117,7 +117,7 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
 <header>
   <h1>Infusion De-ID</h1>
   <span class="sub">Remove patient information from Epic exports, pasted text and screenshots before they leave the hospital.</span>
-  <span class="badge" title="This page makes no network requests. Everything runs inside this browser tab.">Works offline. Nothing leaves this computer.</span>
+  <span class="badge" title="Everything runs inside this browser tab. The page carries a Content-Security-Policy that blocks network requests in current Chrome, Edge and Firefox. It does not stop you from saving or sharing a file.">Runs locally · network blocked</span>
 </header>
 <nav>
   <button data-tab="deid" class="active">Protect</button>
@@ -235,7 +235,7 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
     </div>
     <h3 class="small" style="margin:14px 0 6px">Dates</h3>
     <div class="grid">
-      <label class="f">Dates<select id="optDates"><option value="shift">Shift every date by a secret per-patient number of days so intervals stay correct (default)</option><option value="remove">Remove every date (Safe Harbor)</option></select></label>
+      <label class="f">Dates<select id="optDates"><option value="shift">Research (pseudonymized): shift every date by a secret per-patient number of days so intervals stay correct. Not Safe Harbor. (default)</option><option value="remove">HIPAA Safe Harbor: remove every date; birthdates to year at most (none for 90+); restricted ZIP areas to 000</option></select></label>
       <label class="f">Date of birth<select id="optDob"><option value="drop">Remove and add an age column (default)</option><option value="year">Keep the year only</option><option value="shift">Shift like other dates</option></select></label>
       <label class="f">Ages<select id="optAges"><option value="90plus">Exact, but 90 and over shown as 90+ (default)</option><option value="bands5">5-year groups</option><option value="bands10">10-year groups</option></select></label>
     </div>
@@ -656,7 +656,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     Cipro Levaquin Avelox Zithromax Biaxin Augmentin Keflex Bactrim Septra
     Macrobid Diflucan Vfend Noxafil Cresemba Mycamine Cancidas Eraxis Valtrex
     Zovirax Famvir Tamiflu Paxlovid Veklury Prednisone Medrol Solu-Medrol
-    Solu-Cortef Kenalog Depo-Medrol Celestone Florinef Dexamethasone
+    Solu-Cortef Kenalog Depo-Medrol Celestone Florinef Dexamethasone Dexa Decadron
     Port Port-a-Cath Portacath PICC Hickman Groshong Broviac Huber PowerPort
     Mediport Infusaport BardPort Smart Port Vortex Xcela Dignity Titanium
     Epic Hyperspace Beacon Cadence Prelude Haiku Canto
@@ -3807,6 +3807,33 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
       if (last && /^\s+(?:\p{L}\.?\s+)?$/u.test(text.slice(last.end, t.start)) && last.type === (placeCue ? 'LOCATION' : last.type)) { last.end = t.end; continue; }
       add.push({ start: t.start, end: t.end, type: placeCue || LEX.CITY_SET.has(t.core.toLowerCase()) ? 'LOCATION' : 'NAME_OTHER', source: 'strict', conf: 0.5 });
     }
+    const free = (a, b) => !spans.some((sp) => sp.start < b && a < sp.end) && !add.some((x) => x.start < b && a < x.end);
+    let m;
+    // a labelled place: "City   Springfield", "Hometown: Cedar Falls", "Town of residence Lowell"
+    const PLACE_LABEL = /\b(?:City|Town|Hometown|Home\s+town|Residence|Town\s+of\s+residence|Lives\s+in|Birthplace|Place\s+of\s+birth|County)\b\s*[:\-]?[ \t]+((?:\p{Lu}[\p{L}'’.\-]*)(?:[ \t]\p{Lu}[\p{L}'’.\-]*){0,2})/gu;
+    while ((m = PLACE_LABEL.exec(text))) {
+      const v = m[1], a = m.index + m[0].length - v.length;
+      if (/^(?:Chair|Bay|Pod|Room|Rm|Unit|Floor|State|Zip|Phone|Relationship|Name|Address|Ok|Yes|No|N\/A|Na|None|Unknown)$/i.test(v.split(/\s/)[0])) continue;
+      if (free(a, a + v.length)) add.push({ start: a, end: a + v.length, type: 'LOCATION', source: 'strict', conf: 0.5 });
+    }
+    // a line of ALL-CAPS "LAST, FIRST" names (a census tile row): when one is already a name, the others are names too
+    if (spans.some((sp) => /^NAME/.test(sp.type) && /^\p{Lu}{2,}[\p{Lu}'’\-]*,\s?\p{Lu}{2,}/u.test(text.slice(sp.start, sp.end + 12)))) {
+      const CAPS_NAME = /(?<![\p{L}\d])(\p{Lu}[\p{Lu}'’\-]+),[ \t]?(\p{Lu}[\p{Lu}'’\-]+)(?![\p{L}\d])/gu;
+      while ((m = CAPS_NAME.exec(text))) {
+        const before = text.slice(Math.max(0, m.index - 2), m.index), after = text.slice(m.index + m[0].length, m.index + m[0].length + 2);
+        if (!(/^(?:\s{2}|\t)|^$/.test(after) || /\s{2}$|\t$|^$/.test(before) || m.index === 0)) continue;
+        if ([m[1], m[2]].some((w) => /^(?:MRN|DOB|CSN|FIN|ID|MD|DO|RN|NP|PA|AM|PM|IV|PO|LT|RT|AND|OR|THE|NA|NKDA)$/.test(w))) continue;
+        if (free(m.index, m.index + m[0].length)) add.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
+      }
+    }
+    // an age of 90 or more said in words around it: "mom is 97 now", "she turned 93", "will be 91 next week"
+    const AGE_SAID = /\b(?:is|turned|turns|will\s+be|was)\s+(9\d|1[01]\d)(?=\s+(?:now|today|this|next|last|years?|yrs?|y\.?o\.?|year[-\s]old)\b|\s*(?:[.,;!]|$))/gi;
+    while ((m = AGE_SAID.exec(text))) {
+      const a = m.index + m[0].length - m[1].length;
+      const lead = text.slice(Math.max(0, m.index - 30), m.index);
+      if (/(?:sat|spo2|o2|pulse|hr|heart\s+rate|bp|temp|weight|wt|glucose|bg|sugar|score|level|count|plt|platelets?|rate|%)\W*$/i.test(lead)) continue;
+      if (free(a, a + m[1].length)) add.push({ start: a, end: a + m[1].length, type: 'AGE', source: 'strict', conf: 0.5 });
+    }
     if (!add.length) return spans;
     add.forEach((x) => { x.text = text.slice(x.start, x.end); });
     return spans.concat(add).sort((a, b) => a.start - b.start);
@@ -4243,7 +4270,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
           case 'DATE': {
             const pd = span.date || (() => { for (const p of DATE_PATTERNS) { p.re.lastIndex = 0; const m = p.re.exec(orig); if (m && m[0] === orig) return parseDateMatch(p.kind, m); } return null; })();
             // a birthdate in free text follows the DOB setting, like the DOB column: removed (default), year only, or shifted
-            if (span.type === 'DOB' && cfg.surrogate.dob !== 'shift') return cfg.surrogate.dob === 'year' && pd && pd.hasYear ? String(pd.y) : '[dob]';
+            if (span.type === 'DOB' && cfg.surrogate.dob !== 'shift') return cfg.surrogate.dob === 'year' && pd && pd.hasYear && new Date().getFullYear() - pd.y < 90 ? String(pd.y) : '[dob]';
             if (!cfg.surrogate.dateShift) return span.type === 'DOB' ? '[dob]' : '[date]';
             if (!pd || pd.kind === 'ord') return '[date]'; // a bare day of the month: no month to shift it within
             const key = span.entity || rowPatientKey;
@@ -4255,7 +4282,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
           case 'ADDRESS': return stringSurrogate('ADDRESS', orig, () => {
             if (/\bbox\b/i.test(orig)) return orig.replace(/\d+(?!.*\d)/, () => String(Math.floor(rng() * 9000) + 1000)).replace(/^(?:RR|R\.R\.|Rural\s+Route|HC)\s*\d+/i, (m) => m.replace(/\d+/, () => String(Math.floor(rng() * 9) + 1)));
             if (RULES.ADDRESS_UNIT.source && /(?:apt|apartment|unit|suite|ste|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?$/i.test(orig) && !/\b(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl)\b/.test(orig)) return `${Math.floor(rng() * 900 + 100)} ${pick(LEX.FAKE_LAST)} Rd`; const suf = (orig.match(/\b(Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl|Street|Avenue|Road|Drive|Lane|Court|Place|Boulevard|Parkway)\.?(?=\W*$|\s)/) || [])[1] || (/^\d/.test(orig) ? 'St' : 'Rd'); return `${/^\d/.test(orig) ? Math.floor(rng() * 900 + 100) + ' ' : ''}${pick(LEX.FAKE_LAST)} ${suf}${/\.$/.test(orig) && !/\.$/.test(suf) ? '.' : ''}`; });
-          case 'ZIP': return orig.replace(/\d{5}(-\d{4})?/, (z) => z.slice(0, 3) + '00');
+          case 'ZIP': return orig.replace(/\d{5}(-\d{4})?/, (z) => zip3(z));
           case 'ORG': return stringSurrogate('ORG', orig, () => pick(LEX.FAKE_ORGS));
           case 'LOCATION': return stringSurrogate('LOCATION', orig, () => pick(LEX.FAKE_CITIES));
         }
@@ -4264,6 +4291,11 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     };
   }
 
+  // HIPAA Safe Harbor: the first three ZIP digits may stay only where that 3-digit area holds more than 20,000 people (2000
+  // Census); these 17 prefixes do not, so they become 000.
+  const RESTRICTED_ZIP3 = new Set(['036', '059', '063', '102', '203', '556', '692', '790', '821', '823', '830', '831', '878', '879', '884', '890', '893']);
+  const isRestrictedZip3 = (z) => RESTRICTED_ZIP3.has(String(z).slice(0, 3));
+  const zip3 = (z) => (isRestrictedZip3(z) ? '000' : z.slice(0, 3)) + '00';
   function applySpans(text, spans, replacer) {
     // surrogates are drawn last span first (the allocation order the session key depends on); the text is assembled in one
     // pass, so a long cell with thousands of spans costs linear time, not one copy of the cell per span
@@ -4361,6 +4393,24 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
     const reg = {
       entities, taken, realWords, providers, tokenMap, strings, allocations: 0, docOffset: null,
       get size() { return entities.length; },
+      // A transaction: checkpoint() returns a function that puts the registry back exactly as it was (same entity objects,
+      // same codes, same offsets), so a run that fails half way leaves no half-learned patient behind.
+      checkpoint() {
+        const cpVal = (v) => (v instanceof Set ? new Set(v) : v instanceof Map ? new Map(v) : Array.isArray(v) ? v.slice() : v);
+        const cpObj = (o) => { const c = {}; for (const k of Object.keys(o)) c[k] = cpVal(o[k]); return c; };
+        const keep = (v) => (v instanceof Set ? { set: new Set(v) } : v && typeof v === 'object' && !Array.isArray(v) ? { ref: v, copy: cpObj(v) } : { val: cpVal(v) });
+        const back = (k) => (k.set ? new Set(k.set) : k.ref ? (Object.keys(k.ref).forEach((x) => { if (!(x in k.copy)) delete k.ref[x]; }), Object.assign(k.ref, cpObj(k.copy)), k.ref) : cpVal(k.val));
+        const ents = entities.map((e) => keep(e));
+        const maps = [byMrn, providers, tokenMap, strings, byLast, byDob, byId, byLastDel].map((m) => [m, [...m].map(([k, v]) => [k, keep(v)])]);
+        const sets = [taken, realWords].map((st) => [st, new Set(st)]);
+        const scal = { next, allocations: reg.allocations, docOffset: reg.docOffset };
+        return () => {
+          entities.length = 0; ents.forEach((k) => entities.push(back(k)));
+          maps.forEach(([m, entries]) => { m.clear(); entries.forEach(([k, v]) => m.set(k, back(v))); });
+          sets.forEach(([st, copy]) => { st.clear(); copy.forEach((x) => st.add(x)); });
+          next = scal.next; reg.allocations = scal.allocations; reg.docOffset = scal.docOffset;
+        };
+      },
       toProviderRows() {
         return [...providers.values()].map((pr) => ({ Code: pr.code, SurrogateName: `${pr.fakeLast}, ${pr.fakeFirst}`, RealName: pr.first ? `${pr.last}, ${pr.first}` : pr.last, Credential: pr.credentials || '' }));
       },
@@ -5074,7 +5124,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
           case 'dob': {
             const d = isDate(v) ? v : parseDateString(sv);
             if (cfg.surrogate.dob === 'drop' || !d) out[ci] = '';
-            else if (cfg.surrogate.dob === 'year') out[ci] = String(d.getFullYear());
+            else if (cfg.surrogate.dob === 'year') out[ci] = new Date().getFullYear() - d.getFullYear() >= 90 ? '90+' : String(d.getFullYear()); // Safe Harbor: no birth year for ages 90 and over
             else if (cfg.surrogate.dob === 'shift') out[ci] = isDate(v) ? shiftDate(d, offset) : sur.replace({ type: 'DOB', start: 0, end: sv.length }, sv, pk);
             else out[ci] = '';
             bump(stats.structured, 'DOB'); break;
@@ -5093,7 +5143,7 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
             bump(stats.structured, 'DATE'); break;
           }
           case 'age': out[ci] = bandAge(v, cfg.surrogate.ages); bump(stats.structured, 'AGE'); break;
-          case 'zip': out[ci] = sv.replace(/\d{5}(-\d{4})?/, (z) => z.slice(0, 3) + '00'); bump(stats.structured, 'ZIP'); break;
+          case 'zip': out[ci] = sv.replace(/\d{5}(-\d{4})?/, (z) => zip3(z)); bump(stats.structured, 'ZIP'); break;
           case 'drop': out[ci] = ''; bump(stats.structured, 'DROP'); break;
           default: break;
         }
@@ -5431,13 +5481,86 @@ t.sheetStubs=true}if(t.type=="array"){t.type="binary";var a=xk(e,t);t.type="arra
   }
 
   const VERSION = '0.1.0';
+  // Release scan: an independent check of the protected output against the SOURCE, written apart from the detectors so a
+  // miss in them is not repeated here. It never changes the output; it only reports.
+  //  identifiers: an identifier-column value (patient last name, MRN, account, phone) that still appears anywhere in the output
+  //  words:       a capitalised source word of 4+ letters that survived unchanged and is not a dictionary, clinical,
+  //               drug-stem or allowlisted word (the review queue)
+  //  needles:     the identifier values, kept so the written file can be re-read and checked again
+  function releaseScan(table, result, opts) {
+    const o = opts || {};
+    const out = { identifiers: [], words: [], needles: { digits: [], names: [] } };
+    if (!table || !result || !Array.isArray(result.rows) || !Array.isArray(table.rows)) return out;
+    const allow = new Set((o.allowlist || []).map((w) => String(w).toLowerCase()));
+    const cols = Array.isArray(result.columns) ? result.columns : [];
+    const roleAt = new Map(); cols.forEach((c, i) => roleAt.set(c.index != null ? c.index : i, c.role));
+    const digitSet = new Set(), nameSet = new Set();
+    table.rows.forEach((row) => roleAt.forEach((role, ci) => {
+      const v = cellToString(row && row[ci]).trim(); if (!v) return;
+      if (role === 'mrn' || role === 'account' || role === 'phone') { const d = v.replace(/\D/g, ''); if (d.length >= 6) digitSet.add(d); }
+      else if (role === 'patient_name') {
+        const pn = parseName(v); const last = pn && pn.last ? pn.last : '';
+        last.split(/[\s\-]+/).forEach((t) => { const w = t.replace(/[^A-Za-zÀ-ÿ'’]/g, ''); if (w.length >= 4 && !LEX.isEnglishWord(w) && !LEX.isDictWord(w) && !LEX.isClinical(w)) nameSet.add(w.toLowerCase()); });
+      }
+    }));
+    out.needles.digits = [...digitSet]; out.needles.names = [...nameSet];
+    const hits = findNeedles(result.headers ? [result.headers, ...result.rows] : result.rows, out.needles);
+    hits.forEach((h) => out.identifiers.push({ row: h.row - (result.headers ? 1 : 0), col: h.col, header: cellToString((result.headers || [])[h.col]), text: h.text, type: h.type }));
+    const ordinary = (w) => {
+      const lc = w.toLowerCase();
+      if (allow.has(lc) || /^[A-Z]{2,}s?$/.test(w) || monthIndex(w)) return true;
+      if (/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i.test(w)) return true;
+      if (LEX.isEnglishWord(w) || LEX.isDictWord(w) || LEX.isClinical(w) || DRUG_STEM.test(w) || MED_MORPH.test(w)) return true;
+      return w.split(/[-’']/).filter((x) => x.length >= 2).every((x) => LEX.isEnglishWord(x) || LEX.isDictWord(x) || LEX.isClinical(x)) && /[-]/.test(w);
+    };
+    const TOK = /[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'’\-]*[A-Za-zÀ-ÖØ-öø-ÿ]/g;
+    const seen = new Map();
+    result.rows.forEach((orow, ri) => {
+      const srow = table.rows[ri]; if (!srow) return;
+      roleAt.forEach((role, ci) => {
+        if (role !== 'text' && role !== 'keep') return;
+        const so = cellToString(orow[ci]); if (!so) return;
+        const outToks = new Set(so.match(TOK) || []);
+        const src = normalizeText(cellToString(srow[ci])); TOK.lastIndex = 0; let m;
+        while ((m = TOK.exec(src))) {
+          const w = m[0];
+          if (w.length < 4 || !/^[A-ZÀ-ÖØ-Þ]/.test(w) || !outToks.has(w) || ordinary(w)) continue;
+          // an eponym: "Lee Silverman voice", "Hunter syndrome", "Glasgow Coma scale"
+          if (/^\s+(?:[A-Z][a-z]+\s+)?(?:voice|syndrome|disease|sign|test|scale|score|criteria|classification|procedure|maneuver|manoeuvre|palsy|reflex|phenomenon|method|protocol|regimen|catheter|line|port|needle|stage|grade)\b/i.test(src.slice(m.index + w.length, m.index + w.length + 40))) continue;
+          const e = seen.get(w); if (e) { e.count++; continue; }
+          const rec = { row: ri, col: ci, header: cellToString((result.headers || [])[ci]), text: w, count: 1 }; seen.set(w, rec); out.words.push(rec);
+        }
+      });
+    });
+    return out;
+  }
+  // Look for identifier values in a grid of cells (any cell, any column): digit identifiers inside digit runs (separators
+  // allowed), last names as whole words in any case.
+  function findNeedles(aoa, needles) {
+    const hits = []; if (!needles) return hits;
+    const digits = (needles.digits || []).filter((d) => d.length >= 6);
+    const names = needles.names || [];
+    const nameRe = names.length ? new RegExp(`(?<![A-Za-zÀ-ÿ])(?:${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![A-Za-zÀ-ÿ])`, 'gi') : null;
+    (aoa || []).forEach((row, ri) => (Array.isArray(row) ? row : [row]).forEach((cell, ci) => {
+      const t = cell instanceof Date ? '' : cellToString(cell); if (!t) return;
+      if (digits.length && /\d{3}/.test(t)) {
+        for (const run of t.match(/\d[\d\-\s.()\/]*\d/g) || []) {
+          const d = run.replace(/\D/g, ''); if (d.length < 6) continue;
+          const hit = digits.find((n) => d.includes(n)); if (hit) { hits.push({ row: ri, col: ci, text: run, type: 'ID' }); break; }
+        }
+      }
+      if (nameRe) { nameRe.lastIndex = 0; const m = nameRe.exec(t); if (m) hits.push({ row: ri, col: ci, text: m[0], type: 'NAME_PATIENT' }); }
+    }));
+    return hits;
+  }
+
   return {
     VERSION, TYPES, COARSE, ROLES, ROLE_LABELS, classifyColumns, inferIdPattern, parseName, nameVariants, buildCensus,
     detectText, ruleSpans, lexiconSpans, censusSpans, resolveSpans, mergeAdjacentNames, collectPropagation,
     parseDateString, renderDate, shiftDate, dateRenderings, bandAge,
     Surrogator, applySpans, defaultConfig, compileConfig, processTable, reidentify, selfCheck,
     createRegistry, normalizeId, mrnKeyOf, dobKeyOf, levenshtein, parseTextDocument, normalizeOcrText,
-    cellToString, mulberry32, hashString, tokenize, normalizeText, safeCell,
+    cellToString, mulberry32, hashString, tokenize, normalizeText, safeCell, releaseScan, findNeedles, isRestrictedZip3,
   };
 });
 
@@ -6278,6 +6401,7 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
     if (s === 'rule' || s === 'rules') return 'Found by: a pattern';
     if (s === 'lexicon' || s === 'cue') return 'Found by: a word clue (less certain)';
     if (s === 'propagate') return 'Found by: seen elsewhere in this file';
+    if (s === 'strict') return 'Found by: unrecognised word (strict check; may be an ordinary word)';
     return 'Found by: ' + (s || 'the tool');
   };
   const TYPE_UI = { NAME_PATIENT: 'patient name', NAME_PROVIDER: 'staff name', NAME_OTHER: 'name', MRN: 'MRN', ACCOUNT: 'account number', PHONE: 'phone number', DOB: 'birthdate', DATE: 'date', EMAIL: 'email', ORG: 'organization', LOCATION: 'place', ADDRESS: 'address', ZIP: 'ZIP', AGE: 'age', SSN: 'SSN', ID_OTHER: 'other ID', URL: 'web address', IP: 'network address' };
@@ -6830,7 +6954,7 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
       mrnPattern: userMrnPattern() || (hasMrnCol ? null : session.mrnPattern) || null,
       seed: session.seed,
       registry: session.registry,
-      surrogate: { patients: $('optPatients').value, providers: $('optProviders').value, dob: $('optDob').value, ages: $('optAges').value, dateShift: $('optDates').value === 'shift', shiftRange: [isNaN(a) ? 30 : a, isNaN(b) ? 365 : b] },
+      surrogate: { patients: $('optPatients').value, providers: $('optProviders').value, dob: $('optDates').value === 'remove' && $('optDob').value === 'shift' ? 'year' : $('optDob').value, ages: $('optAges').value, dateShift: $('optDates').value === 'shift', shiftRange: [isNaN(a) ? 30 : a, isNaN(b) ? 365 : b] },
       denylist: lines('optDeny'), allowlist: lines('optAllow'),
       auditColumn: true, auditDetail: false, deriveAge: $('optDerive').checked,
       manual: item ? item.manual : {},
@@ -6869,6 +6993,13 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
   // The same goes for any earlier input once the session knows a patient (name or record number) it did not know when that
   // input was protected: a later tile view can name a patient that an earlier table listed, and the earlier output is rescanned.
   const registryStamp = () => session.registry.entities.reduce((n, e) => n + e.names.size + e.mrns.size + 1, 0);
+  // What a result was made from: tool version, the session's patients, the item's settings, column roles and review edits.
+  // A download is allowed only while this still matches; anything changed since the check means the file would not be the
+  // one that was checked.
+  const resultKey = (item) => {
+    const c = collectConfig(item);
+    return JSON.stringify([DeID.VERSION, registryStamp(), c.columns, userMrnPattern() || '', c.surrogate, c.denylist, c.allowlist, c.deriveAge, c.manual, session.seed]);
+  };
 
   // One job at a time: every run, re-run and repair of an earlier input goes through this queue, so two runs never
   // interleave on the session's patient registry. A newer request for the same input supersedes an older one (item.gen),
@@ -7088,11 +7219,13 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
     const gen = item.gen;
     const live = () => item.gen === gen && session.items.includes(item);
     const progress = typeof o.progress === 'function' ? o.progress : () => {};
+    let rollback = null;
     try {
       if (!item.table || !Array.isArray(item.table.rows) || !Array.isArray(item.table.headers)) throw new Error('there is nothing readable in this input');
       tableLimits(item.table.headers, item.table.rows);
       patientLimit(item.table.headers, item.table.rows, item.columns);
       const before = snapshotRegistry();
+      rollback = session.registry.checkpoint();
       const cfg = collectConfig(item);
       if (testHooks.process > 0) { testHooks.process--; throw new Error('forced test failure while protecting'); }
       const nRows = item.table.rows.length;
@@ -7113,12 +7246,16 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
       }
       if (!live()) return false;
       if (!leak || !Array.isArray(leak.hits)) throw new Error('the check of the result returned no answer');
-      item.result = result; item.leak = leak; item.error = null;
+      const release = DeID.releaseScan(item.table, result, { allowlist: cfg.allowlist });
+      item.result = result; item.leak = leak; item.release = release; item.error = null;
       if (!session.mrnPattern && result.cfg.inferredMrnPattern) session.mrnPattern = result.cfg.inferredMrnPattern;
       item.linkedBy = computeLinks(item, before);
       item.flagged = result.details.filter(isFlagged).length;
       item.regStamp = registryStamp();
+      item.resultKey = resultKey(item);
     } catch (e) {
+      // a failed run leaves the session's patients as they were before it
+      if (rollback) { try { rollback(); } catch (e2) { console.warn(e2); } }
       if (!live()) return false;
       failItem(item, e);
     }
@@ -7227,7 +7364,9 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
   }
 
   // ------------------------------------------------------------ verdict + summary
-  const isRed = (item) => !!item && !!item.leak && item.leak.hits.length > 0;
+  const releaseIds = (item) => (item && item.release ? item.release.identifiers : []);
+  const isRed = (item) => !!item && ((!!item.leak && item.leak.hits.length > 0) || releaseIds(item).length > 0);
+  const surviving = (item) => (item && item.release ? item.release.words : []);
   // Green needs patients to check against: the input's own, or any the session already knows (patient list, earlier inputs).
   // With none at all the check had nothing to look for, so the verdict is amber, never green.
   const checkedAgainst = (item) => { const c = item && item.result && item.result.census; return c ? c.patients.size + (c.known ? c.known.size : 0) : 0; };
@@ -7236,6 +7375,10 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
   // until a name or record number column is chosen (or the compliance override is on).
   const noOwnPatients = (item) => !!item && item.kind === 'table' && !!item.result && !!item.table && item.table.rows.length > 0 && !!item.result.census && item.result.census.patients.size === 0;
   const isAmber = (item) => !!item && !!item.result && !!item.leak && !item.error && !isRed(item) && (checkedAgainst(item) === 0 || noOwnPatients(item));
+  // Review required: text or a screenshot with no patient list (names found by rules alone), or source words that survived
+  // the protection and are not ordinary words. Downloads then need a person to say they looked, for this exact result.
+  const needsReview = (item) => !!item && !!item.result && !item.error && !isRed(item) && (isAmber(item) || surviving(item).length > 0);
+  const reviewed = (item) => !!item && !!item.resultKey && item.ackKey === item.resultKey;
   // Why an input may not be downloaded right now ('' when it may). Every export path asks this itself.
   function blockReason(it, override) {
     if (!it) return 'Nothing to download yet';
@@ -7243,8 +7386,10 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
     if (it.running) return 'Still working…';
     if (!it.result || !it.leak) return 'Not protected yet';
     if (isGated(it)) return 'Confirm columns first';
+    if (!it.resultKey || it.resultKey !== resultKey(it)) return 'Something changed after this was checked (settings, patients or edits). Run it again first.';
     if (isRed(it) && !override) return 'Fix the identifiers that still appear first';
     if (noOwnPatients(it) && !override) return 'Choose the column that holds patient names or record numbers first';
+    if (needsReview(it) && !reviewed(it)) return 'Review required: look over the flagged text, then press "I have reviewed this"';
     return '';
   }
   const allBlockReason = (override) => (!session.items.length ? 'Nothing to download yet' : session.items.map((x) => blockReason(x, override)).find(Boolean) || '');
@@ -7260,13 +7405,13 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
     set('dlAll', !!allReason, allReason);
     // amber: downloads stay allowed, but the buttons say what the check could not do
     const amber = !reason && isAmber(it);
-    $('dlNow').textContent = amber ? 'Download anyway (.xlsx): not checked against a patient list' : DL_LABEL;
-    $('dlXlsx').textContent = amber ? `${DL_LABEL}: not checked against a patient list` : DL_LABEL;
-    $('dlAmber').textContent = amber ? 'Not checked against a patient list: names were found by rules only. Add today\'s schedule under Patient list to make the check real.' : '';
+    $('dlNow').textContent = amber ? 'Download (.xlsx): reviewed, no patient list' : DL_LABEL;
+    $('dlXlsx').textContent = amber ? `${DL_LABEL}: reviewed, no patient list` : DL_LABEL;
+    $('dlAmber').textContent = amber ? 'Not checked against a patient list: names were found by rules only and a person reviewed the result. Add today\'s schedule under Patient list to make the check real.' : '';
   }
   function renderError(item) {
     $('verdict').classList.remove('hidden');
-    $('verdictBody').innerHTML = `<div class="verdict bad"><b>Stop: this input could not be processed.</b> Error: ${esc(item.error.message)}. Nothing from it can be downloaded, and Download all stays off, until it runs without an error. <span class="lnk" id="retryRun">Try again</span> · <span class="lnk" id="removeItem">Remove this input</span></div>`;
+    $('verdictBody').innerHTML = `<div class="verdict bad"><b>Blocked: this input could not be processed.</b> Error: ${esc(item.error.message)}. Nothing from it can be downloaded, and Download all stays off, until it runs without an error. <span class="lnk" id="retryRun">Try again</span> · <span class="lnk" id="removeItem">Remove this input</span></div>`;
     $('verdictActions').classList.add('hidden');
     $('summary').innerHTML = '';
     $('reviewCard').classList.add('hidden');
@@ -7290,24 +7435,31 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
       $('verdictBody').innerHTML = `<div class="verdict amber"><b>No patient column</b> – no patient names or record numbers were found in this table, so the check had nothing to look for and names in it may pass through. Choose the column that holds them under <span class="lnk" data-cols="1">Columns</span>; downloads stay off until then.</div>`;
       $('verdictBody').querySelectorAll('[data-cols]').forEach((a) => a.addEventListener('click', () => { $('colsDetails').open = true; $('colsCard').scrollIntoView({ block: 'center' }); }));
       $('verdictActions').classList.add('hidden');
-    } else if (!L.hits.length && isAmber(item)) {
-      $('verdictBody').innerHTML = `<div class="verdict amber"><b>No patient list</b> – names were found by rules only. Paste today's schedule (<span class="lnk" data-roster="1">Patient list</span>) to make this check real.${item.kind === 'image' ? ' (from the text we could read)' : ''}</div>`;
+    } else if (!isRed(item) && needsReview(item)) {
+      const words = surviving(item);
+      const why = [isAmber(item) ? `no patient list, so names were found by rules only (paste today's schedule under <span class="lnk" data-roster="1">Patient list</span> to make the check real)${item.kind === 'image' ? '; the check covers only the text that could be read' : ''}` : '',
+        words.length ? `${plural(words.length, 'word from the source survived', 'words from the source survived')} that ${words.length === 1 ? 'is' : 'are'} not an ordinary or medical word: ${words.slice(0, 12).map((w) => `<span class="lnk" data-word="${esc(w.text)}">${esc(w.text)}</span>${w.count > 1 ? ` ×${w.count}` : ''}`).join(', ')}${words.length > 12 ? ', …' : ''}. If any is a name or place, mark it in the review below` : ''].filter(Boolean);
+      const done = reviewed(item);
+      $('verdictBody').innerHTML = `<div class="verdict amber"><b>Review required</b> – ${why.join('; and ')}.${item.flagged > 0 ? ` ${plural(item.flagged, 'line is', 'lines are')} flagged below.` : ''}<div style="margin-top:8px">${done ? '<span class="ok">Reviewed. Downloads are on for this result.</span>' : '<button id="ackReview" class="secondary">I have reviewed this</button> <span class="small muted">Downloads stay off until then. A new run needs a new review.</span>'}</div></div>`;
       $('verdictBody').querySelectorAll('[data-roster]').forEach((a) => a.addEventListener('click', openRoster));
-      $('verdictActions').classList.toggle('hidden', isGated(item));
+      $('verdictBody').querySelectorAll('[data-word]').forEach((a) => a.addEventListener('click', () => { $('reviewFilter').value = 'all'; $('reviewSearch').value = a.dataset.word; state.page = 1; renderReview(item); $('reviewCard').scrollIntoView({ block: 'start' }); }));
+      const ack = $('ackReview'); if (ack) ack.addEventListener('click', () => { item.ackKey = item.resultKey; item.viewedReview = true; renderVerdict(item); });
+      $('verdictActions').classList.toggle('hidden', isGated(item) || !done);
       $('toReview').textContent = item.flagged > 0 ? `${plural(item.flagged, 'line needs', 'lines need')} a look first` : 'Nothing needs a look';
-    } else if (!L.hits.length) {
-      $('verdictBody').innerHTML = `<div class="verdict ok"><b>Checked:</b> none of your ${plural(n, "patient's", "patients'")} names, nicknames, initials, MRNs, phone numbers, account numbers or birthdates appear in the output, in any spacing or spelling the page can predict.${item.kind === 'image' ? ' (from the text we could read)' : ''}${L.providerHits.length ? `<div class="small muted" style="margin-top:6px">${plural(L.providerHits.length, 'staff name still appears', 'staff names still appear')}; staff names are not patient identifiers but you may want to look.</div>` : ''}${L.coincidences.length ? `<div class="small muted" style="margin-top:6px">${plural(L.coincidences.length, 'shifted date', 'shifted dates')} in other patients' rows happen to equal a birthdate in the file (row ${L.coincidences.map((c) => c.row + 1).slice(0, 5).join(', ')}); nothing links them to that patient.</div>` : ''}</div>`;
+    } else if (!isRed(item)) {
+      $('verdictBody').innerHTML = `<div class="verdict ok"><b>Release check passed:</b> none of your ${plural(n, "patient's", "patients'")} names, nicknames, initials, MRNs, phone numbers, account numbers or birthdates appear in the output, in any spacing or spelling the page can predict.${item.kind === 'image' ? ' (from the text we could read)' : ''}${L.providerHits.length ? `<div class="small muted" style="margin-top:6px">${plural(L.providerHits.length, 'staff name still appears', 'staff names still appear')}; staff names are not patient identifiers but you may want to look.</div>` : ''}${L.coincidences.length ? `<div class="small muted" style="margin-top:6px">${plural(L.coincidences.length, 'shifted date', 'shifted dates')} in other patients' rows happen to equal a birthdate in the file (row ${L.coincidences.map((c) => c.row + 1).slice(0, 5).join(', ')}); nothing links them to that patient.</div>` : ''}</div>`;
       const gated = isGated(item);
       $('verdictActions').classList.toggle('hidden', gated);
       $('toReview').textContent = item.flagged > 0 ? `${plural(item.flagged, 'line needs', 'lines need')} a look first` : 'Nothing needs a look';
     } else {
-      const unnamed = L.hits.filter((h) => h.kind === 'unnamed'), others = L.hits.filter((h) => h.kind !== 'unnamed');
-      const list = L.hits.slice(0, 50).map((h, i) => h.kind === 'unnamed' ? `<li>Row ${h.row + 1}: the patient's name could not be read, only the record number. Check the line and add the name as patient info if it is there. <span class="lnk" data-show="${i}">Show</span></li>` : `<li>${h.row >= 0 ? `Row ${h.row + 1}, ${esc(h.header)}` : esc(h.header || 'Column heading')}: "${esc(h.text)}" (${TYPE_UI[h.type] || h.type}) <span class="lnk" data-show="${i}">Show</span></li>`).join('');
+      const allHits = L.hits.concat(releaseIds(item).map((h) => Object.assign({ kind: 'release' }, h)));
+      const unnamed = allHits.filter((h) => h.kind === 'unnamed'), others = allHits.filter((h) => h.kind !== 'unnamed');
+      const list = allHits.slice(0, 50).map((h, i) => h.kind === 'unnamed' ? `<li>Row ${h.row + 1}: the patient's name could not be read, only the record number. Check the line and add the name as patient info if it is there. <span class="lnk" data-show="${i}">Show</span></li>` : `<li>${h.row >= 0 ? `Row ${h.row + 1}, ${esc(h.header)}` : esc(h.header || 'Column heading')}: "${esc(h.text)}" (${TYPE_UI[h.type] || h.type}) <span class="lnk" data-show="${i}">Show</span></li>`).join('');
       const head = others.length ? `${plural(others.length, 'patient identifier still appears', 'patient identifiers still appear')} in the output.` : '';
       const head2 = unnamed.length ? ` ${plural(unnamed.length, "patient's name", "patients' names")} could not be read, so the check cannot vouch for ${unnamed.length === 1 ? 'it' : 'them'}.` : '';
-      $('verdictBody').innerHTML = `<div class="verdict bad"><b>Stop:</b> ${head}${head2} Fix this below before downloading.<ul>${list}</ul>${$('optOverride').checked ? '<div class="small warn" style="margin-top:6px">Compliance override is on: downloads are allowed and the run summary records it.</div>' : ''}</div>`;
+      $('verdictBody').innerHTML = `<div class="verdict bad"><b>Blocked:</b> ${head}${head2} Fix this below before downloading.<ul>${list}</ul>${$('optOverride').checked ? '<div class="small warn" style="margin-top:6px">Compliance override is on: downloads are allowed and the run summary records it.</div>' : ''}</div>`;
       $('verdictActions').classList.add('hidden');
-      $('verdictBody').querySelectorAll('[data-show]').forEach((a) => a.addEventListener('click', () => { const h = L.hits[+a.dataset.show]; $('reviewFilter').value = 'all'; $('reviewSearch').value = h.kind === 'unnamed' ? '' : h.text; state.page = 1; renderReview(item); const td = $('reviewTable').querySelector(`td[data-row="${h.row}"]`); if (td) td.scrollIntoView({ block: 'center' }); }));
+      $('verdictBody').querySelectorAll('[data-show]').forEach((a) => a.addEventListener('click', () => { const h = allHits[+a.dataset.show]; $('reviewFilter').value = 'all'; $('reviewSearch').value = h.kind === 'unnamed' ? '' : h.text; state.page = 1; renderReview(item); const td = $('reviewTable').querySelector(`td[data-row="${h.row}"]`); if (td) td.scrollIntoView({ block: 'center' }); }));
     }
     $('datesLine').textContent = datesLabel();
     setDownloadState();
@@ -7453,39 +7605,113 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
   $('dlXlsx').addEventListener('click', () => {
     const item = state.current; if (exportBlocked(item)) return;
     if (item.flagged > 0 && !item.viewedReview) $('dlNudge').textContent = `You have not looked at the ${item.flagged} line${item.flagged === 1 ? '' : 's'} flagged above. The file downloaded anyway.`;
-    const ws = XLSX.utils.aoa_to_sheet(aoaOut(item), { cellDates: true });
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Protected');
-    XLSX.writeFile(wb, `${fileStamp(item)}.xlsx`, { cellDates: true });
+    releaseExport([item], 'xlsx');
   });
   // CSV written here, not by SheetJS: every field holding a quote, comma, line feed or a bare carriage return is quoted
   // (RFC 4180), so a line break inside a cell can never start a new record whose first cell is a formula; every field
   // goes through the formula guard as well
+  const csvValue = (v) => String(safeCell(v == null ? '' : v instanceof Date ? String(fmtDate(v)) : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : String(v)));
   function csvText(aoa) {
-    const field = (v) => {
-      let x = v == null ? '' : v instanceof Date ? String(fmtDate(v)) : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : String(v);
-      x = String(safeCell(x));
-      return /[",\r\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x;
-    };
+    const field = (v) => { const x = csvValue(v); return /[",\r\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
     return aoa.map((r) => (Array.isArray(r) ? r : [r]).map(field).join(',')).join('\r\n') + '\r\n';
   }
-  $('dlCsv').addEventListener('click', () => {
-    const item = state.current; if (exportBlocked(item)) return;
-    download(new Blob([csvText(aoaOut(item))], { type: 'text/csv' }), `${fileStamp(item)}.csv`);
-  });
-  $('dlTxt').addEventListener('click', () => {
-    const item = state.current; if (exportBlocked(item)) return;
+  // RFC 4180 reader, used only to read back what csvText wrote
+  function parseCsv(text) {
+    const rows = []; let row = [], f = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; continue; }
+      if (ch === '"') q = true; else if (ch === ',') { row.push(f); f = ''; }
+      else if (ch === '\r' && text[i + 1] === '\n') { row.push(f); rows.push(row); row = []; f = ''; i++; }
+      else f += ch;
+    }
+    if (f !== '' || row.length) { row.push(f); rows.push(row); }
+    return rows;
+  }
+  const txtOut = (item) => {
     const li = item.result.headers.indexOf('Line');
     // every line is guarded, including a line that starts after a break inside a cell
-    const text = item.result.rows.map((r) => DeID.cellToString(r[li < 0 ? 0 : li]).split(/\r\n|\r|\n/).map(safeCell).join('\n')).join('\n');
-    download(new Blob([text], { type: 'text/plain' }), `${fileStamp(item)}.txt`);
-  });
+    return item.result.rows.map((r) => DeID.cellToString(r[li < 0 ? 0 : li]).split(/\r\n|\r|\n/).map(safeCell).join('\n')).join('\n');
+  };
+  $('dlCsv').addEventListener('click', () => releaseExport([state.current], 'csv'));
+  $('dlTxt').addEventListener('click', () => releaseExport([state.current], 'txt'));
+
+  // ------------------------------------------------------------ release
+  // Every protected download goes through here. It asks again whether each input may leave (fresh result, check passed,
+  // review done), builds the file, reads the written bytes back with an independent reader, and checks them: same sheets,
+  // same cells, no formulas, and none of the identifier-column values (names, MRNs, accounts, phones) anywhere. Only then is
+  // the file handed to the browser. Any failure downloads nothing.
+  function mergedNeedles(items) {
+    const d = new Set(), n = new Set();
+    items.forEach((it) => { const nd = it.release && it.release.needles; if (!nd) return; nd.digits.forEach((x) => d.add(x)); nd.names.forEach((x) => n.add(x)); });
+    return { digits: [...d], names: [...n] };
+  }
+  function verifyGrid(expect, got, label) {
+    if (got.length < expect.length) throw new Error(`${label}: ${expect.length - got.length} rows missing after writing`);
+    let bad = 0;
+    expect.forEach((row, r) => (Array.isArray(row) ? row : [row]).forEach((v, c) => {
+      if (v == null || v === '' || v instanceof Date) return;
+      const g = (got[r] || [])[c];
+      if (typeof v === 'number' ? Number(g) !== v : String(g == null ? '' : g) !== String(v)) bad++;
+    }));
+    if (bad) throw new Error(`${label}: ${bad} cells differ after writing`);
+  }
+  function releaseExport(items, kind) {
+    items = items.filter(Boolean);
+    const override = $('optOverride').checked;
+    if (!items.length) { notice('Not downloaded: nothing to download yet', 'warn'); return false; }
+    for (const it of items) { const why = blockReason(it, override); if (why) { notice(`Not downloaded${items.length > 1 ? ` (input ${it.n})` : ''}: ${esc(why)}`, 'warn'); return false; } }
+    const needles = override && items.some(isRed) ? { digits: [], names: [] } : mergedNeedles(items);
+    try {
+      let blob, name;
+      if (kind === 'xlsx' || kind === 'all') {
+        const wb = XLSX.utils.book_new(); const expect = [];
+        items.forEach((it) => { const aoa = aoaOut(it); expect.push(aoa); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa, { cellDates: true }), kind === 'all' ? `Input ${it.n}` : 'Protected'); });
+        const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx', cellDates: true });
+        const back = XLSX.read(bytes, { type: 'array', cellFormula: true, cellDates: true });
+        if (back.SheetNames.join('|') !== wb.SheetNames.join('|')) throw new Error('the written workbook has different sheets');
+        back.SheetNames.forEach((sn, i) => {
+          const ws = back.Sheets[sn];
+          Object.keys(ws).forEach((k) => { if (k[0] !== '!' && ws[k] && ws[k].f) throw new Error(`a formula was found in ${sn}!${k}`); });
+          const got = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '', blankrows: true });
+          verifyGrid(expect[i], got, sn);
+          got.forEach((row) => row.forEach((v) => { if (typeof v === 'string' && FORMULA_START.test(v)) throw new Error(`a cell in ${sn} starts like a formula`); }));
+          const hits = DeID.findNeedles(got, needles); if (hits.length) throw new Error(`an identifier from the patient columns is in ${sn}, row ${hits[0].row + 1}`);
+        });
+        blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        name = kind === 'all' ? `protected_${today()}_all.xlsx` : `${fileStamp(items[0])}.xlsx`;
+      } else {
+        const item = items[0];
+        const text = kind === 'csv' ? csvText(aoaOut(item)) : kind === 'txt' ? txtOut(item) : reportLines(item).join('\n');
+        if (kind === 'csv') {
+          const exp = aoaOut(item).map((r) => (Array.isArray(r) ? r : [r]).map(csvValue));
+          const got = parseCsv(text);
+          if (got.length !== exp.length) throw new Error(`the written CSV has ${got.length} records, not ${exp.length}`);
+          verifyGrid(exp, got, 'CSV');
+          got.forEach((row) => row.forEach((v) => { if (FORMULA_START.test(v)) throw new Error('a CSV field starts like a formula'); }));
+        } else {
+          text.split('\n').forEach((l) => { if (FORMULA_START.test(l)) throw new Error('a line starts like a formula'); });
+        }
+        const hits = DeID.findNeedles(text.split(/\r?\n/).map((l) => [l]), needles); if (hits.length) throw new Error(`an identifier from the patient columns is in line ${hits[0].row + 1}`);
+        blob = new Blob([text], { type: kind === 'csv' ? 'text/csv' : 'text/plain' });
+        name = `${fileStamp(item)}${kind === 'csv' ? '.csv' : kind === 'txt' ? '.txt' : '_report.txt'}`;
+      }
+      download(blob, name);
+      items.forEach((it) => { it.releasedKey = it.resultKey; });
+      return true;
+    } catch (e) {
+      notice(`Not downloaded: the check of the written file failed (${esc((e && e.message) || e)}). Nothing was saved.`, 'danger');
+      return false;
+    }
+  }
   function reportLines(item) {
     const r = item.result, s = r.stats, L = item.leak;
     const kind = item.kind === 'image' ? 'screenshot' : item.kind === 'text' ? 'pasted text' : 'spreadsheet';
     const self = L.hits.length ? ($('optOverride').checked ? 'overridden' : `FAILED (${L.hits.length} identifiers)`) : noOwnPatients(item) ? 'no patient column (no names or record numbers to check against)' : isAmber(item) ? 'no patients to check against (no patient list; names found by rules only)' : 'passed';
     return [`Infusion De-ID run report · no patient data`, `Tool version: ${DeID.VERSION}`, `Run at: ${new Date().toISOString()}`,
       `Input ${item.n} of ${session.items.length}: ${kind}, ${s.rows} rows, ${r.headers.length} columns`,
-      `Dates: ${$('optDates').value === 'shift' ? 'shifted per patient (intervals kept)' : 'removed (Safe Harbor)'}`,
+      `Release profile: ${$('optDates').value === 'shift' ? 'research pseudonymization (dates shifted per patient, intervals kept). This is NOT HIPAA Safe Harbor: shifted dates are still dates.' : 'HIPAA Safe Harbor rules applied by the tool (every date removed; birth year only below age 90; ages 90+ grouped; ZIP to 3 digits, restricted areas to 000). Safe Harbor also requires that you have no actual knowledge the rest could identify someone.'}`,
+      `Release scan (independent of the detectors): ${releaseIds(item).length} identifier-column values found in the output; ${surviving(item).length} unrecognised source words survived${needsReview(item) ? `; review ${reviewed(item) ? 'done' : 'NOT done'}` : ''}`,
       `Self-check: ${self}`, `Self-check overridden: ${L.hits.length && $('optOverride').checked ? 'yes' : 'no'}`,
       `Patients in this input: ${r.census.patients.size}; patients in the session: ${session.registry.size}; on the patient list: ${session.roster.ids.size}; checked against: ${checkedAgainst(item)}; providers: ${r.census.providers.size}`, '',
       // the headings as they were written to the protected file, never the input's: a heading can hold patient information
@@ -7495,7 +7721,7 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
       'Identifiers replaced in free text by type:', ...Object.entries(s.byType).map(([k, v]) => `  ${k}: ${v}`), 'By layer:', ...Object.entries(s.bySource).map(([k, v]) => `  ${k}: ${v}`), 'Structured columns:', ...Object.entries(s.structured).map(([k, v]) => `  ${k}: ${v}`), '',
       'This report contains no patient data. The session key does.'];
   }
-  $('dlReport').addEventListener('click', () => { const item = state.current; if (exportBlocked(item)) return; download(new Blob([reportLines(item).join('\n')], { type: 'text/plain' }), `${fileStamp(item)}_report.txt`); });
+  $('dlReport').addEventListener('click', () => releaseExport([state.current], 'report'));
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 
   // ------------------------------------------------------------ session strip, key, panel
@@ -7536,10 +7762,7 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
     // all or nothing: one input that errored, is still running, is unconfirmed or fails its check stops the whole download
     const why = allBlockReason($('optOverride').checked);
     if (why) { notice(`Not downloaded: ${esc(why)}`, 'warn'); return; }
-    const wb = XLSX.utils.book_new();
-    session.items.forEach((it) => { XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoaOut(it), { cellDates: true }), `Input ${it.n}`); });
-    if (!wb.SheetNames.length) return;
-    XLSX.writeFile(wb, `protected_${today()}_all.xlsx`, { cellDates: true });
+    releaseExport(session.items.slice(), 'all');
   });
   function restoreSession(wb) {
     const toJson = (name) => (wb.Sheets[name] ? sheetObjects(wb.Sheets[name]).map((r) => mapValues(r, unsafeCell)) : []);
@@ -7594,7 +7817,7 @@ H4sICDJv42QAA2VuZy50cmFpbmVkZGF0YQDM/IWXXceVwI0evHQuM2Mzc7fUUqvFkiVbBpljjB0n8cTh
     }).join('');
     $('patientsTable').querySelectorAll('[data-same]').forEach((b) => b.addEventListener('click', () => { session.items.forEach((it) => { if (it.linkedBy) it.linkedBy[b.dataset.same] = 'confirmed'; }); renderSessionPanel(); }));
     $('sourcesList').innerHTML = session.items.map((it) => `<div class="row" style="margin-top:4px"><span>${it.n}. ${esc(it.name)} <span class="muted">(${it.kind === 'image' ? 'screenshot' : it.kind === 'text' ? 'text' : 'spreadsheet'}, ${it.table ? it.table.rows.length : 0} rows)</span></span>${it.error ? '<span class="bad">could not be processed</span>' : it.result ? `<span class="lnk" data-dl="${it.id}">Download</span>` : '<span class="muted">working…</span>'}<span class="lnk" data-showitem="${it.id}">Show</span></div>`).join('') || '<span class="muted">No sources yet.</span>';
-    $('sourcesList').querySelectorAll('[data-dl]').forEach((a) => a.addEventListener('click', () => { const it = session.items.find((x) => x.id === a.dataset.dl); const why = blockReason(it, $('optOverride').checked); if (why) { notice(`That source cannot be downloaded: ${esc(why)}`, 'warn'); return; } const ws = XLSX.utils.aoa_to_sheet(aoaOut(it), { cellDates: true }); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Protected'); XLSX.writeFile(wb, `${fileStamp(it)}.xlsx`, { cellDates: true }); }));
+    $('sourcesList').querySelectorAll('[data-dl]').forEach((a) => a.addEventListener('click', () => { const it = session.items.find((x) => x.id === a.dataset.dl); releaseExport([it], 'xlsx'); }));
     $('sourcesList').querySelectorAll('[data-showitem]').forEach((a) => a.addEventListener('click', () => { const it = session.items.find((x) => x.id === a.dataset.showitem); if (it) { showItem(it); if (it.result) { $('runInfo').textContent = 'Shown'; } window.scrollTo(0, 0); } }));
   }
   window.addEventListener('beforeunload', (e) => { if ((session.items.length > 0 || session.registry.size > session.roster.ids.size) && !session.keySaved) { e.preventDefault(); e.returnValue = 'The session key has not been saved. Leave anyway?'; } });

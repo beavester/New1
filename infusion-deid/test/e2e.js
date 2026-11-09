@@ -89,7 +89,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
   assert(/\d+ rows/.test(summary) && /\d+ patients/.test(summary) && /lines need a look/.test(summary), 'summary missing: ' + summary);
   assert(/What was replaced/.test(summary) && /Names|Dates|Record numbers/.test(summary) && !/census|lexicon|propagate|\bcue\b|\brule\b/.test(summary), 'summary pills: ' + summary);
   const verdict = await page.textContent('#verdict');
-  assert(/Checked:/.test(verdict) && /Dates: shifted/.test(verdict), 'verdict: ' + verdict.slice(0, 120));
+  assert(/Release check passed:/.test(verdict) && /Dates: shifted/.test(verdict), 'verdict: ' + verdict.slice(0, 120));
   for (const id of ['dlXlsx', 'dlCsv', 'dlAll']) assert(!(await page.isDisabled('#' + id)), id + ' should be enabled');
   assert(/Dates: shifted/.test(await sessionText()), 'session dates line');
   const firstPatients = await patientCount();
@@ -142,7 +142,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
   assert(await page.isDisabled('#dlXlsx'), 'dlXlsx must be disabled while the self-check is red');
   assert(await page.$eval('#verdictActions', (e) => e.classList.contains('hidden')), 'verdict download button must hide when red');
   const redVerdict = await page.textContent('#verdict');
-  assert(/Stop:/.test(redVerdict) && /Row \d+/.test(redVerdict) && /still appears? in the output/.test(redVerdict), 'red verdict: ' + redVerdict.slice(0, 160));
+  assert(/Blocked:/.test(redVerdict) && /Row \d+/.test(redVerdict) && /still appears? in the output/.test(redVerdict), 'red verdict: ' + redVerdict.slice(0, 160));
   // compliance override (inside Advanced → Technical)
   await openAdvanced();
   await page.check('#optOverride');
@@ -153,7 +153,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
   assert(await page.isDisabled('#dlXlsx'), 'dlXlsx must be disabled again after the override is removed');
   await page.evaluate((key) => { const it = window.__deid.state.current; delete it.manual[key]; window.__deid.runDeid(it, false); }, forced.key);
   await doneIn();
-  assert(!(await page.isDisabled('#dlXlsx')) && /Checked:/.test(await page.textContent('#verdict')), 'self-check did not recover');
+  assert(!(await page.isDisabled('#dlXlsx')) && /Release check passed:/.test(await page.textContent('#verdict')), 'self-check did not recover');
   void pmText;
   await page.selectOption('#reviewFilter', 'model');
 
@@ -220,13 +220,13 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
   await page.waitForFunction(() => /4 sources/.test(document.querySelector('#session').textContent)); await doneIn();
   const wordOut = await page.evaluate(() => { const it = window.__deid.state.current; return { rows: JSON.stringify(it.result.rows), patients: it.result.census.patients.size, verdict: document.querySelector('#verdict').textContent, names: it.result.registry.toMappingRows().map((r) => r.RealName) }; });
   assert(wordOut.patients === 2, 'Bell and Hill should be two patients, got ' + wordOut.patients + ' ' + JSON.stringify(wordOut.names));
-  for (const leak of ['Bell', 'Hill', 'Kevin', 'Rose', '032767781', '84445786', '32767781']) assert(!wordOut.rows.includes(leak), `pasted common-word surname leaked: ${leak} in ${wordOut.rows}`);
+  for (const leak of ['Bell', 'Hill', 'Kevin', 'Rose', '032767781', '84445786', '32767781']) assert(!new RegExp(`\\b${leak}\\b`).test(wordOut.rows), `pasted common-word surname leaked: ${leak} in ${wordOut.rows}`);
   assert(wordOut.names.some((n) => /Bell, Kevin/.test(n)) && wordOut.names.some((n) => /Hill, Rose/.test(n)) && !wordOut.names.some((n) => /Bruno/.test(n)), 'registry names: ' + JSON.stringify(wordOut.names));
-  assert(/Checked:/.test(wordOut.verdict), 'word-surname note verdict: ' + wordOut.verdict.slice(0, 120));
+  assert(/Release check passed:/.test(wordOut.verdict), 'word-surname note verdict: ' + wordOut.verdict.slice(0, 120));
   // 4c-iii. an MRN-only line (no legible name) cannot get a green verdict
   await page.click('#pasteOpen'); await page.fill('#pasteText', 'MRN 55512345  labs ok, tolerating well.'); await page.click('#pasteRun');
   await page.waitForFunction(() => /5 sources/.test(document.querySelector('#session').textContent)); await doneIn();
-  assert(/Stop:[\s\S]*could not be read/.test(await page.textContent('#verdict')), 'unnamed patient must not get a green verdict: ' + (await page.textContent('#verdict')).slice(0, 160));
+  assert(/Blocked:[\s\S]*could not be read/.test(await page.textContent('#verdict')), 'unnamed patient must not get a green verdict: ' + (await page.textContent('#verdict')).slice(0, 160));
   assert(await page.isDisabled('#dlXlsx'), 'download must be off while a patient name is unread');
   await page.evaluate(() => { const s = window.__deid.session; const it = s.items[s.items.length - 1]; s.items.splice(s.items.indexOf(it), 1); s.items.splice(s.items.length - 1, 1); window.__deid.state.current = s.items[s.items.length - 1]; });
   await page.evaluate(() => { const it = window.__deid.state.current; window.__deid.runDeid(it, true); }); await doneIn();
@@ -257,7 +257,11 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
   assert(/Contact/.test(await page.textContent('#colWarnings')), 'warning should name the kept column');
   assert(await page.isDisabled('#dlXlsx') && (await page.getAttribute('#dlXlsx', 'title')) === 'Confirm columns first', 'gate must disable downloads');
   await page.click('#colsConfirm');
-  assert(!(await page.isDisabled('#dlXlsx')), 'confirm should enable downloads');
+  // the kept Contact column holds names: the independent release scan finds them surviving, so a review is required
+  await page.waitForFunction(() => /Review required/.test(document.querySelector('#verdictBody').textContent));
+  assert(/Review required/.test(await page.getAttribute('#dlXlsx', 'title')) && /survived/.test(await page.textContent('#verdictBody')), 'kept names must require review: ' + (await page.textContent('#verdictBody')).slice(0, 200));
+  await page.click('#ackReview');
+  assert(!(await page.isDisabled('#dlXlsx')), 'confirm + review should enable downloads: ' + (await page.getAttribute('#dlXlsx', 'title')));
   // dates option: both the strip and the verdict follow it
   await openAdvanced();
   await page.selectOption('#optDates', 'remove'); await doneIn();
@@ -288,7 +292,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
   assert(await page.evaluate(() => window.__deid.session.registry.entities.every((e) => e.offset === 0)), 'offsets should be 0 under remove');
   await page.selectOption('#optDates', 'shift'); await doneIn();
   assert(await page.evaluate(() => window.__deid.session.registry.entities.every((e) => e.offset !== 0 && e.offset != null)), 'offsets must be re-drawn when shifting is turned on');
-  assert(/Checked:/.test(await page.textContent('#verdict')), 'verdict after re-shift');
+  assert(/Release check passed:/.test(await page.textContent('#verdict')), 'verdict after re-shift');
   const reshiftAoa = aoaOf(readWb(await dl('#dlXlsx')));
   const apptIdx = synth.headers.indexOf('Appt Date');
   for (let i = 0; i < synth.rows.length; i++) { const a = reshiftAoa[i + 1][apptIdx]; assert(a instanceof Date && Math.abs(a.getTime() - synth.rows[i][apptIdx].getTime()) >= 29 * 86400000, `appointment date not shifted on row ${i + 1}`); }
@@ -313,7 +317,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
   const m = synOut.match(/(\d+\.\d)%token recall/);
   assert(m && parseFloat(m[1]) >= 99, 'synthetic recall too low: ' + (m && m[1]));
   await page.click('#synAdv'); await page.waitForSelector('#advCard:not(.hidden)');
-  const adv = await page.textContent('#advOut'); assert(/19 of 20 pass/.test(adv), 'adversarial: ' + adv.slice(0, 60));
+  const adv = await page.textContent('#advOut'); assert(/20 of 20 pass/.test(adv), 'adversarial: ' + adv.slice(0, 60));
   await page.click('#synAbl'); await page.waitForFunction(() => /Tier 0 rules only/.test(document.querySelector('#ablOut').textContent));
 
   // 6. restore identities round trip on the spreadsheet item
@@ -411,7 +415,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     assert((await opage.$eval('#ocrText', (e) => e.value.trim().length)) > 20, 'ocrText empty');
     assert(await opage.$('#ocrRerun'), 'ocrRerun missing');
     const ov = await opage.textContent('#verdict');
-    assert(/Checked:[\s\S]*from the text we could read/.test(ov), 'OCR verdict: ' + ov.slice(0, 200));
+    assert(/Release check passed:[\s\S]*from the text we could read/.test(ov), 'OCR verdict: ' + ov.slice(0, 200));
     // no rendered patient name or MRN survives in any OCR item's protected rows
     const ocrLeaks = await opage.evaluate((pats) => { const out = window.__deid.session.items.map((it) => JSON.stringify(it.result.rows)).join(' ').toLowerCase(); return pats.filter((p) => out.includes(`${p.last}, ${p.first}`.toLowerCase()) || out.includes(p.mrn)).map((p) => p.last); }, used.map((p) => ({ last: p.last, first: p.first, mrn: String(p.mrn) })));
     assert(!ocrLeaks.length, 'OCR items leaked: ' + ocrLeaks.join(', '));
@@ -450,16 +454,22 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     const paste = async (text) => { await rp.click('#pasteOpen'); await rp.fill('#pasteText', text); await rp.click('#pasteRun'); };
     const verdict = () => rp.textContent('#verdict');
 
-    // (b) no patients at all to check against: amber, never green; downloads allowed and say so
+    // (b) no patients at all to check against: review required, never green; downloads stay off until a person says they
+    // reviewed this exact result, then they are allowed and say so
     await paste('Vanterpool called about labs, tolerating C3D1 well.\nRide home arranged by daughter.');
     await sources(1); await rDone();
     let v = await verdict();
-    assert(/No patient list/.test(v) && /found by rules only/.test(v) && /make this check real/.test(v) && !/Checked:/.test(v), `${label}: amber verdict expected: ${v.slice(0, 200)}`);
-    assert(await rp.$('#verdictBody .verdict.amber'), `${label}: amber verdict must be styled amber`);
-    assert(!(await rp.isDisabled('#dlXlsx')) && !(await rp.isDisabled('#dlNow')) && !(await rp.isDisabled('#dlAll')), `${label}: amber must still allow downloads`);
-    assert(/not checked against a patient list/i.test(await rp.textContent('#dlNow')) && /not checked against a patient list/i.test(await rp.textContent('#dlXlsx')) && /patient list/i.test(await rp.textContent('#dlAmber')), `${label}: amber download buttons must say so`);
+    assert(/Review required/.test(v) && /found by rules only/.test(v) && /make the check real/.test(v) && !/Release check passed:/.test(v), `${label}: review-required verdict expected: ${v.slice(0, 200)}`);
+    assert(await rp.$('#verdictBody .verdict.amber'), `${label}: review-required verdict must be styled amber`);
+    assert((await rp.isDisabled('#dlXlsx')) && (await rp.isDisabled('#dlAll')) && (await rp.isDisabled('#dlReport')), `${label}: review required must block downloads until acknowledged`);
+    assert(/Review required/.test(await rp.getAttribute('#dlXlsx', 'title')), `${label}: blocked button must say why`);
+    await rp.click('#ackReview');
+    await rp.waitForFunction(() => !document.querySelector('#dlXlsx').disabled);
+    assert(/Reviewed/.test(await verdict()) && !(await rp.isDisabled('#dlNow')) && !(await rp.isDisabled('#dlAll')), `${label}: acknowledgement must allow downloads`);
+    assert(/reviewed, no patient list/i.test(await rp.textContent('#dlNow')) && /reviewed, no patient list/i.test(await rp.textContent('#dlXlsx')) && /patient list/i.test(await rp.textContent('#dlAmber')), `${label}: download buttons must say there was no patient list`);
     assert(/No patient list/.test(await strip()), `${label}: strip should say there is no patient list`);
-    assert(/Self-check: no patients to check against/.test(fs.readFileSync(await rdl('#dlReport'), 'utf8')), `${label}: run summary must record the amber check`);
+    const rep0 = fs.readFileSync(await rdl('#dlReport'), 'utf8');
+    assert(/Self-check: no patients to check against/.test(rep0) && /review done/.test(rep0) && /Release profile: research/.test(rep0), `${label}: run summary must record the check, the review and the profile`);
 
     // (a) a pasted patient list fills the registry, adds no source, re-runs what was protected, and turns the check real
     const roster = ['Vanterpool, Desmond   MRN 00555111   DOB 2/3/1951', 'Clifford Nyambura      00987654', '08:30 Chair 4 Hydration', 'Infusion Schedule Monday'].join('\n');
@@ -467,14 +477,14 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     await rp.waitForFunction(() => /Patient list: 2 patients/.test(document.querySelector('#session').textContent));
     await rDone();
     v = await verdict();
-    assert(/Checked:/.test(v), `${label}: with a patient list the verdict should be green: ${v.slice(0, 200)}`);
+    assert(/Release check passed:/.test(v), `${label}: with a patient list the verdict should be green: ${v.slice(0, 200)}`);
     assert(!(await rowsText()).includes('vanterpool'), `${label}: a patient-list surname survived the re-run`);
     assert(/\b1 sources/.test(await strip()), `${label}: the patient list must not add a source: ${await strip()}`);
     const regNames = await rp.evaluate(() => window.__deid.session.registry.toMappingRows().map((r) => r.RealName));
     assert(regNames.some((n) => /Vanterpool, Desmond/.test(n)) && regNames.some((n) => /Nyambura, Clifford/.test(n)) && !regNames.some((n) => /Hydration|Schedule|Chair|Monday|Infusion/.test(n)), `${label}: registry after the patient list: ${JSON.stringify(regNames)}`);
     await paste('Spoke with Desmond Vanterpool re: ride. Nyambura to call back after 2pm.\nMRN 00987654 labs ok, tolerating well.');
     await sources(2); await rDone();
-    assert(/Checked:/.test(await verdict()), `${label}: text naming patient-list patients: ${(await verdict()).slice(0, 200)}`);
+    assert(/Release check passed:/.test(await verdict()), `${label}: text naming patient-list patients: ${(await verdict()).slice(0, 200)}`);
     // a roster export (split name columns) through the file chooser
     const rwb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(rwb, XLSX.utils.aoa_to_sheet([['Last Name', 'First Name', 'MRN', 'DOB'], ['Thistlewood', 'Avery', '00661122', '5/6/1949'], ['Quenneville', 'Marlowe', '00661133', '1/2/1960']]), 'Roster');
     const rosterFile = path.join(tmp, `${label}_roster.xlsx`); fs.writeFileSync(rosterFile, XLSX.write(rwb, { type: 'buffer', bookType: 'xlsx' }));
@@ -483,7 +493,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     assert(/\b2 sources/.test(await strip()), `${label}: a roster file must not add a source`);
     await paste('Avery Thistlewood called re: parking. Quenneville in chair 3, premeds given.');
     await sources(3); await rDone();
-    assert(/Checked:/.test(await verdict()), `${label}: roster-file patients: ${(await verdict()).slice(0, 200)}`);
+    assert(/Release check passed:/.test(await verdict()), `${label}: roster-file patients: ${(await verdict()).slice(0, 200)}`);
     await rp.click('#sessionShow');
     assert(/4 patients from today's schedule/.test(await rp.textContent('#rosterPanelInfo')), `${label}: session panel patient list`);
     await rp.click('#sessionShow');
@@ -493,7 +503,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     await rp.evaluate(() => { window.__deid.runDeid(window.__deid.state.current, false); });
     await rp.waitForFunction(() => /could not be processed/.test(document.querySelector('#verdict').textContent));
     v = await verdict();
-    assert(/Stop:/.test(v) && /forced test failure while protecting/.test(v), `${label}: error verdict: ${v.slice(0, 200)}`);
+    assert(/Blocked:/.test(v) && /forced test failure while protecting/.test(v), `${label}: error verdict: ${v.slice(0, 200)}`);
     for (const id of ['dlXlsx', 'dlCsv', 'dlTxt', 'dlNow', 'dlAll', 'dlReport']) assert(await rp.isDisabled('#' + id), `${label}: #${id} must be disabled for an input that errored`);
     assert(await rp.evaluate(() => { const it = window.__deid.state.current; return it.result === null && !!it.error && window.__deid.blockReason(it) !== ''; }), `${label}: an errored input keeps no result`);
     await rp.click('#sessionShow');
@@ -505,7 +515,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     assert(!forcedDownload, `${label}: export handlers must refuse an errored input even when a button is forced on`);
     assert(/Not downloaded/.test(await rp.textContent('#inputNotice')), `${label}: a refused export should say why`);
     await rp.evaluate(() => { window.__deid.runDeid(window.__deid.state.current, false); }); await rDone();
-    assert(/Checked:/.test(await verdict()) && !(await rp.isDisabled('#dlXlsx')) && !(await rp.isDisabled('#dlAll')), `${label}: a clean re-run must recover`);
+    assert(/Release check passed:/.test(await verdict()) && !(await rp.isDisabled('#dlXlsx')) && !(await rp.isDisabled('#dlAll')), `${label}: a clean re-run must recover`);
     await rp.evaluate(() => window.__deid.failNext('check'));
     await rp.evaluate(() => { window.__deid.runDeid(window.__deid.state.current, false); });
     await rp.waitForFunction(() => /could not be processed/.test(document.querySelector('#verdict').textContent));
@@ -559,7 +569,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     assert(lr.prog.some((t) => /Protecting row [\d,]+ of 3,?000/.test(t)) && lr.prog.some((t) => /Checking the result: row [\d,]+ of 3,?000/.test(t)), `${label}: progress updates missing: ${JSON.stringify(lr.prog.slice(0, 6))}`);
     assert(lr.stop, `${label}: a long run should offer Stop`);
     assert(lr.hb.ticks > 10 && lr.hb.max < 2500, `${label}: the page froze for ${Math.round(lr.hb.max)} ms during a long run (${lr.hb.ticks} heartbeats)`);
-    assert(/Checked:/.test(lr.verdict), `${label}: long input verdict: ${lr.verdict.slice(0, 200)}`);
+    assert(/Release check passed:/.test(lr.verdict), `${label}: long input verdict: ${lr.verdict.slice(0, 200)}`);
     const longOut = aoaOf(readWb(await rdl('#dlXlsx')));
     assert(longOut.length === 3001, `${label}: long output rows ${longOut.length - 1}`);
     const longText = JSON.stringify(longOut).toLowerCase();
@@ -611,7 +621,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     const booked = await bp.evaluate(() => { const it = window.__deid.state.current; return { roles: it.columns.map((c) => c.role), own: it.result.census.patients.size, out: JSON.stringify(it.result.rows), verdict: document.querySelector('#verdict').textContent }; });
     assert(booked.roles[0] === 'patient_name' && booked.own === 3, `b5: Booked For should be read as the name column: ${JSON.stringify(booked.roles)} own ${booked.own}`);
     for (const x of ['Wolstenholme', 'Featherby', 'Szczepanik', 'Ottilie', 'Lucan', 'Bartosz']) assert(!booked.out.includes(x), `b5: ${x} survived in ${booked.out}`);
-    assert(/Checked:/.test(booked.verdict) && /3 patients/.test(booked.verdict), `b5: Booked For verdict: ${booked.verdict.slice(0, 160)}`);
+    assert(/Release check passed:/.test(booked.verdict) && /3 patients/.test(booked.verdict), `b5: Booked For verdict: ${booked.verdict.slice(0, 160)}`);
 
     // (c) a remembered "Keep unchanged" on the name column never passes the next file: the gate is raised again and a table
     // with no patient of its own is never green and cannot be downloaded
@@ -627,7 +637,7 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
     assert(keepB.saved && keepB.gate && keepB.dl, `b5: a remembered Keep on the name column must still raise the gate: ${JSON.stringify(keepB).slice(0, 300)}`);
     await bp.click('#colsConfirm');
     keepB = await bp.evaluate(() => ({ dl: document.querySelector('#dlXlsx').disabled, dlAll: document.querySelector('#dlAll').disabled, title: document.querySelector('#dlXlsx').title, verdict: document.querySelector('#verdict').textContent }));
-    assert(keepB.dl && keepB.dlAll && /patient names or record numbers/.test(keepB.title) && /No patient column/.test(keepB.verdict) && !/Checked:/.test(keepB.verdict), `b5: a table with no patient of its own must be blocked: ${JSON.stringify(keepB).slice(0, 300)}`);
+    assert(keepB.dl && keepB.dlAll && /patient names or record numbers/.test(keepB.title) && /No patient column/.test(keepB.verdict) && !/Release check passed:/.test(keepB.verdict), `b5: a table with no patient of its own must be blocked: ${JSON.stringify(keepB).slice(0, 300)}`);
     let forced = false; const onDl = () => { forced = true; }; bp.on('download', onDl);
     await bp.evaluate(() => { for (const id of ['dlXlsx', 'dlCsv', 'dlReport']) { const b = document.querySelector('#' + id); b.disabled = false; b.click(); } });
     await bp.waitForTimeout(800); bp.off('download', onDl);

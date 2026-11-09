@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src blob: data:; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <title>Infusion De-ID</title>
 <style>
 :root{
@@ -117,7 +117,7 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
 <header>
   <h1>Infusion De-ID</h1>
   <span class="sub">Remove patient information from Epic exports, pasted text and screenshots before they leave the hospital.</span>
-  <span class="badge" title="This page makes no network requests. Everything runs inside this browser tab.">Works offline. Nothing leaves this computer.</span>
+  <span class="badge" title="Everything runs inside this browser tab. The page carries a Content-Security-Policy that blocks network requests in current Chrome, Edge and Firefox. It does not stop you from saving or sharing a file.">Runs locally · network blocked</span>
 </header>
 <nav>
   <button data-tab="deid" class="active">Protect</button>
@@ -235,7 +235,7 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
     </div>
     <h3 class="small" style="margin:14px 0 6px">Dates</h3>
     <div class="grid">
-      <label class="f">Dates<select id="optDates"><option value="shift">Shift every date by a secret per-patient number of days so intervals stay correct (default)</option><option value="remove">Remove every date (Safe Harbor)</option></select></label>
+      <label class="f">Dates<select id="optDates"><option value="shift">Research (pseudonymized): shift every date by a secret per-patient number of days so intervals stay correct. Not Safe Harbor. (default)</option><option value="remove">HIPAA Safe Harbor: remove every date; birthdates to year at most (none for 90+); restricted ZIP areas to 000</option></select></label>
       <label class="f">Date of birth<select id="optDob"><option value="drop">Remove and add an age column (default)</option><option value="year">Keep the year only</option><option value="shift">Shift like other dates</option></select></label>
       <label class="f">Ages<select id="optAges"><option value="90plus">Exact, but 90 and over shown as 90+ (default)</option><option value="bands5">5-year groups</option><option value="bands10">10-year groups</option></select></label>
     </div>

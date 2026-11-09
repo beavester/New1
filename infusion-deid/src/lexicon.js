@@ -215,7 +215,7 @@
     Cipro Levaquin Avelox Zithromax Biaxin Augmentin Keflex Bactrim Septra
     Macrobid Diflucan Vfend Noxafil Cresemba Mycamine Cancidas Eraxis Valtrex
     Zovirax Famvir Tamiflu Paxlovid Veklury Prednisone Medrol Solu-Medrol
-    Solu-Cortef Kenalog Depo-Medrol Celestone Florinef Dexamethasone
+    Solu-Cortef Kenalog Depo-Medrol Celestone Florinef Dexamethasone Dexa Decadron
     Port Port-a-Cath Portacath PICC Hickman Groshong Broviac Huber PowerPort
     Mediport Infusaport BardPort Smart Port Vortex Xcela Dignity Titanium
     Epic Hyperspace Beacon Cadence Prelude Haiku Canto

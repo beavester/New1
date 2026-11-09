@@ -1438,3 +1438,39 @@ test('strict pass: unknown proper nouns are removed; drugs, doses, acronyms, med
   const off = D.processTable({ headers: ['Comments'], rows: [['From: Cormac Ó Briain']] }, { strict: false }).rows[0][0];
   assert.ok(off.includes('Cormac'), 'strict: false keeps the old behaviour');
 });
+
+test('release scan: identifier-column values and unrecognised source words that survive are reported; ordinary words are not', () => {
+  const t = { headers: ['Patient', 'MRN', 'Contact', 'Notes'], rows: [['Vanterpool, Grace', '00123456', 'Thistlewood', 'Darzalex given; Lee Silverman voice referral. Hunter syndrome n/a.']] };
+  const cfg = { columns: [{ header: 'Patient', role: 'patient_name' }, { header: 'MRN', role: 'mrn' }, { header: 'Contact', role: 'keep' }, { header: 'Notes', role: 'text' }] };
+  const r = D.processTable(t, cfg);
+  const rs = D.releaseScan(t, r, {});
+  assert.deepEqual(rs.identifiers, []);
+  assert.deepEqual(rs.words.map((w) => w.text), ['Thistlewood'], 'a name in a kept column is a survivor; drugs and eponyms are not');
+  // an output that still holds the MRN (any separators) or the last name is caught, wherever it is
+  const bad = Object.assign({}, r, { rows: [r.rows[0].map((v, i) => (i === 3 ? 'call re 00-123-456; vanterpool ok' : v))] });
+  const ids = D.releaseScan(t, bad, {}).identifiers.map((h) => h.type).sort();
+  assert.deepEqual(ids, ['ID', 'NAME_PATIENT']);
+  assert.equal(D.findNeedles([['nothing here 1234']], rs.needles).length, 0);
+});
+
+test('Safe Harbor rules: restricted ZIP prefixes become 000; no birth year for ages 90+', () => {
+  const t = { headers: ['Patient', 'ZIP', 'DOB', 'Notes'], rows: [['Ames, Ola', '03601', '1/2/1925', 'lives Concord NH 03601'], ['Bly, Ian', '14221', '5/5/1960', 'x']] };
+  const r = D.processTable(t, { surrogate: { dob: 'year' } });
+  assert.equal(r.rows[0][1], '00000'); assert.equal(r.rows[1][1], '14200');
+  assert.equal(r.rows[0][2], '90+'); assert.equal(r.rows[1][2], '1960');
+  assert.ok(!/036/.test(r.rows[0][3]), r.rows[0][3]);
+  assert.ok(D.isRestrictedZip3('893') && !D.isRestrictedZip3('142'));
+});
+
+test('registry transaction: checkpoint() restores the registry exactly after a run', () => {
+  const R = D.createRegistry();
+  D.processTable({ headers: ['Patient', 'MRN'], rows: [['Ames, Ola', '1234567']] }, { registry: R });
+  const code = R.entities[0].code, names = [...R.entities[0].names];
+  const back = R.checkpoint();
+  D.processTable({ headers: ['Patient', 'MRN'], rows: [['Ames, Ola Jean', '1234567'], ['Bly, Ian', '7654321']] }, { registry: R });
+  assert.equal(R.size, 2);
+  back();
+  assert.equal(R.size, 1); assert.equal(R.entities[0].code, code); assert.deepEqual([...R.entities[0].names], names);
+  D.processTable({ headers: ['Patient', 'MRN'], rows: [['Bly, Ian', '7654321']] }, { registry: R });
+  assert.equal(R.entities[1].code, 'P002', 'codes continue from the restored state');
+});
