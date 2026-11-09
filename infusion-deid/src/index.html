@@ -76,6 +76,9 @@ mark.NAME{background:var(--t-name)}mark.DATE{background:var(--t-date)}mark.PHONE
 mark.MRN,mark.ACCOUNT,mark.ID{background:var(--t-id)}mark.ORG{background:var(--t-org)}mark.LOCATION{background:var(--t-loc)}mark.AGE{background:var(--t-age)}
 mark.manual{outline:2px solid var(--bad)}mark.removed{background:none;text-decoration:line-through;opacity:.6}
 mark.locked{cursor:not-allowed;border-bottom:2px solid var(--ok)}
+.resid{outline:2px solid var(--warn);outline-offset:1px;border-radius:2px;color:var(--ink);font-weight:600}
+.residact{white-space:nowrap;margin:0 4px}
+button.mini{font:inherit;font-size:11px;line-height:1.3;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;border-radius:10px;cursor:pointer;margin-left:3px}
 .cell{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;line-height:1.5}
 .legend span{display:inline-block;margin-right:10px;font-size:12px}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
 .warn{color:var(--warn)}.ok{color:var(--ok)}.bad{color:var(--bad)}
@@ -200,9 +203,9 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
       <span><i style="background:var(--t-name)"></i>Name</span><span><i style="background:var(--t-date)"></i>Date</span><span><i style="background:var(--t-phone)"></i>Phone or email</span>
       <span><i style="background:var(--t-id)"></i>Record number</span><span><i style="background:var(--t-org)"></i>Organization</span><span><i style="background:var(--t-loc)"></i>Place</span><span><i style="background:var(--t-age)"></i>Age 90+</span>
     </div>
-    <div class="small muted" style="margin:6px 0">Tap a highlight if it is NOT patient information. To add one, select the text and press "This is patient info". A patient's own name or record number (green underline) cannot be un-hidden.</div>
+    <div class="small muted" style="margin:6px 0">Tap a highlight if it is NOT patient information. To add one, select the text and press "This is patient info". A patient's own name or record number (green underline) cannot be un-hidden. A word outlined in the "After" column is one the tool left in and could not explain (not an ordinary or medical word): press "Hide: it is a name" to replace it everywhere in this input, or "It is fine" to leave it.</div>
     <div class="toolbar">
-      <select id="reviewFilter"><option value="model">Lines that need a look</option><option value="all">All lines</option><option value="certain">Lines with certain replacements only</option><option value="none">Lines with nothing found</option><option value="manual">Lines I changed</option></select>
+      <select id="reviewFilter"><option value="model">Lines that need a look</option><option value="residue">Lines with an unexplained word</option><option value="all">All lines</option><option value="certain">Lines with certain replacements only</option><option value="none">Lines with nothing found</option><option value="manual">Lines I changed</option></select>
       <input type="search" id="reviewSearch" placeholder="Search the original text…">
       <select id="markType"><option value="NAME_OTHER">Name</option><option value="ORG">Organization</option><option value="LOCATION">Place</option><option value="DATE">Date</option><option value="PHONE">Phone</option><option value="ID_OTHER">Other ID</option></select>
       <button class="btn" id="markSel">This is patient info</button>
@@ -303,7 +306,7 @@ footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
   <div class="card">
     <h2>What it catches and what it may miss</h2>
     <p class="small">It catches every patient name, MRN, date of birth, account number and phone number that appears in the report's own columns, wherever they also appear in notes, in any spelling the computer can predict. It catches dates, phone numbers, emails, addresses, ages over 89, and names, places and organizations that have a clue around them (Dr., son, called, Hospital, "City, ST"). Before any download it checks its own output against the real identifiers in the file.</p>
-    <p class="small">It may miss: an unusual surname with no clue around it ("Vanterpool called about labs"); a hospital or clinic name you have not added to <b>Always remove</b>; text a screenshot reader got wrong (flagged as "Unclear in screenshot"); and small cells, where a patient on a regimen nobody else gets is identifiable regardless. Look at the flagged lines before you download.</p>
+    <p class="small">It may miss: an unusual surname with no clue around it ("Vanterpool called about labs"); a hospital or clinic name you have not added to <b>Always remove</b>; text a screenshot reader got wrong (flagged as "Unclear in screenshot"); and small cells, where a patient on a regimen nobody else gets is identifiable regardless. Look at the flagged lines before you download. A word it left in the text and cannot explain (not an ordinary or medical word, not a common abbreviation, not something it replaced) is listed as an unexplained word: the result then says "Review required" and downloads stay off until you have hidden each one or said it is fine, or pressed "I have reviewed this". A name that is also an ordinary word (Will, Rose, June) is not caught this way.</p>
   </div>
   <div class="card">
     <h2>What this tool stores</h2>

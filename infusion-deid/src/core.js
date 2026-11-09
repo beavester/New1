@@ -5310,7 +5310,148 @@
     mapping.providers = registry.toProviderRows();
     mapping.others = registry.toOtherRows();
     mapping.meta = { seed: cfg.seed, processedAt: new Date().toISOString(), documentOffsetDays: sur.docOffset, mrnPattern: cfg.inferredMrnPattern || cfg.mrnPattern || '', columns: columns.map((c, i) => (outHeaders[i] !== c.header ? { header: c.header, role: c.role, output: outHeaders[i] } : { header: c.header, role: c.role })) };
-    return { headers: outHeaders, rows: outRows, columns, census, details, stats, mapping, cfg, registry, errors, surrogateCollisions: sur.collisions };
+    // what detection did not understand, per cell (details[i].cells[j].residue) and counted (result.residue): see residueTokens
+    let residue; try { residue = residueTokens({ headers: outHeaders, census, details, cfg }); } catch (e) { fail(-1, -1, e); residue = { tokens: 0, rows: 0, words: [] }; }
+    return { headers: outHeaders, rows: outRows, columns, census, details, stats, mapping, cfg, registry, errors, surrogateCollisions: sur.collisions, residue };
+  }
+
+  // ---------------------------------------------------------------------
+  // 6b. Residue: what detection did not understand. Fail closed on it.
+  // After replacement, every free-text cell is read once more for words that nothing explains: a capitalised or ALL-CAPS
+  // word, or a lower-case word of 4+ letters, in the text the tool passed through unchanged, that is not an ordinary or
+  // medical word (dictionary, clinical, drug, unit, credential, organisation and label lists; code shapes), not a made-up
+  // value (those sit inside the replaced spans and are never read here), not something the reviewer un-hid by hand, and not
+  // this file's own vocabulary (a short ALL-CAPS abbreviation used in the notes of several different patients). It changes
+  // nothing in the output. Each such word is recorded on its cell (details[i].cells[j].residue: text, position in the
+  // source and in the output, why) and counted in result.residue, so the page can make the line one that needs a look and
+  // cannot vouch for the result until a person has looked.
+  //   why: 'hidden-elsewhere'  the same word (or one letter off) was replaced as a name or place somewhere in this input
+  //        'listed-name'       a word from the name lists that was not replaced here
+  //        'unknown-caps'      an ALL-CAPS word that is in no list and is not shared vocabulary of this input
+  //        'unknown-cap'       a capitalised word that is in no list
+  //        'unknown-lower'     a lower-case word of 4+ letters that is in no list
+  // opts.manual: the review edits of the whole input (the page passes them when it re-reads a result made in parts).
+  // ---------------------------------------------------------------------
+  const RESIDUE_SHARED = 2; // an unknown word in the notes of this many different patients is the clinic's vocabulary
+  // generic drug names by their ending (international nonproprietary name stems) that the detectors' own stem list does not
+  // carry, and standard ward shorthand that is pronounceable (so the shape test below cannot clear it)
+  const RESIDUE_INN = /(?:tadine|ramine|faxine|oxetine|triptyline|azine|idone|setron|pitant|dipine|afil|gliptin|gliflozin|glutide|parin|xaban|gatran|caine|curium|relbine|tabine|rabine|tansine|vedotin|tecan|poside|mustine|bazine|trexate|trexed|amide|olone|asone|isone|terol|tropium|lukast|profen|coxib|triptan|penem|bactam|ciclovir|cyclovir|fungin|pime|axone|zolin|usate|maltose|dextran|gluconate|sucrose|citrate|sulfate|phosphate|chloride|acetate|tartrate|succinate|mesylate|maleate|fumarate|stim)$/i;
+  const RESIDUE_ABBR = new Set(('covid apap emla fmla sbar cauti clabsi stemi nstemi cpap nicu micu sicu perrla rchop hidac codox ivac mopp hcpoa aarp ivpb adls ltac ltach aaox').split(' '));
+  function residueTokens(result, opts) {
+    const o = opts || {};
+    const out = { tokens: 0, rows: 0, words: [] };
+    if (!result || !Array.isArray(result.details)) return out;
+    const cfg = result.cfg || {};
+    const allow = cfg.allowSet instanceof Set ? cfg.allowSet : new Set();
+    const manual = o.manual || cfg.manual || null;
+    const key = (w) => LEX.fold(w).replace(/[^\p{L}]/gu, '');
+    // header and label words of this input: a word the file uses as a column heading is a label, not a person
+    const labels = new Set();
+    (Array.isArray(result.headers) ? result.headers : []).forEach((h) => (cellToString(h).match(/\p{L}[\p{L}\p{M}]+/gu) || []).forEach((w) => labels.add(w.toLowerCase())));
+    // the word alone: is it in any list the detectors use?
+    const knownCache = new Map();
+    const listed = (w) => {
+      const lw = w.toLowerCase();
+      if (LEX.isEnglishWord(w) || LEX.isDictWord(w) || LEX.isClinical(w)) return true;
+      if (DRUG_STEM.test(lw) || MED_MORPH.test(lw)) return true;
+      if (STRICT_SKIP.test(w) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || HEADER_WORD.has(lw) || labels.has(lw) || monthIndex(w) || relWord(w)) return true;
+      if (LEX.CREDENTIAL_SET.has(lw) || LEX.HONORIFIC_SET.has(lw) || LEX.STATE_ABBR_SET.has(w) || LEX.STATE_NAME_SET.has(lw)) return true;
+      if (LEX.ORG_SUFFIX_SET.has(lw) || LEX.ORG_NAMEWORD_SET.has(lw) || LEX.ORG_PREFIX_SET.has(lw) || LEX.GEO_SUFFIX_SET.has(lw)) return true;
+      if ((LEX.GREETING_SET && LEX.GREETING_SET.has(lw)) || (LEX.LANGUAGE_SET && LEX.LANGUAGE_SET.has(lw)) || allow.has(lw)) return true;
+      return false;
+    };
+    const known = (w) => {
+      let v = knownCache.get(w); if (v !== undefined) return v;
+      v = listed(w);
+      if (!v) { const parts = w.split(/[-'’]/).filter(Boolean); v = parts.length > 1 && parts.every((x) => x.length < 3 || listed(x)); }
+      // a Roman numeral or a stage (III, IIIB, IVA)
+      if (!v) v = /^(?=[IVX])(?:X{0,3})(?:IX|IV|V?I{0,3})[A-C]?$/.test(w);
+      const lw = w.toLowerCase();
+      if (!v) v = RESIDUE_ABBR.has(lw);
+      // the rules below are this scan's own, wider than the detectors': never for a word from the name lists
+      if (!v && (LEX.isFirstName(w) || LEX.isSurname(w))) { knownCache.set(w, false); return false; }
+      if (!v) v = RESIDUE_INN.test(lw);
+      // the plural of a known word or abbreviation (appts, PFTs, NSAIDs)
+      if (!v && /[^s]s$/i.test(w) && w.length >= 4) v = known(w.slice(0, -1));
+      // an ordinary prefix on a known word (redose, deaccessed, self-inj), or two ordinary words run together (chairside, rideshare)
+      if (!v) { const pm = lw.match(/^(?:re|de|un|pre|post|non|co|sub|self|over|under|mis|anti|multi|semi|inter|intra|extra|hyper|hypo|peri)-?(.{4,})$/); v = !!pm && listed(pm[1]); }
+      if (!v && /^\p{Ll}+$/u.test(w) && w.length >= 7) for (let i = 3; i <= w.length - 3 && !v; i++) v = LEX.isEnglishWord(w.slice(0, i)) && LEX.isEnglishWord(w.slice(i)) && !LEX.isFirstName(w.slice(0, i)) && !LEX.isFirstName(w.slice(i));
+      knownCache.set(w, v); return v;
+    };
+    // a dose or a cycle day right after it: a drug or a product ("Rystiggo 420 mg", "Lemtrada D3", "Vyepti q12wk"). Narrower on
+    // purpose than the detectors' own context rules (a word before "weekly", "infusion" or after "on", "given" is not cleared
+    // here): this scan is the net under them.
+    const drugContext = (text, t) => {
+      const after = text.slice(t.fullEnd, t.fullEnd + 24);
+      return /^\s*\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|gm|units?|iu|ml|mL|meq|mmol|%)(?![A-Za-z])/.test(after) || /^\s*(?:C\d+(?:D\d+)?|D\d+|wk\s*\d|week\s*\d|q\d+\s*(?:w|wk|wks|weeks?|d|h|mo)\b)/i.test(after);
+    };
+    // every name, place and organisation word this run replaced, and every census patient's name words
+    const hidden = new Set(), hiddenByLen = new Map();
+    const addHidden = (s) => (String(s || '').match(/\p{L}[\p{L}\p{M}]{2,}/gu) || []).forEach((w) => { const k = key(w); if (k.length < 3 || hidden.has(k)) return; hidden.add(k); if (!hiddenByLen.has(k.length)) hiddenByLen.set(k.length, []); hiddenByLen.get(k.length).push(k); });
+    result.details.forEach((d) => ((d && d.cells) || []).forEach((c) => (c.replacements || []).forEach((r) => { if (/^(?:NAME|ORG|LOCATION)$/.test(COARSE(r.type))) addHidden(r.original); })));
+    try { const c = result.census; if (c && c.patients && typeof c.patients.forEach === 'function') c.patients.forEach((p) => { if (!p) return; if (p.names && typeof p.names.forEach === 'function') p.names.forEach(addHidden); if (p.entity && p.entity.nicks && typeof p.entity.nicks.forEach === 'function') p.entity.nicks.forEach(addHidden); }); } catch (e) { /* the census of a merged result may be partial: the replaced words are enough */ }
+    const likeHidden = (k) => {
+      if (hidden.has(k)) return true;
+      if (k.length < 5) return false;
+      for (let n = k.length - 1; n <= k.length + 1; n++) for (const h of hiddenByLen.get(n) || []) if (h[0] === k[0] && osaDistance(h, k) <= 1) return true;
+      return false;
+    };
+    // pass 1: the candidates (words no list explains), with the patient whose row they are in
+    const cands = [], groups = new Map();
+    result.details.forEach((d) => ((d && d.cells) || []).forEach((c) => {
+      c.residue = [];
+      const text = typeof c.original === 'string' ? c.original : ''; if (!text) return;
+      const reps = (c.replacements || []).slice().sort((a, b) => a.start - b.start);
+      const man = manual && manual[`${d.row}:${c.col}`];
+      const unhid = man && Array.isArray(man.remove) ? man.remove : [];
+      const toks = tokenize(text);
+      let ri = 0, delta = 0;
+      for (let i = 0; i < toks.length; i++) {
+        const t = toks[i];
+        while (ri < reps.length && reps[ri].end <= t.start) { delta += String(reps[ri].replacement == null ? '' : reps[ri].replacement).length - (reps[ri].end - reps[ri].start); ri++; }
+        if (!t.word || !/^\p{L}[\p{L}\p{M}'’\-]*$/u.test(t.core)) continue;
+        if (ri < reps.length && reps[ri].start < t.end) continue; // inside a replaced span: not in the output
+        const k = key(t.core); const len = k.length;
+        const upper = /\p{Lu}/u.test(t.core), lower = /\p{Ll}/u.test(t.core);
+        const shape = upper && !lower ? 'caps' : upper ? 'cap' : 'lower';
+        if (len < (shape === 'lower' ? 4 : 3)) continue;
+        if (known(t.core)) continue;
+        if (unhid.some((r) => r[0] < t.end && t.start < r[1])) continue; // the reviewer un-hid this by hand
+        // a shape no name has: letters glued to digits (CD20, HER2, PD-L1, 5FU, B12), no vowel at all (VSS, WNL, CXR, tmrw),
+        // or capitals inside a short word (CrCl, QTc, mEq)
+        const code = (len <= 5 && (/[0-9]$/.test(text.slice(Math.max(0, t.start - 1), t.start)) || /^(?:[0-9]|[-\/][0-9])/.test(text.slice(t.end, t.end + 2))))
+          || !/[aeiouy]/.test(k)
+          || (shape === 'cap' && len <= 5 && (/^\p{Ll}/u.test(t.core) || (t.core.match(/\p{Lu}/gu) || []).length >= 2));
+        const g = d.patientCode || '';
+        if (!groups.has(k)) groups.set(k, new Set()); groups.get(k).add(g);
+        cands.push({ d, c, t, k, len, shape, text, delta, code });
+      }
+    }));
+    // pass 2: the reason, or none
+    const words = new Map(); const rowSet = new Set();
+    for (const x of cands) {
+      const { d, c, t, k, len, shape, text } = x;
+      // a three-letter ALL-CAPS word is an abbreviation unless it is a well-known name (KIM, LEE are; IRR, PIV, ILD are not)
+      const tla = shape === 'caps' && len <= 3;
+      const name = tla ? LEX.isStrongName(t.core) || LEX.isCuratedName(t.core) : LEX.isFirstName(t.core) || LEX.isSurname(t.core);
+      const eponym = (() => { const nx = (text.slice(t.fullEnd).match(/^\s+([A-Za-z]+)/) || [])[1]; return !!nx && LEX.EPONYM_FOLLOW.has(nx.toLowerCase()); })();
+      // this input's own vocabulary: a short ALL-CAPS abbreviation in the notes of several different patients (a nickname in
+      // capitals stays with one patient; a longer word, or one in lower case, could be a staff name and is not cleared this way)
+      const shared = shape === 'caps' && len <= 5 && groups.get(k).size >= RESIDUE_SHARED && !groups.get(k).has('');
+      let why = '';
+      if (likeHidden(k)) why = 'hidden-elsewhere';
+      else if (x.code || eponym) why = ''; // a code shape; or the eponym rule kept it on purpose (Lee Silverman voice treatment)
+      else if (name) why = 'listed-name';
+      else if (tla || shared || drugContext(text, t)) why = '';
+      else why = shape === 'caps' ? 'unknown-caps' : shape === 'cap' ? 'unknown-cap' : 'unknown-lower';
+      if (!why) continue;
+      c.residue.push({ start: t.start, end: t.end, outStart: t.start + x.delta, outEnd: t.end + x.delta, text: t.core, why });
+      out.tokens++; rowSet.add(d.row);
+      const wk = t.core.toLowerCase(); const w = words.get(wk);
+      if (w) { w.count++; if (w.rows[w.rows.length - 1] !== d.row) w.rows.push(d.row); } else words.set(wk, { text: t.core, why, count: 1, rows: [d.row] });
+    }
+    out.rows = rowSet.size; out.words = [...words.values()];
+    return out;
   }
 
   // Re-identify: reverse the mapping on a de-identified table.
@@ -5713,6 +5854,6 @@
     parseDateString, renderDate, shiftDate, dateRenderings, bandAge,
     Surrogator, applySpans, defaultConfig, compileConfig, processTable, reidentify, selfCheck,
     createRegistry, normalizeId, mrnKeyOf, dobKeyOf, levenshtein, parseTextDocument, normalizeOcrText,
-    cellToString, mulberry32, hashString, tokenize, normalizeText, safeCell, releaseScan, findNeedles, isRestrictedZip3,
+    cellToString, mulberry32, hashString, tokenize, normalizeText, safeCell, releaseScan, findNeedles, isRestrictedZip3, residueTokens,
   };
 });
