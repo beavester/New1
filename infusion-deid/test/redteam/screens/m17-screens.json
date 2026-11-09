@@ -1,0 +1,365 @@
+[
+  {
+    "id": "m17-scr-01",
+    "category": "routine",
+    "note": "Department appointment desk schedule, one day, four patients with MRN and DOB.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#1f4e79;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Appointment Desk - ONC INFUSION CTR - Tue 11/17/2026</div><table style=\"width:100%\"><tr><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Time</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Pt Name</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">MRN</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">DOB</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Visit Type</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Prov</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Chair</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Status</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">08:00</td><td style=\"border-bottom:1px solid #e1e5ea\">Whitcombe, Harriet</td><td style=\"border-bottom:1px solid #e1e5ea\">40817263</td><td style=\"border-bottom:1px solid #e1e5ea\">03/14/1951</td><td style=\"border-bottom:1px solid #e1e5ea\">CHEMO 4HR</td><td style=\"border-bottom:1px solid #e1e5ea\">Lindqvist, M</td><td style=\"border-bottom:1px solid #e1e5ea\">C04</td><td style=\"border-bottom:1px solid #e1e5ea\">Arrived</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">08:30</td><td style=\"border-bottom:1px solid #e1e5ea\">Nguyen, Thi Hoa</td><td style=\"border-bottom:1px solid #e1e5ea\">40922518</td><td style=\"border-bottom:1px solid #e1e5ea\">09/02/1967</td><td style=\"border-bottom:1px solid #e1e5ea\">INFUSION 2HR</td><td style=\"border-bottom:1px solid #e1e5ea\">Lindqvist, M</td><td style=\"border-bottom:1px solid #e1e5ea\">C07</td><td style=\"border-bottom:1px solid #e1e5ea\">Arrived</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">09:15</td><td style=\"border-bottom:1px solid #e1e5ea\">Okonkwo, Chidinma</td><td style=\"border-bottom:1px solid #e1e5ea\">41003377</td><td style=\"border-bottom:1px solid #e1e5ea\">12/21/1979</td><td style=\"border-bottom:1px solid #e1e5ea\">INJ ONLY</td><td style=\"border-bottom:1px solid #e1e5ea\">Farouk, S</td><td style=\"border-bottom:1px solid #e1e5ea\">INJ</td><td style=\"border-bottom:1px solid #e1e5ea\">Scheduled</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">10:00</td><td style=\"border-bottom:1px solid #e1e5ea\">Kowalczyk, Zbigniew</td><td style=\"border-bottom:1px solid #e1e5ea\">39877410</td><td style=\"border-bottom:1px solid #e1e5ea\">06/30/1944</td><td style=\"border-bottom:1px solid #e1e5ea\">CHEMO 6HR</td><td style=\"border-bottom:1px solid #e1e5ea\">Farouk, S</td><td style=\"border-bottom:1px solid #e1e5ea\">C11</td><td style=\"border-bottom:1px solid #e1e5ea\">Scheduled</td></tr></table><div style=\"padding:6px 10px;color:#555\">4 appointments | Dept: ONC INFUSION CTR</div></body></html>"
+    ],
+    "phi": [
+      "11/17/2026",
+      "Whitcombe, Harriet",
+      "40817263",
+      "03/14/1951",
+      "Nguyen, Thi Hoa",
+      "40922518",
+      "09/02/1967",
+      "Okonkwo, Chidinma",
+      "41003377",
+      "12/21/1979",
+      "Kowalczyk, Zbigniew",
+      "39877410",
+      "06/30/1944"
+    ],
+    "keep": [
+      "CHEMO 4HR",
+      "INFUSION 2HR",
+      "INJ ONLY"
+    ],
+    "viewport": {
+      "width": 1000,
+      "height": 300
+    }
+  },
+  {
+    "id": "m17-scr-02",
+    "category": "routine",
+    "note": "MAR activity with storyboard-style patient header; administration rows with timestamps on the visit date.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#e8eef5;padding:8px 10px;border-bottom:2px solid #1f4e79;display:flex;gap:22px;flex-wrap:wrap\"><span style=\"font-size:16px;font-weight:bold\">Esposito, Carmela</span><span><b>MRN:</b> 50316642</span><span><b>DOB:</b> 07/19/1958</span><span><b>Age:</b> 68 y.o.</span><span><b>Sex:</b> F</span><span><b>Allergies:</b> Sulfa Antibiotics</span><span><b>Wt:</b> 71.2 kg</span></div><div style=\"background:#2d6a4f;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">MAR - 11/18/2026</div><table style=\"width:100%\"><tr><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Medication</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Dose</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Route</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Given</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Action</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">diphenhydrAMINE (BENADRYL) injection</td><td style=\"border-bottom:1px solid #e1e5ea\">25 mg</td><td style=\"border-bottom:1px solid #e1e5ea\">IV push</td><td style=\"border-bottom:1px solid #e1e5ea\">11/18/2026 09:12</td><td style=\"border-bottom:1px solid #e1e5ea\">Given</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">acetaminophen (TYLENOL) tablet</td><td style=\"border-bottom:1px solid #e1e5ea\">650 mg</td><td style=\"border-bottom:1px solid #e1e5ea\">Oral</td><td style=\"border-bottom:1px solid #e1e5ea\">11/18/2026 09:12</td><td style=\"border-bottom:1px solid #e1e5ea\">Given</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">riTUXimab-abbs (TRUXIMA) in NS 500 mL</td><td style=\"border-bottom:1px solid #e1e5ea\">375 mg/m2 (670 mg)</td><td style=\"border-bottom:1px solid #e1e5ea\">IV</td><td style=\"border-bottom:1px solid #e1e5ea\">11/18/2026 09:45</td><td style=\"border-bottom:1px solid #e1e5ea\">New Bag - 50 mg/hr</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">riTUXimab-abbs (TRUXIMA) in NS 500 mL</td><td style=\"border-bottom:1px solid #e1e5ea\">375 mg/m2 (670 mg)</td><td style=\"border-bottom:1px solid #e1e5ea\">IV</td><td style=\"border-bottom:1px solid #e1e5ea\">11/18/2026 10:15</td><td style=\"border-bottom:1px solid #e1e5ea\">Rate Change - 100 mg/hr</td></tr></table><div style=\"padding:8px 10px\">Comment: Tolerated rate escalation, no chills or rigors. VS stable.</div></body></html>"
+    ],
+    "phi": [
+      "Esposito, Carmela",
+      "50316642",
+      "07/19/1958",
+      "11/18/2026",
+      "11/18/2026 09:12",
+      "11/18/2026 09:45",
+      "11/18/2026 10:15"
+    ],
+    "keep": [
+      "375 mg/m2 (670 mg)",
+      "Rate Change - 100 mg/hr",
+      "no chills or rigors"
+    ],
+    "viewport": {
+      "width": 1000,
+      "height": 340
+    }
+  },
+  {
+    "id": "m17-scr-03",
+    "category": "routine",
+    "note": "MyChart patient message thread; patient mentions daughter who drives her and a callback number.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#5b3f8c;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Patient Medical Advice Request</div><div style=\"padding:8px 10px;background:#efeaf6\"><b>From:</b> Ramaswamy, Lakshmi (MRN 61200934) &nbsp; <b>Received:</b> 11/12/2026 7:41 PM</div><div style=\"padding:10px;line-height:1.5;background:#fff;border:1px solid #d6cfe3;margin:8px\">Hello, I have my next pembrolizumab on Monday. My daughter Priya Ramaswamy will bring me and stay in the lobby. Since last cycle I have a rash on both forearms, itchy but no blisters. Should I still come? Please call me at 555-0142 after 3pm.<br>Thank you, Lakshmi</div><div style=\"padding:10px;line-height:1.5;background:#fff;border:1px solid #d6cfe3;margin:8px\"><b>Reply - Oncology RN, 11/13/2026 8:05 AM:</b> Please keep your appointment. We will have the provider assess the rash (grade 1 likely) before treatment. Apply the hydrocortisone cream as needed.</div></body></html>"
+    ],
+    "phi": [
+      "Ramaswamy, Lakshmi",
+      "61200934",
+      "11/12/2026",
+      "Priya Ramaswamy",
+      "555-0142",
+      "Lakshmi",
+      "11/13/2026"
+    ],
+    "keep": [
+      "rash on both forearms",
+      "grade 1 likely",
+      "hydrocortisone cream"
+    ],
+    "viewport": {
+      "width": 900,
+      "height": 360
+    }
+  },
+  {
+    "id": "m17-scr-04",
+    "category": "routine",
+    "note": "Front desk check-in board with payer, member ID and phone columns.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#7a4b00;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Check-In - Infusion Front Desk</div><table style=\"width:100%\"><tr><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Appt</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Patient</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">MRN</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Payer</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Member ID</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Copay</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Home Ph</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Elig</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">07:45</td><td style=\"border-bottom:1px solid #e1e5ea\">Delgado, Ernesto</td><td style=\"border-bottom:1px solid #e1e5ea\">33019852</td><td style=\"border-bottom:1px solid #e1e5ea\">BCBS PPO</td><td style=\"border-bottom:1px solid #e1e5ea\">XQB884120397</td><td style=\"border-bottom:1px solid #e1e5ea\">$40.00</td><td style=\"border-bottom:1px solid #e1e5ea\">555-0117</td><td style=\"border-bottom:1px solid #e1e5ea\">Verified</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">08:15</td><td style=\"border-bottom:1px solid #e1e5ea\">Abdirahman, Hodan</td><td style=\"border-bottom:1px solid #e1e5ea\">33572201</td><td style=\"border-bottom:1px solid #e1e5ea\">Medicaid</td><td style=\"border-bottom:1px solid #e1e5ea\">MC20419987</td><td style=\"border-bottom:1px solid #e1e5ea\">$0.00</td><td style=\"border-bottom:1px solid #e1e5ea\">555-0163</td><td style=\"border-bottom:1px solid #e1e5ea\">Verified</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">08:45</td><td style=\"border-bottom:1px solid #e1e5ea\">Tremblay, Gaetan</td><td style=\"border-bottom:1px solid #e1e5ea\">32904416</td><td style=\"border-bottom:1px solid #e1e5ea\">Medicare A/B</td><td style=\"border-bottom:1px solid #e1e5ea\">4TR8-KQ1-MN72</td><td style=\"border-bottom:1px solid #e1e5ea\">$0.00</td><td style=\"border-bottom:1px solid #e1e5ea\">555-0188</td><td style=\"border-bottom:1px solid #e1e5ea\">Needs Auth</td></tr></table><div style=\"padding:6px 10px;color:#7a4b00\">Date: 11/19/2026 &nbsp; Prior auth pending for IVIG 2 g/kg - Tremblay.</div></body></html>"
+    ],
+    "phi": [
+      "Delgado, Ernesto",
+      "33019852",
+      "XQB884120397",
+      "555-0117",
+      "Abdirahman, Hodan",
+      "33572201",
+      "MC20419987",
+      "555-0163",
+      "Tremblay, Gaetan",
+      "32904416",
+      "4TR8-KQ1-MN72",
+      "555-0188",
+      "11/19/2026",
+      "Tremblay"
+    ],
+    "keep": [
+      "Needs Auth",
+      "IVIG 2 g/kg",
+      "Medicare A/B"
+    ],
+    "viewport": {
+      "width": 1000,
+      "height": 260
+    }
+  },
+  {
+    "id": "m17-scr-05",
+    "category": "routine",
+    "note": "Therapy plan order summary with outside referring provider and fax.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#e8eef5;padding:8px 10px;border-bottom:2px solid #1f4e79;display:flex;gap:22px;flex-wrap:wrap\"><span style=\"font-size:16px;font-weight:bold\">Haddad, Rami</span><span><b>MRN:</b> 72054418</span><span><b>DOB:</b> 01/08/1962</span><span><b>Acct #:</b> 9100457723</span><span><b>PCP:</b> Dr. Josephine Mbeki (outside)</span></div><div style=\"background:#1f4e79;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Treatment Plan: ONC FOLFOX q14d - Cycle 3 Day 1</div><table style=\"width:100%\"><tr><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Order</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Dose</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Details</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">oxaliplatin (ELOXATIN) in D5W</td><td style=\"border-bottom:1px solid #e1e5ea\">85 mg/m2</td><td style=\"border-bottom:1px solid #e1e5ea\">IV over 2 hr</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">leucovorin calcium in D5W</td><td style=\"border-bottom:1px solid #e1e5ea\">400 mg/m2</td><td style=\"border-bottom:1px solid #e1e5ea\">IV over 2 hr, concurrent</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">fluorouracil (ADRUCIL) bolus</td><td style=\"border-bottom:1px solid #e1e5ea\">400 mg/m2</td><td style=\"border-bottom:1px solid #e1e5ea\">IV push</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">fluorouracil (ADRUCIL) CADD pump</td><td style=\"border-bottom:1px solid #e1e5ea\">2400 mg/m2</td><td style=\"border-bottom:1px solid #e1e5ea\">Continuous over 46 hr</td></tr></table><div style=\"padding:8px 10px\">Plan start: 10/22/2026 &nbsp;|&nbsp; Referred by Dr. Josephine Mbeki, Lakeshore GI Associates, fax 555-0179. Hold if ANC &lt; 1500 or plt &lt; 75K.</div></body></html>"
+    ],
+    "phi": [
+      "Haddad, Rami",
+      "72054418",
+      "01/08/1962",
+      "9100457723",
+      "Dr. Josephine Mbeki",
+      "10/22/2026",
+      "555-0179"
+    ],
+    "keep": [
+      "85 mg/m2",
+      "Continuous over 46 hr",
+      "Cycle 3 Day 1"
+    ],
+    "viewport": {
+      "width": 1000,
+      "height": 380
+    }
+  },
+  {
+    "id": "m17-scr-06",
+    "category": "routine",
+    "expectPatients": 3,
+    "note": "Two screenshots of same three patients: provider schedule and nursing worklist.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#1f4e79;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Prov Schedule - Bellucci, A (NP) - 11/20/2026</div><table style=\"width:100%\"><tr><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Time</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Pat Name</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">MRN</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Age/Sex</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Visit</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Notes</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">09:00</td><td style=\"border-bottom:1px solid #e1e5ea\">Park, Seo-yeon</td><td style=\"border-bottom:1px solid #e1e5ea\">58801126</td><td style=\"border-bottom:1px solid #e1e5ea\">54 y.o. F</td><td style=\"border-bottom:1px solid #e1e5ea\">MD VISIT + TX</td><td style=\"border-bottom:1px solid #e1e5ea\">C2D1 trastuzumab/pertuzumab</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">09:30</td><td style=\"border-bottom:1px solid #e1e5ea\">Adeyemi, Folasade</td><td style=\"border-bottom:1px solid #e1e5ea\">58934470</td><td style=\"border-bottom:1px solid #e1e5ea\">47 y.o. F</td><td style=\"border-bottom:1px solid #e1e5ea\">TX ONLY</td><td style=\"border-bottom:1px solid #e1e5ea\">Iron sucrose 200 mg #3 of 5</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">10:30</td><td style=\"border-bottom:1px solid #e1e5ea\">Villanueva, Rogelio</td><td style=\"border-bottom:1px solid #e1e5ea\">57712098</td><td style=\"border-bottom:1px solid #e1e5ea\">71 y.o. M</td><td style=\"border-bottom:1px solid #e1e5ea\">MD VISIT + TX</td><td style=\"border-bottom:1px solid #e1e5ea\">Zoledronic acid q12wk, check Cr</td></tr></table></body></html>",
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#2d6a4f;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Infusion Worklist - 11/20/2026</div><table style=\"width:100%\"><tr><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Chair</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Patient</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">MRN</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Task</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Due</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">B3</td><td style=\"border-bottom:1px solid #e1e5ea\">Park, Seo-yeon</td><td style=\"border-bottom:1px solid #e1e5ea\">58801126</td><td style=\"border-bottom:1px solid #e1e5ea\">Echo within 3 mo - verify LVEF</td><td style=\"border-bottom:1px solid #e1e5ea\">09:15</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">B5</td><td style=\"border-bottom:1px solid #e1e5ea\">Adeyemi, Folasade</td><td style=\"border-bottom:1px solid #e1e5ea\">58934470</td><td style=\"border-bottom:1px solid #e1e5ea\">Observe 30 min post iron</td><td style=\"border-bottom:1px solid #e1e5ea\">10:45</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">B8</td><td style=\"border-bottom:1px solid #e1e5ea\">Villanueva, Rogelio</td><td style=\"border-bottom:1px solid #e1e5ea\">57712098</td><td style=\"border-bottom:1px solid #e1e5ea\">BMP resulted - Cr 1.1</td><td style=\"border-bottom:1px solid #e1e5ea\">10:30</td></tr></table></body></html>"
+    ],
+    "phi": [
+      "11/20/2026",
+      "Park, Seo-yeon",
+      "58801126",
+      "Adeyemi, Folasade",
+      "58934470",
+      "Villanueva, Rogelio",
+      "57712098"
+    ],
+    "keep": [
+      "Iron sucrose 200 mg #3 of 5",
+      "Observe 30 min post iron",
+      "verify LVEF"
+    ],
+    "viewport": {
+      "width": 950,
+      "height": 240
+    }
+  },
+  {
+    "id": "m17-scr-07",
+    "category": "routine",
+    "note": "Snapboard chair tiles with patient name, MRN, age, regimen and nurse note.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#1f4e79;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Snapboard - Infusion Pod B</div><div style=\"padding:4px\"><div style=\"width:210px;border:1px solid #888;border-left:6px solid #2e86de;background:#fff;padding:6px;margin:6px;display:inline-block;vertical-align:top;line-height:1.4\"><b>Chair 1</b><br><b>Jean-Baptiste, Fritzner</b><br>MRN 66120385 | 63 y<br>Bortezomib SQ 1.3 mg/m2<br>In chair 08:10</div><div style=\"width:210px;border:1px solid #888;border-left:6px solid #e67e22;background:#fff;padding:6px;margin:6px;display:inline-block;vertical-align:top;line-height:1.4\"><b>Chair 2</b><br><b>Dimaculangan, Teresita</b><br>MRN 66209741 | 58 y<br>Paclitaxel weekly 80 mg/m2<br>Premeds given</div><div style=\"width:210px;border:1px solid #888;border-left:6px solid #27ae60;background:#fff;padding:6px;margin:6px;display:inline-block;vertical-align:top;line-height:1.4\"><b>Chair 3</b><br><b>Szczepanski, Waldemar</b><br>MRN 65981102 | 76 y<br>Blood transfusion 1 unit PRBC<br>Hgb 7.2, consent signed</div><div style=\"width:210px;border:1px solid #888;border-left:6px solid #8e44ad;background:#fff;padding:6px;margin:6px;display:inline-block;vertical-align:top;line-height:1.4\"><b>Chair 4</b><br><b>Warsame, Ayaan</b><br>MRN 66340059 | 39 y<br>Infliximab 5 mg/kg<br>Interpreter: Somali, at bedside</div></div></body></html>"
+    ],
+    "phi": [
+      "Jean-Baptiste, Fritzner",
+      "66120385",
+      "Dimaculangan, Teresita",
+      "66209741",
+      "Szczepanski, Waldemar",
+      "65981102",
+      "Warsame, Ayaan",
+      "66340059"
+    ],
+    "keep": [
+      "Bortezomib SQ 1.3 mg/m2",
+      "Hgb 7.2, consent signed",
+      "Infliximab 5 mg/kg"
+    ],
+    "viewport": {
+      "width": 960,
+      "height": 220
+    }
+  },
+  {
+    "id": "m17-scr-08",
+    "category": "routine",
+    "expectPatients": 2,
+    "note": "Two screens for same two patients: registration/insurance and pending orders, emergency contact listed.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#7a4b00;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Registration Summary</div><table style=\"width:100%\"><tr><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Pt</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">MRN</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">DOB</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Address</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Primary Ins</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Subscriber ID</th><th style=\"background:#f3e7d3;border-bottom:1px solid #c9a46a\">Emerg Contact</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">Thibodeau, Rejean</td><td style=\"border-bottom:1px solid #e1e5ea\">44071923</td><td style=\"border-bottom:1px solid #e1e5ea\">02/11/1949</td><td style=\"border-bottom:1px solid #e1e5ea\">18 Rue Valois, Biddeford ME 04005</td><td style=\"border-bottom:1px solid #e1e5ea\">Aetna MA</td><td style=\"border-bottom:1px solid #e1e5ea\">W2286610453</td><td style=\"border-bottom:1px solid #e1e5ea\">Monique Thibodeau 555-0134</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">Iyer, Venkatesh</td><td style=\"border-bottom:1px solid #e1e5ea\">44188306</td><td style=\"border-bottom:1px solid #e1e5ea\">10/27/1971</td><td style=\"border-bottom:1px solid #e1e5ea\">742 Larchmont Ave, Edison NJ 08817</td><td style=\"border-bottom:1px solid #e1e5ea\">Cigna OAP</td><td style=\"border-bottom:1px solid #e1e5ea\">U73390218-01</td><td style=\"border-bottom:1px solid #e1e5ea\">Anjali Iyer 555-0151</td></tr></table></body></html>",
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#1f4e79;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Orders Pending Release - 11/23/2026</div><table style=\"width:100%\"><tr><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Patient</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">MRN</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Order</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Status</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">Thibodeau, Rejean</td><td style=\"border-bottom:1px solid #e1e5ea\">44071923</td><td style=\"border-bottom:1px solid #e1e5ea\">Denosumab 120 mg SQ q4wk</td><td style=\"border-bottom:1px solid #e1e5ea\">Signed - awaiting Ca</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">Iyer, Venkatesh</td><td style=\"border-bottom:1px solid #e1e5ea\">44188306</td><td style=\"border-bottom:1px solid #e1e5ea\">Ocrelizumab 600 mg IV q6mo</td><td style=\"border-bottom:1px solid #e1e5ea\">Pharmacy verified</td></tr></table></body></html>"
+    ],
+    "phi": [
+      "Thibodeau, Rejean",
+      "44071923",
+      "02/11/1949",
+      "18 Rue Valois",
+      "Biddeford",
+      "04005",
+      "W2286610453",
+      "Monique Thibodeau",
+      "555-0134",
+      "Iyer, Venkatesh",
+      "44188306",
+      "10/27/1971",
+      "742 Larchmont Ave",
+      "Edison",
+      "08817",
+      "U73390218-01",
+      "Anjali Iyer",
+      "555-0151",
+      "11/23/2026"
+    ],
+    "keep": [
+      "Denosumab 120 mg SQ q4wk",
+      "Ocrelizumab 600 mg IV q6mo",
+      "Signed - awaiting Ca"
+    ],
+    "viewport": {
+      "width": 1100,
+      "height": 220
+    }
+  },
+  {
+    "id": "m17-scr-09",
+    "category": "hard",
+    "note": "Dark-theme schedule with grey-on-charcoal text and colored status pills; 92-year-old patient.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#151d26;color:#b8c4d0;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#111820;color:#9ad1ff;padding:6px 10px;font-size:15px;font-weight:bold;border-bottom:1px solid #2a3a4a\">Infusion Schedule (Night Mode) - Wed 11/25/2026</div><table style=\"width:100%\"><tr><th style=\"background:#1c2733;color:#7f93a8;border-bottom:1px solid #2a3a4a\">Dt</th><th style=\"background:#1c2733;color:#7f93a8;border-bottom:1px solid #2a3a4a\">Pt</th><th style=\"background:#1c2733;color:#7f93a8;border-bottom:1px solid #2a3a4a\">Rec #</th><th style=\"background:#1c2733;color:#7f93a8;border-bottom:1px solid #2a3a4a\">Age</th><th style=\"background:#1c2733;color:#7f93a8;border-bottom:1px solid #2a3a4a\">Regimen</th><th style=\"background:#1c2733;color:#7f93a8;border-bottom:1px solid #2a3a4a\">Comments</th></tr><tr><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">11/25/2026 07:30</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">Gagnon, Solange</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">27730194</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">92</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">Azacitidine 75 mg/m2 SQ D3</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">Lives w/ son Luc Gagnon, he will call 555-0126 for pickup</td></tr><tr><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">11/25/2026 08:00</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">Cao, Minh Tuan</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">27815562</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">61</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">Gemcitabine 1000 mg/m2</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\"><span style=\"background:#5a1e1e;color:#ffb3b3;padding:1px 5px;border-radius:8px\">PLT 88K - hold?</span></td></tr><tr><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">11/25/2026 09:00</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">Mohamud, Faadumo</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">27901846</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">44</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">Vedolizumab 300 mg</td><td style=\"border-bottom:1px solid #22303d;color:#b8c4d0\">Prefers female RN</td></tr></table></body></html>"
+    ],
+    "phi": [
+      "11/25/2026",
+      "Gagnon, Solange",
+      "27730194",
+      "92",
+      "Luc Gagnon",
+      "555-0126",
+      "Cao, Minh Tuan",
+      "27815562",
+      "Mohamud, Faadumo",
+      "27901846"
+    ],
+    "keep": [
+      "Azacitidine 75 mg/m2 SQ D3",
+      "PLT 88K - hold?",
+      "Vedolizumab 300 mg"
+    ],
+    "viewport": {
+      "width": 1000,
+      "height": 220
+    }
+  },
+  {
+    "id": "m17-scr-10",
+    "category": "hard",
+    "note": "Two-column chart review: demographics sidebar on left, nursing note on right; OCR may interleave columns.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"display:flex\"><div style=\"width:260px;background:#e8eef5;padding:10px;line-height:1.6;border-right:2px solid #1f4e79\"><div style=\"font-size:16px;font-weight:bold\">Al-Khatib, Yasmin</div>MRN: 83305217<br>DOB: 05/03/1985 (41 y.o.)<br>Ph: 555-0193<br>Email: yasmin.alkhatib85@example.net<br>4410 Cedar Bend Dr<br>Dearborn, MI 48126<br>Coverage: HAP 88301442</div><div style=\"flex:1;padding:10px;line-height:1.5\"><div style=\"font-weight:bold;color:#1f4e79;font-size:15px\">Infusion Nursing Note - 11/16/2026</div>Pt arrived ambulatory with husband Omar Al-Khatib. Natalizumab 300 mg IV over 1 hr via PIV R forearm, 22g, flushed w/ NS. Observed 1 hr post, no hypersensitivity. JCV antibody index 0.31 drawn today. Next infusion 12/14/2026.</div></div></body></html>"
+    ],
+    "phi": [
+      "Al-Khatib, Yasmin",
+      "83305217",
+      "05/03/1985",
+      "555-0193",
+      "yasmin.alkhatib85@example.net",
+      "4410 Cedar Bend Dr",
+      "Dearborn",
+      "48126",
+      "88301442",
+      "11/16/2026",
+      "Omar Al-Khatib",
+      "12/14/2026"
+    ],
+    "keep": [
+      "Natalizumab 300 mg IV over 1 hr",
+      "no hypersensitivity",
+      "JCV antibody index 0.31"
+    ],
+    "viewport": {
+      "width": 900,
+      "height": 260
+    }
+  },
+  {
+    "id": "m17-scr-11",
+    "category": "hard",
+    "note": "Report grid with narrow Comments column so names, phone and plate wrap across lines in the rendered image.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"background:#1f4e79;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Infusion Daily Census - 11/24/2026</div><table style=\"width:760px;table-layout:fixed\"><tr><th style=\"width:110px;background:#dde6ef\">Pt Name</th><th style=\"width:80px;background:#dde6ef\">MRN</th><th style=\"width:150px;background:#dde6ef\">Regimen</th><th style=\"width:130px;background:#dde6ef\">Comments</th><th style=\"background:#dde6ef\">Attending</th></tr><tr><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Bautista, Marisol Concepcion</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">90127734</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Carboplatin AUC 5 + pemetrexed 500 mg/m2</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Sister Graciela Bautista waiting in car, plate 7KXR219, cell 555-0108</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Oyelaran</td></tr><tr><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Pierre-Louis, Wislande</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">90244561</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Daratumumab SC 1800 mg</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Port accessed, good blood return. Creole interpreter</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Oyelaran</td></tr><tr><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Wisniewska, Halina</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">90318820</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Eribulin 1.4 mg/m2 D1,8</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Pump serial CX4471902 returned to pharmacy</td><td style=\"border-bottom:1px solid #ccc;vertical-align:top\">Lombardi</td></tr></table></body></html>"
+    ],
+    "phi": [
+      "11/24/2026",
+      "Bautista, Marisol Concepcion",
+      "90127734",
+      "Graciela Bautista",
+      "7KXR219",
+      "555-0108",
+      "Pierre-Louis, Wislande",
+      "90244561",
+      "Wisniewska, Halina",
+      "90318820",
+      "CX4471902"
+    ],
+    "keep": [
+      "Carboplatin AUC 5 + pemetrexed 500 mg/m2",
+      "good blood return",
+      "Daratumumab SC 1800 mg"
+    ],
+    "viewport": {
+      "width": 780,
+      "height": 320
+    }
+  },
+  {
+    "id": "m17-scr-12",
+    "category": "hard",
+    "note": "Screenshot cropped at right edge: wide grid overflows viewport so trailing columns are cut; identifiers in the visible part, plus a partially scrolled header.",
+    "htmls": [
+      "<html><head><style>body{margin:0;font-family:\"DejaVu Sans\", Arial, sans-serif;font-size:13px;background:#f4f6f8;color:#1b1b1b;}table{border-collapse:collapse}td,th{padding:4px 8px;text-align:left}</style></head><body><div style=\"width:1400px\"><div style=\"background:#1f4e79;color:#fff;padding:6px 10px;font-size:15px;font-weight:bold\">Appts by Dept - ONC INFUSION EAST - 11/30/2026 through 12/04/2026 - Run by: MCLERK</div><table style=\"white-space:nowrap\"><tr><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Appt Dt</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Pt Name</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Pt MRN</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Pt DOB</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Acct #</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Regimen</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Comments</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Ref Prov</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Pt Phone</th><th style=\"background:#dde6ef;border-bottom:1px solid #9fb3c8\">Payer</th></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">11/30/2026</td><td style=\"border-bottom:1px solid #e1e5ea\">Shin, Dong-hyun</td><td style=\"border-bottom:1px solid #e1e5ea\">15528804</td><td style=\"border-bottom:1px solid #e1e5ea\">08/09/1966</td><td style=\"border-bottom:1px solid #e1e5ea\">2207731845</td><td style=\"border-bottom:1px solid #e1e5ea\">Cetuximab 250 mg/m2 wkly</td><td style=\"border-bottom:1px solid #e1e5ea\">Acneiform rash gr 2, doxycycline started</td><td style=\"border-bottom:1px solid #e1e5ea\">Dr. Ingrid Haugen</td><td style=\"border-bottom:1px solid #e1e5ea\">555-0171</td><td style=\"border-bottom:1px solid #e1e5ea\">UHC</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">12/01/2026</td><td style=\"border-bottom:1px solid #e1e5ea\">Ogunleye, Babatunde</td><td style=\"border-bottom:1px solid #e1e5ea\">15603379</td><td style=\"border-bottom:1px solid #e1e5ea\">04/15/1953</td><td style=\"border-bottom:1px solid #e1e5ea\">2207798012</td><td style=\"border-bottom:1px solid #e1e5ea\">Enfortumab 1.25 mg/kg</td><td style=\"border-bottom:1px solid #e1e5ea\">Check glucose pre-dose</td><td style=\"border-bottom:1px solid #e1e5ea\">Dr. Ingrid Haugen</td><td style=\"border-bottom:1px solid #e1e5ea\">555-0185</td><td style=\"border-bottom:1px solid #e1e5ea\">Humana</td></tr><tr><td style=\"border-bottom:1px solid #e1e5ea\">12/02/2026</td><td style=\"border-bottom:1px solid #e1e5ea\">Jaramillo, Xochitl</td><td style=\"border-bottom:1px solid #e1e5ea\">15677120</td><td style=\"border-bottom:1px solid #e1e5ea\">11/30/1990</td><td style=\"border-bottom:1px solid #e1e5ea\">2207812466</td><td style=\"border-bottom:1px solid #e1e5ea\">Ferric carboxymaltose 750 mg</td><td style=\"border-bottom:1px solid #e1e5ea\">Pregnant 22 wk, OB aware</td><td style=\"border-bottom:1px solid #e1e5ea\">Dr. Tomas Arreola</td><td style=\"border-bottom:1px solid #e1e5ea\">555-0112</td><td style=\"border-bottom:1px solid #e1e5ea\">Medicaid</td></tr></table></div></body></html>"
+    ],
+    "phi": [
+      "11/30/2026",
+      "12/04/2026",
+      "Shin, Dong-hyun",
+      "15528804",
+      "08/09/1966",
+      "2207731845",
+      "Ogunleye, Babatunde",
+      "15603379",
+      "04/15/1953",
+      "2207798012",
+      "12/01/2026",
+      "Jaramillo, Xochitl",
+      "15677120",
+      "11/30/1990",
+      "2207812466",
+      "12/02/2026"
+    ],
+    "keep": [
+      "Cetuximab 250 mg/m2 wkly",
+      "Enfortumab 1.25 mg/kg",
+      "Ferric carboxymaltose 750 mg"
+    ],
+    "viewport": {
+      "width": 1000,
+      "height": 220
+    }
+  }
+]

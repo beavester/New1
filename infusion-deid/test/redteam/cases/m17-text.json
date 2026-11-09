@@ -1,0 +1,1155 @@
+[
+ {
+  "id": "m17-text-01",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Nguyen Thi Hoa (MRN 40018827) called to r/s C3D1 FOLFOX from 03/14/2026 to 03/17/2026 d/t ride falling through. Cb # 608-555-0142. Labs to be drawn same day.",
+  "phi": [
+   "Nguyen Thi Hoa",
+   "40018827",
+   "03/14/2026",
+   "03/17/2026",
+   "608-555-0142"
+  ],
+  "keep": [
+   "C3D1 FOLFOX",
+   "Labs to be drawn same day"
+  ],
+  "note": "standard reschedule comment"
+ },
+ {
+  "id": "m17-text-02",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Kowalczyk, Zofia",
+    "E2203914",
+    "07/22/1958",
+    "C4 Herceptin q3w, echo due before next cycle. Daughter Agnieszka will drive."
+   ]
+  ],
+  "phi": [
+   "Kowalczyk, Zofia",
+   "E2203914",
+   "07/22/1958",
+   "Agnieszka"
+  ],
+  "keep": [
+   "Herceptin q3w",
+   "echo due before next cycle"
+  ],
+  "note": "one-row export with relative first name"
+ },
+ {
+  "id": "m17-text-03",
+  "kind": "text",
+  "category": "routine",
+  "text": "MyChart msg from pt Darnell Whitfield: \"Can I move my iron infusion on 11/20 to the afternoon? I work mornings now.\" Moved to 11/20/2026 1:30 PM chair. Pt confirmed via MyChart.",
+  "phi": [
+   "Darnell Whitfield",
+   "11/20",
+   "11/20/2026"
+  ],
+  "keep": [
+   "iron infusion",
+   "Pt confirmed via MyChart"
+  ],
+  "note": "MyChart reschedule"
+ },
+ {
+  "id": "m17-text-04",
+  "kind": "text",
+  "category": "routine",
+  "text": "Phone note: Spoke w/ pt's husband Rajesh Patel re: wife Priya Patel's Rituxan appt tomorrow. Reviewed premeds (Tylenol 650, Benadryl 25). He asked about parking validation. Callback 312-555-0177.",
+  "phi": [
+   "Rajesh Patel",
+   "Priya Patel",
+   "312-555-0177"
+  ],
+  "keep": [
+   "Rituxan",
+   "Tylenol 650, Benadryl 25"
+  ],
+  "note": "phone call with spouse"
+ },
+ {
+  "id": "m17-text-05",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Okonkwo, Chukwuemeka",
+    "10457732",
+    "02/03/1971",
+    "IVIG 2 g/kg split over 2 days. Slow titration per protocol, tolerated well last course."
+   ]
+  ],
+  "phi": [
+   "Okonkwo, Chukwuemeka",
+   "10457732",
+   "02/03/1971"
+  ],
+  "keep": [
+   "IVIG 2 g/kg split over 2 days",
+   "Slow titration per protocol"
+  ],
+  "note": "routine IVIG row"
+ },
+ {
+  "id": "m17-text-06",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt reports sister May Rose is staying w/ her through cycle 2. Pt lives in Hope, near the Grand Ave bridge, and May will bring her in. Pt: Lourdes Tran-Ocampo, MRN 3381904.",
+  "phi": [
+   "May Rose",
+   "May",
+   "Hope",
+   "Lourdes Tran-Ocampo",
+   "3381904"
+  ],
+  "keep": [
+   "through cycle 2",
+   "staying w/ her"
+  ],
+  "note": "relative name that is also month/common words; town name that is common word"
+ },
+ {
+  "id": "m17-text-07",
+  "kind": "text",
+  "category": "routine",
+  "text": "Nursing note 10/02/2026: Pt Ahmed Al-Sayed arrived for C2D8 gemcitabine. VS stable, port accessed w/o difficulty, + blood return. Tolerated infusion, d/c'd ambulatory.",
+  "phi": [
+   "10/02/2026",
+   "Ahmed Al-Sayed"
+  ],
+  "keep": [
+   "C2D8 gemcitabine",
+   "port accessed w/o difficulty, + blood return"
+  ],
+  "note": "nursing note"
+ },
+ {
+  "id": "m17-text-08",
+  "kind": "text",
+  "category": "routine",
+  "text": "Transport: Pt Marguerite Bélanger needs wheelchair van pickup from 412 Rue Champlain, Apt 3, Burlington VT 05401 at 7:15 for 8:30 Zometa. Confirmation #TR88213.",
+  "phi": [
+   "Marguerite Bélanger",
+   "412 Rue Champlain, Apt 3",
+   "Burlington",
+   "05401"
+  ],
+  "keep": [
+   "wheelchair van",
+   "Zometa"
+  ],
+  "note": "transport note with address"
+ },
+ {
+  "id": "m17-text-09",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Abdi, Hodan",
+    "20033158",
+    "11/30/1989",
+    "Interpreter (Somali) needed. Entyvio 300 mg q8w. Pt prefers female RN."
+   ]
+  ],
+  "phi": [
+   "Abdi, Hodan",
+   "20033158",
+   "11/30/1989"
+  ],
+  "keep": [
+   "Entyvio 300 mg q8w",
+   "Interpreter (Somali) needed"
+  ],
+  "note": "Somali name, language mention should stay"
+ },
+ {
+  "id": "m17-text-10",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pharmacy note: Carboplatin AUC 5 dose recalculated for pt Eleanor Haskins (MRN 7710245) using SCr 0.9 from 08/11/26. Dose 610 mg. Verified with oncologist.",
+  "phi": [
+   "Eleanor Haskins",
+   "7710245",
+   "08/11/26"
+  ],
+  "keep": [
+   "Carboplatin AUC 5",
+   "Dose 610 mg"
+  ],
+  "note": "pharmacy note with lab date"
+ },
+ {
+  "id": "m17-text-11",
+  "kind": "text",
+  "category": "hard",
+  "text": "pt kim min-jun mrn 5520193 dob 4/9/63 called c/o fatigue after keytruda, wife (seo-yeon) asking if ok to travel to busan in dec. advised discuss w/ md at next visit.",
+  "phi": [
+   "kim min-jun",
+   "5520193",
+   "4/9/63",
+   "seo-yeon"
+  ],
+  "keep": [
+   "c/o fatigue after keytruda",
+   "advised discuss w/ md at next visit"
+  ],
+  "note": "all lowercase Korean names; Busan foreign city (not US geo subdivision) not listed"
+ },
+ {
+  "id": "m17-text-12",
+  "kind": "text",
+  "category": "routine",
+  "text": "Social work: Met w/ pt Rosalind Achterberg and son Pieter re: transportation and copay assistance. Referred to foundation grant. Son's cell 555-0119.",
+  "phi": [
+   "Rosalind Achterberg",
+   "Pieter",
+   "555-0119"
+  ],
+  "keep": [
+   "copay assistance",
+   "Referred to foundation grant"
+  ],
+  "note": "social work note"
+ },
+ {
+  "id": "m17-text-13",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Ramírez Delgado, José Luis",
+    "60298114",
+    "05/17/1966",
+    "Pt asked to be first chair of the day. Remicade 5 mg/kg, wt 82 kg."
+   ]
+  ],
+  "phi": [
+   "Ramírez Delgado, José Luis",
+   "60298114",
+   "05/17/1966"
+  ],
+  "keep": [
+   "Remicade 5 mg/kg",
+   "wt 82 kg"
+  ],
+  "note": "compound Hispanic surname"
+ },
+ {
+  "id": "m17-text-14",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Jean-Baptiste Pierre-Louis no-showed 09/23/2026 Venofer. LVM at 617-555-0163 to reschedule. 2nd no-show this month.",
+  "phi": [
+   "Jean-Baptiste Pierre-Louis",
+   "09/23/2026",
+   "617-555-0163"
+  ],
+  "keep": [
+   "Venofer",
+   "2nd no-show this month"
+  ],
+  "note": "Haitian name, no-show"
+ },
+ {
+  "id": "m17-text-15",
+  "kind": "text",
+  "category": "hard",
+  "text": "Daughter calling on behalf of mom, who is 93 and very HOH. Mom (Bessie Lindqvist) wants Prolia moved closer to her b-day 1/5. Daughter Karin can be reached at karin.lindqvist55@example.com.",
+  "phi": [
+   "93",
+   "Bessie Lindqvist",
+   "1/5",
+   "Karin",
+   "karin.lindqvist55@example.com"
+  ],
+  "keep": [
+   "Prolia",
+   "very HOH"
+  ],
+  "note": "age over 89, partial birthday, email"
+ },
+ {
+  "id": "m17-text-16",
+  "kind": "text",
+  "category": "routine",
+  "text": "Appt Dt 12/01/2026 - Pat: Fatima Zahra Benali MRN 88301245 - Cytoxan/Taxotere C1. Chemo teach completed. Pt has questions re: hair loss, gave cold cap info.",
+  "phi": [
+   "12/01/2026",
+   "Fatima Zahra Benali",
+   "88301245"
+  ],
+  "keep": [
+   "Cytoxan/Taxotere C1",
+   "Chemo teach completed"
+  ],
+  "note": "abbreviated header-like inline"
+ },
+ {
+  "id": "m17-text-17",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Bartholomew Quinlan called, insurance changed to new plan as of 11/1. New member ID XKJ447120983. Auth needed for Ocrevus before 11/18 appt.",
+  "phi": [
+   "Bartholomew Quinlan",
+   "XKJ447120983",
+   "11/18"
+  ],
+  "keep": [
+   "Auth needed for Ocrevus",
+   "insurance changed to new plan"
+  ],
+  "note": "member ID; 11/1 is insurance effective date not tied to person, not listed"
+ },
+ {
+  "id": "m17-text-18",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Dela Cruz, Maricel",
+    "31104467",
+    "08/08/1979",
+    "Pt reports mild rash after last Taxol. Hold for MD eval. Husband Rodel waiting in lobby."
+   ]
+  ],
+  "phi": [
+   "Dela Cruz, Maricel",
+   "31104467",
+   "08/08/1979",
+   "Rodel"
+  ],
+  "keep": [
+   "mild rash after last Taxol",
+   "Hold for MD eval"
+  ],
+  "note": "Filipino name"
+ },
+ {
+  "id": "m17-text-19",
+  "kind": "text",
+  "category": "hard",
+  "text": "Called pt @ home (555) 014-8821 - no ans. Tried work # 555.016.2290 x214, spoke to coworker. Pt Teodor Wiśniewski will call back re: Aranesp.",
+  "phi": [
+   "(555) 014-8821",
+   "555.016.2290 x214",
+   "Teodor Wiśniewski"
+  ],
+  "keep": [
+   "Aranesp",
+   "no ans"
+  ],
+  "note": "varied phone formats with extension; Polish diacritics"
+ },
+ {
+  "id": "m17-text-20",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Gwendolyn Fairbanks arrived 15 min late for 10:00 Reclast. Stated traffic on I-90. Infused over 30 min w/o issue.",
+  "phi": [
+   "Gwendolyn Fairbanks"
+  ],
+  "keep": [
+   "Reclast",
+   "Infused over 30 min w/o issue"
+  ],
+  "note": "interstate mention not an address"
+ },
+ {
+  "id": "m17-text-21",
+  "kind": "text",
+  "category": "routine",
+  "text": "MyChart: Hi, this is Thuy Pham. I got my blood work done at the Lakeside lab on Monday. Do I still come in for my Neulasta shot Wednesday 10/14? Thanks, Thuy",
+  "phi": [
+   "Thuy Pham",
+   "10/14",
+   "Thuy"
+  ],
+  "keep": [
+   "Neulasta shot",
+   "blood work done"
+  ],
+  "note": "patient-authored MyChart message"
+ },
+ {
+  "id": "m17-text-22",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt's son Will called. Will will bring pt Mrs. Grace Faith Oyelaran-Hope to appt. Pt has been feeling down, Grace says she misses church.",
+  "phi": [
+   "Will",
+   "Grace Faith Oyelaran-Hope",
+   "Grace"
+  ],
+  "keep": [
+   "feeling down",
+   "misses church"
+  ],
+  "note": "names that are also common English words"
+ },
+ {
+  "id": "m17-text-23",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Vo, Quang Minh",
+    "40992018",
+    "01/14/1952",
+    "Weekly cetuximab, check Mg. Needs Vietnamese interpreter; son can't come Thursdays."
+   ]
+  ],
+  "phi": [
+   "Vo, Quang Minh",
+   "40992018",
+   "01/14/1952"
+  ],
+  "keep": [
+   "Weekly cetuximab, check Mg",
+   "Needs Vietnamese interpreter"
+  ],
+  "note": "short Vietnamese surname"
+ },
+ {
+  "id": "m17-text-24",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Shabnam Qureshi (MRN 2093381) requests appt reminder texts to new cell 773-555-0108. Updated in demographics.",
+  "phi": [
+   "Shabnam Qureshi",
+   "2093381",
+   "773-555-0108"
+  ],
+  "keep": [
+   "Updated in demographics",
+   "appt reminder texts"
+  ],
+  "note": "phone update"
+ },
+ {
+  "id": "m17-text-25",
+  "kind": "text",
+  "category": "routine",
+  "text": "Infusion nursing: Pt Ignatius Okafor tolerated C5 daratumumab SQ. Observed 15 min. Pt states his PCP Dr. Folasade Adeyemi at Northgate Family Medicine will manage BP.",
+  "phi": [
+   "Ignatius Okafor",
+   "Folasade Adeyemi"
+  ],
+  "keep": [
+   "C5 daratumumab SQ",
+   "Observed 15 min"
+  ],
+  "note": "outside provider name"
+ },
+ {
+  "id": "m17-text-26",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt Hughes (first name Paris) traveling to Paris 2/3-2/10, wants C6 pushed. Return flight lands 2/10. Advised can move C6 to 2/12/27. Dx: Hodgkin lymphoma, ABVD.",
+  "phi": [
+   "Hughes",
+   "Paris",
+   "2/12/27"
+  ],
+  "keep": [
+   "Hodgkin lymphoma, ABVD",
+   "wants C6 pushed"
+  ],
+  "note": "first name equals foreign city; eponym Hodgkin must stay. Paris listed once as substring covers name"
+ },
+ {
+  "id": "m17-text-27",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Wilhelmina Strand called re: bill for 10/06 visit. Acct # 900184472. Transferred to billing.",
+  "phi": [
+   "Wilhelmina Strand",
+   "10/06",
+   "900184472"
+  ],
+  "keep": [
+   "Transferred to billing",
+   "re: bill"
+  ],
+  "note": "account number"
+ },
+ {
+  "id": "m17-text-28",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Hassan, Yusuf Abdirahman",
+    "72045519",
+    "06/30/1994",
+    "First Tysabri today. JCV neg. Pt brother Abdullahi present."
+   ]
+  ],
+  "phi": [
+   "Hassan, Yusuf Abdirahman",
+   "72045519",
+   "06/30/1994",
+   "Abdullahi"
+  ],
+  "keep": [
+   "First Tysabri today",
+   "JCV neg"
+  ],
+  "note": "Somali name, brother"
+ },
+ {
+  "id": "m17-text-29",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Lucia Ferraro-Bianchi called c/o nausea x2 days post cisplatin. Taking Zofran, not helping. Added olanzapine per protocol. Pt's # 555-0131.",
+  "phi": [
+   "Lucia Ferraro-Bianchi",
+   "555-0131"
+  ],
+  "keep": [
+   "nausea x2 days post cisplatin",
+   "Added olanzapine per protocol"
+  ],
+  "note": "Italian hyphenated name"
+ },
+ {
+  "id": "m17-text-30",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt DOB 3-Mar-1948, MRN#:00451287 - wife Constance says pt fell at home in Springfield last wk, bruise L hip. Pt Harold Dunmore-Vance. Hold Eliquis? MD aware.",
+  "phi": [
+   "3-Mar-1948",
+   "00451287",
+   "Constance",
+   "Springfield",
+   "Harold Dunmore-Vance"
+  ],
+  "keep": [
+   "bruise L hip",
+   "Hold Eliquis? MD aware"
+  ],
+  "note": "DOB in DD-Mon-YYYY, MRN with leading zeros and #: no space"
+ },
+ {
+  "id": "m17-text-31",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Emeka Nwachukwu-Eze checked in at 8:05 for Velcade/dex. Weight 91.2 kg. Pt reports neuropathy grade 1, stable.",
+  "phi": [
+   "Emeka Nwachukwu-Eze"
+  ],
+  "keep": [
+   "Velcade/dex",
+   "neuropathy grade 1, stable"
+  ],
+  "note": "Nigerian hyphenated name"
+ },
+ {
+  "id": "m17-text-32",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Tremblay, Marie-Ève",
+    "51280377",
+    "12/24/1960",
+    "Pt staying w/ cousin in Sherbrooke over holidays, may need to r/s 12/29 Kyprolis."
+   ]
+  ],
+  "phi": [
+   "Tremblay, Marie-Ève",
+   "51280377",
+   "12/24/1960",
+   "12/29"
+  ],
+  "keep": [
+   "Kyprolis",
+   "may need to r/s"
+  ],
+  "note": "French-Canadian name; Sherbrooke is a foreign city, not listed"
+ },
+ {
+  "id": "m17-text-33",
+  "kind": "text",
+  "category": "hard",
+  "text": "Message left by pt's neighbor (Doreen at 555-0156) that pt Mr Augustin Desrosiers was taken to St. Brigid's ER last night (11/03). Will not be in for 11/04 Darzalex. Neighbor has key, lives at 19 Larch Ln.",
+  "phi": [
+   "Doreen",
+   "555-0156",
+   "Augustin Desrosiers",
+   "11/03",
+   "11/04",
+   "19 Larch Ln"
+  ],
+  "keep": [
+   "Darzalex",
+   "ER last night"
+  ],
+  "note": "neighbor as contact, ER admission date, address of neighbor"
+ },
+ {
+  "id": "m17-text-34",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Siobhan McAuliffe requests port flush only, no chemo this wk per onc. Scheduled 10/28/2026 0900. Heparin lock after.",
+  "phi": [
+   "Siobhan McAuliffe",
+   "10/28/2026"
+  ],
+  "keep": [
+   "port flush only",
+   "Heparin lock after"
+  ],
+  "note": "Irish name"
+ },
+ {
+  "id": "m17-text-35",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Arjun Venkataraman, MRN 66120548. Prior auth approved for Benlysta through 04/30/2027, auth # PA-2026-118843.",
+  "phi": [
+   "Arjun Venkataraman",
+   "66120548"
+  ],
+  "keep": [
+   "Prior auth approved for Benlysta",
+   "Benlysta"
+  ],
+  "note": "auth expiry date is administrative, not listed; auth # could be identifier, not listed as not HIPAA personal ID - ambiguous so omitted"
+ },
+ {
+  "id": "m17-text-36",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Brzezinski, Kazimierz",
+    "14408862",
+    "09/02/1947",
+    "Blood transfusion 2u PRBC. Type & screen drawn 10/30. Hgb 6.9."
+   ]
+  ],
+  "phi": [
+   "Brzezinski, Kazimierz",
+   "14408862",
+   "09/02/1947",
+   "10/30"
+  ],
+  "keep": [
+   "Blood transfusion 2u PRBC",
+   "Hgb 6.9"
+  ],
+  "note": "Polish name, lab draw date"
+ },
+ {
+  "id": "m17-text-37",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt's MyChart proxy is her granddaughter: Amara (amara.osei.b@example.net). Pt Comfort Osei-Bonsu, 89 yo, born 1937. Wants Tues appts only. Pt has a pacemaker, Medtronic SN PJN602117S.",
+  "phi": [
+   "Amara",
+   "amara.osei.b@example.net",
+   "Comfort Osei-Bonsu",
+   "PJN602117S"
+  ],
+  "keep": [
+   "Wants Tues appts only",
+   "pacemaker"
+  ],
+  "note": "device serial; age 89 (not over 89) and year alone not listed"
+ },
+ {
+  "id": "m17-text-38",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Thanh Le called, running low on antiemetics before C3. Rx Compazine sent to pharmacy. Pt's appt is 11/11/2026.",
+  "phi": [
+   "Thanh Le",
+   "11/11/2026"
+  ],
+  "keep": [
+   "Rx Compazine sent to pharmacy",
+   "running low on antiemetics before C3"
+  ],
+  "note": "short Vietnamese name"
+ },
+ {
+  "id": "m17-text-39",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Bernadette Castellanos, DOB 02/19/1955, arrived with her daughter Inés. Pt tolerated Faslodex IM x2. Next appt 4 wks.",
+  "phi": [
+   "Bernadette Castellanos",
+   "02/19/1955",
+   "Inés"
+  ],
+  "keep": [
+   "Faslodex IM x2",
+   "Next appt 4 wks"
+  ],
+  "note": "standard"
+ },
+ {
+  "id": "m17-text-40",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt name corrected in Epic: previously registered as \"Mohamed Abdelrahman\", correct legal name is \"Mohammed Abd El-Rahman\". MRN 9927341 unchanged. Old SSN on file ending 4421 removed, full SSN 900-55-4421 verified.",
+  "phi": [
+   "Mohamed Abdelrahman",
+   "Mohammed Abd El-Rahman",
+   "9927341",
+   "4421",
+   "900-55-4421"
+  ],
+  "keep": [
+   "Pt name corrected in Epic",
+   "correct legal name"
+  ],
+  "note": "two spellings, SSN and SSN fragment; keep string contains MRN so check redaction of number within keep is acceptable - keep checks label text"
+ },
+ {
+  "id": "m17-text-41",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Sandoval, Ximena",
+    "83300125",
+    "03/27/1985",
+    "Pt pregnant 22 wk, OB aware. IV iron sucrose 200 mg."
+   ]
+  ],
+  "phi": [
+   "Sandoval, Ximena",
+   "83300125",
+   "03/27/1985"
+  ],
+  "keep": [
+   "IV iron sucrose 200 mg",
+   "OB aware"
+  ],
+  "note": "routine"
+ },
+ {
+  "id": "m17-text-42",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Florian Desjardins called to confirm 11/25 Actemra. Asked if wife Solange can sit with him in infusion bay. Advised 1 visitor allowed.",
+  "phi": [
+   "Florian Desjardins",
+   "11/25",
+   "Solange"
+  ],
+  "keep": [
+   "Actemra",
+   "1 visitor allowed"
+  ],
+  "note": "visitor name"
+ },
+ {
+  "id": "m17-text-43",
+  "kind": "text",
+  "category": "hard",
+  "text": "PT CALLED: HAS FEVER 101.4 SINCE LAST NIGHT, ON DAY 9 OF FOLFIRINOX. SENT TO ED. PT IS DESHAWN MCKINNEY-BOATENG, MRN 4410287, PH 555-0188. WIFE TAMIKA DRIVING.",
+  "phi": [
+   "DESHAWN MCKINNEY-BOATENG",
+   "4410287",
+   "555-0188",
+   "TAMIKA"
+  ],
+  "keep": [
+   "FEVER 101.4",
+   "SENT TO ED"
+  ],
+  "note": "all caps text"
+ },
+ {
+  "id": "m17-text-44",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Ingrid Halvorsen reports she moved. New address 2207 Birchwood Dr, Eau Claire, WI 54701. Updated chart.",
+  "phi": [
+   "Ingrid Halvorsen",
+   "2207 Birchwood Dr",
+   "Eau Claire",
+   "54701"
+  ],
+  "keep": [
+   "Updated chart",
+   "reports she moved"
+  ],
+  "note": "new address"
+ },
+ {
+  "id": "m17-text-45",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Rahman, Nasrin Akter",
+    "29066410",
+    "10/10/1976",
+    "Hx infusion rxn to Taxol, premedicate w/ dex + famotidine. Abraxane C2 today."
+   ]
+  ],
+  "phi": [
+   "Rahman, Nasrin Akter",
+   "29066410",
+   "10/10/1976"
+  ],
+  "keep": [
+   "Hx infusion rxn to Taxol",
+   "Abraxane C2 today"
+  ],
+  "note": "Bangladeshi name"
+ },
+ {
+  "id": "m17-text-46",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt Dr. Vikram Malhotra (pt is a retired dentist) asked that his records not be shared with Dr. Ananya Rao at Riverside Oncology, his previous oncologist. Pt MRN 33809127. Opdivo C8.",
+  "phi": [
+   "Vikram Malhotra",
+   "Ananya Rao",
+   "33809127"
+  ],
+  "keep": [
+   "Opdivo C8",
+   "retired dentist"
+  ],
+  "note": "patient with Dr. title; outside provider"
+ },
+ {
+  "id": "m17-text-47",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Corinne Ashby-Lowe called, rash improved w/ hydrocortisone cream. Will keep 11/16/2026 Erbitux appt.",
+  "phi": [
+   "Corinne Ashby-Lowe",
+   "11/16/2026"
+  ],
+  "keep": [
+   "rash improved w/ hydrocortisone cream",
+   "Erbitux"
+  ],
+  "note": "routine follow-up call"
+ },
+ {
+  "id": "m17-text-48",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Oluwaseun Adebayo-Williams (MRN 57701934) late cancel today, child sick. Rebooked Soliris for Fri 11/13.",
+  "phi": [
+   "Oluwaseun Adebayo-Williams",
+   "57701934",
+   "11/13"
+  ],
+  "keep": [
+   "Rebooked Soliris",
+   "late cancel today, child sick"
+  ],
+  "note": "late cancel"
+ },
+ {
+  "id": "m17-text-49",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt goes by \"Bao\" (legal name Nguyen Van Bao). Pt's ride is grandson Tuan, plate 7KXR219, silver Camry, will park in garage lvl 2. Tuan cell 555-0124. MRN 6124580.",
+  "phi": [
+   "Bao",
+   "Nguyen Van Bao",
+   "Tuan",
+   "7KXR219",
+   "555-0124",
+   "6124580"
+  ],
+  "keep": [
+   "garage lvl 2",
+   "silver Camry"
+  ],
+  "note": "nickname, license plate"
+ },
+ {
+  "id": "m17-text-50",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Fontaine, Rémi",
+    "42291076",
+    "04/04/1969",
+    "Zoledronic acid q12w. Pt sees dentist Dr. Hélène Gagnon Tues re: jaw pain, hold until cleared."
+   ]
+  ],
+  "phi": [
+   "Fontaine, Rémi",
+   "42291076",
+   "04/04/1969",
+   "Hélène Gagnon"
+  ],
+  "keep": [
+   "Zoledronic acid q12w",
+   "hold until cleared"
+  ],
+  "note": "outside dentist"
+ },
+ {
+  "id": "m17-text-51",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Patience Ekwueme called, wants to know if she can get flu shot same day as Rituxan 11/19. Per MD ok. Pt confirmed.",
+  "phi": [
+   "Patience Ekwueme",
+   "11/19"
+  ],
+  "keep": [
+   "flu shot same day as Rituxan",
+   "Per MD ok"
+  ],
+  "note": "name that is also a word"
+ },
+ {
+  "id": "m17-text-52",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt sent photo of PICC dressing via MyChart; link https://mychart.example.org/msg/att?pt=ZRODRIGUEZ1962&id=88213. Pt Zoila Rodríguez de León. Dressing intact, no erythema.",
+  "phi": [
+   "https://mychart.example.org/msg/att?pt=ZRODRIGUEZ1962&id=88213",
+   "Zoila Rodríguez de León"
+  ],
+  "keep": [
+   "Dressing intact, no erythema",
+   "PICC dressing"
+  ],
+  "note": "URL with personal info"
+ },
+ {
+  "id": "m17-text-53",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Mustafa Karimi arrived w/ wife Leila. C1 Lupron given IM, tolerated. Next due 02/08/2027. Pt fax for paperwork: 555-0193.",
+  "phi": [
+   "Mustafa Karimi",
+   "Leila",
+   "02/08/2027",
+   "555-0193"
+  ],
+  "keep": [
+   "C1 Lupron given IM, tolerated",
+   "Next due"
+  ],
+  "note": "fax number"
+ },
+ {
+  "id": "m17-text-54",
+  "kind": "table",
+  "category": "routine",
+  "headers": [
+   "Patient Name",
+   "MRN",
+   "DOB",
+   "Comments"
+  ],
+  "rows": [
+   [
+    "Park, Ji-woo",
+    "18874502",
+    "07/07/1991",
+    "Pt requests weekend appts for Stelara loading dose. Mom Hye-jin will accompany."
+   ]
+  ],
+  "phi": [
+   "Park, Ji-woo",
+   "18874502",
+   "07/07/1991",
+   "Hye-jin"
+  ],
+  "keep": [
+   "Stelara loading dose",
+   "weekend appts"
+  ],
+  "note": "Korean names"
+ },
+ {
+  "id": "m17-text-55",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt (Esperanza Mbeki-Valdés) passed away 10/31/26 at hospice. Family (husband Thabo) called to cancel all future infusions. Sent condolence card to 88 Orchard Hill Rd, Marlborough MA.",
+  "phi": [
+   "Esperanza Mbeki-Valdés",
+   "10/31/26",
+   "Thabo",
+   "88 Orchard Hill Rd",
+   "Marlborough"
+  ],
+  "keep": [
+   "cancel all future infusions",
+   "passed away"
+  ],
+  "note": "date of death, address"
+ },
+ {
+  "id": "m17-text-56",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pharmacy: Pt Clementine Babineaux, wt 64 kg, BSA 1.71. Docetaxel 75 mg/m2 = 128 mg. Double checked with 2nd RN.",
+  "phi": [
+   "Clementine Babineaux"
+  ],
+  "keep": [
+   "Docetaxel 75 mg/m2 = 128 mg",
+   "BSA 1.71"
+  ],
+  "note": "pharmacy dose check"
+ },
+ {
+  "id": "m17-text-57",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt Santos, Rodrigo P. called. Prefers Spanish. Said his doctor in Ponce told him to bring old records. Hold for records from Dr. Wilfredo Colón. MRN: 70-118-245.",
+  "phi": [
+   "Santos, Rodrigo P.",
+   "Ponce",
+   "Wilfredo Colón",
+   "70-118-245"
+  ],
+  "keep": [
+   "Prefers Spanish",
+   "Hold for records"
+  ],
+  "note": "dashed MRN; Puerto Rico town"
+ },
+ {
+  "id": "m17-text-58",
+  "kind": "text",
+  "category": "routine",
+  "text": "Pt Aaliyah Brightwater checked in for Tepezza #4 of 8. Hearing check done, no change. Glucose 132 pre.",
+  "phi": [
+   "Aaliyah Brightwater"
+  ],
+  "keep": [
+   "Tepezza #4 of 8",
+   "Glucose 132 pre"
+  ],
+  "note": "routine"
+ },
+ {
+  "id": "m17-text-59",
+  "kind": "text",
+  "category": "hard",
+  "text": "Called pt re: appt tmrw (Thurs 11/12). Pt said \"tell Dr. Mehta my cousin Farah Siddiqui at 555-0170 is my emergency contact now, not Imran.\" Pt: Zainab Chaudhry, Acct 7720-0149-33.",
+  "phi": [
+   "11/12",
+   "Farah Siddiqui",
+   "555-0170",
+   "Imran",
+   "Zainab Chaudhry",
+   "7720-0149-33"
+  ],
+  "keep": [
+   "emergency contact",
+   "appt tmrw"
+  ],
+  "note": "in-house Dr. Mehta not listed; quoted speech with relatives"
+ },
+ {
+  "id": "m17-text-60",
+  "kind": "text",
+  "category": "hard",
+  "text": "Pt Antoinette \"Toni\" Szymańska-Reyes, 94 y/o, DOB 1932-06-15, came in w/ caregiver Marisol from Golden Years Home Care. Pt's home: 5 Willow Ct, Unit B, Cranston RI 02910. Iron dextran test dose given, no rxn.",
+  "phi": [
+   "Antoinette",
+   "Toni",
+   "Szymańska-Reyes",
+   "94",
+   "1932-06-15",
+   "Marisol",
+   "5 Willow Ct, Unit B",
+   "Cranston",
+   "02910"
+  ],
+  "keep": [
+   "Iron dextran test dose given, no rxn",
+   "came in w/ caregiver"
+  ],
+  "note": "ISO DOB, nickname, age over 89, full address"
+ }
+]
