@@ -1492,3 +1492,16 @@ test('round 13 patterns: plates, MRN lists, member numbers, bracketed emails, st
   for (const [t, gone] of cases) assert.ok(!run(t).includes(gone), `${t} -> ${run(t)}`);
   for (const t of ['Will call if fever. May need dose reduction.', 'Pembrolizumab 200 mg q3w, CD20 positive', 'lives in Assisted living']) assert.equal(run(t), t);
 });
+
+test('round 14 patterns: "Will to pick her up", a city after a place word, a driver licence in brackets', () => {
+  const run = (t) => D.processTable({ headers: ['Comments'], rows: [[t]] }, {}).rows[0][0];
+  assert.ok(!/\bWill\b/.test(run('B12 and folate current. Will to pick her up at 3.')));
+  assert.ok(!/Bridgeport/.test(run('Pt late from Bridgeport traffic.')));
+  assert.ok(!/D441/.test(run('needs copy of DL (D441-922-0377) for the app')));
+  for (const t of ['switch to Keytruda', 'came from Radiology', 'charted in Epic', 'Will call if fever.']) assert.equal(run(t), t);
+});
+
+test('a place word before a side, a cycle or a muscle is not a town', () => {
+  const run = (t) => D.processTable({ headers: ['Comments'], rows: [[t]] }, {}).rows[0][0];
+  for (const t of ['Pt hard of hearing, speak to L side.', 'Flu shot given today in L deltoid.', 'needs echo prior to C1 trastuzumab.']) assert.equal(run(t), t);
+});

@@ -896,6 +896,8 @@
       while ((pm = PLATE.exec(text))) { const v = pm[1]; if (!/\d/.test(v) || !/[A-Z]/.test(v) && v.replace(/\D/g, '').length < 5) continue; const a = pm.index + pm[0].length - v.length; pushId(a, a + v.length, 'ID_OTHER'); }
       const MRNS = /\b(?:MRNs|MRN's|record\s+numbers)\b/gi;
       while ((pm = MRNS.exec(text))) { const win = text.slice(pm.index, pm.index + 90); const re = /\d[\d\-]{4,}\d/g; let d; while ((d = re.exec(win))) { if (d[0].replace(/\D/g, '').length >= 6) pushId(pm.index + d.index, pm.index + d.index + d[0].length, 'MRN'); } }
+      const DL = /\b(?:DL|D\.L\.|driver'?s?\s+licen[cs]e|licen[cs]e)\b\s*(?:#|no\.?|number)?\s*[:(]?\s*([A-Z]{0,2}\d[\dA-Z\-]{5,}\d)/g;
+      while ((pm = DL.exec(text))) { const v = pm[1]; const a = pm.index + pm[0].length - v.length; pushId(a, a + v.length, 'ID_OTHER'); }
       const ALNUM = /\b[A-Z]{1,4}\d{7,12}\b(?!\s*(?:mg|mcg|ml|units?|iu)\b)/g;
       while ((pm = ALNUM.exec(text))) pushId(pm.index, pm.index + pm[0].length, 'ID_OTHER');
     }
@@ -2822,7 +2824,7 @@
     for (let i = 0; i < toks.length - 1; i++) {
       const t = toks[i]; if (!t.word || !free(t.start, t.end)) continue;
       const nx = text.slice(t.end, t.end + 30);
-      if (t.cap && t.core.length >= 3 && LEX.isFirstName(t.core) && !DRUG_STEM.test(t.core) && /^\s+(?:says|said|reports|reported|states|stated|wants|wanted|asks|asked|called|calls|denies|denied|agrees|agreed|declines|declined|feels|felt|tolerated|arrived|requests|requested|prefers|confirmed|confirms|texted|emailed|phoned)\b/.test(nx)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
+      if (t.cap && t.core.length >= 3 && LEX.isFirstName(t.core) && !DRUG_STEM.test(t.core) && /^\s+(?:to\s+(?:pick|drive|bring|take|come|stay|call|help|sign)|says|said|reports|reported|states|stated|wants|wanted|asks|asked|called|calls|denies|denied|agrees|agreed|declines|declined|feels|felt|tolerated|arrived|requests|requested|prefers|confirmed|confirms|texted|emailed|phoned)\b/.test(nx)) { add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); continue; }
       if (/^[\p{Ll}]/u.test(t.core) && t.core.length >= 3 && LEX.isFirstName(t.core) && !LEX.isEnglishWord(t.core) && /^\s*(?:#|:|at|cell|ph|phone|tel)?\s*\(?\d{3}\)?[\s.\-]?\d{3,4}/i.test(nx)) add.push({ start: t.start, end: t.end, type: 'NAME_OTHER', source: 'strict', conf: 0.5 });
     }
     // "Pt May Tran": a first name that is also a word, between a patient cue and a name already found, is part of the name
@@ -2841,10 +2843,19 @@
     }
     // a ZIP on its own after a place or name the screen reader split from its state ("Verlander      91770; transport van")
     spans.concat(add).filter((sp) => sp.type === 'LOCATION' || /^NAME/.test(sp.type)).forEach((sp) => {
-      const z = text.slice(sp.end, sp.end + 48).match(/^(?:,\s*|\s{2,}|\s*\n\s*)(\d{5})(?:-\d{4})?(?![\d\/:.\-])(?!\s*(?:mg|mcg|ml|mL|units?|cells|copies|iu|k\b|x\b))/);
+      const z = text.slice(sp.end, sp.end + 160).match(/^(?:,\s*|\s{2,}|\s*\n\s*)(\d{5})(?:-\d{4})?(?![\d\/:.\-])(?!\s*(?:mg|mcg|ml|mL|units?|cells|copies|iu|k\b|x\b))/);
       if (!z) return; const a = sp.end + z[0].length - z[1].length;
       if (free(a, a + 5)) add.push({ start: a, end: a + 5, type: 'ZIP', source: 'strict', conf: 0.5 });
     });
+    // a known city after a place cue even when it is also a word or a name ("late from Bridgeport traffic", "from Mobile")
+    for (let i = 1; i < toks.length; i++) {
+      const t = toks[i], p = toks[i - 1];
+      if (!t.word || !t.cap || !p.word || !/^(?:from|in|to|near|outside|toward|towards)$/i.test(p.core) || !free(t.start, t.end)) continue;
+      if (!/^\p{Lu}\p{Ll}{2,}(?:[\s\-]\p{Lu}\p{Ll}+)?$/u.test(t.core)) continue;
+      if (!LEX.CITY_SET.has(t.core.toLowerCase()) && (LEX.isDictWord(t.core) || LEX.isClinical(t.core) || STRICT_SKIP.test(t.core) || DRUG_STEM.test(t.core) || /^[A-Z]{2,}$/.test(t.core) || monthIndex(t.core))) continue;
+      if (LEX.isClinical(t.core) && !/^(?:from|near|outside)$/i.test(p.core)) continue;
+      add.push({ start: t.start, end: t.end, type: 'LOCATION', source: 'strict', conf: 0.5 });
+    }
     // an age of 90 or more said in words around it: "mom is 97 now", "she turned 93", "will be 91 next week"
     const AGE_SAID = /\b(?:is|turned|turns|will\s+be|was)\s+(9\d|1[01]\d)(?=\s+(?:now|today|this|next|last|years?|yrs?|y\.?o\.?|year[-\s]old)\b|\s*(?:[.,;!]|$))/gi;
     while ((m = AGE_SAID.exec(text))) {
