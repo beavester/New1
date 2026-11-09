@@ -1,0 +1,333 @@
+[
+  {
+    "id": "m8-t01",
+    "kind": "table",
+    "headers": ["Appt Date", "Patient Name", "MRN", "DOB", "Age", "Acct #", "Phone", "Attending", "Regimen", "Comments"],
+    "rows": [
+      ["11/03/2026", "Okonkwo, Chidiebere", "4471023", "05/14/1961", "65", "200318845", "555-0142", "Hargreave, Philip MD", "FOLFOX C4", "Port accessed, flushed fine. Pt tolerated well."],
+      ["11/03/2026", "Dumont-Lavoie, Genevieve", "3390871", "09/22/1958", "68", "200318902", "555-0177", "Hargreave, Philip MD", "Pembrolizumab q3w", "Daughter Solange driving, cb 555-0188 when done."],
+      ["11/03/2026", "Tran, Minh Quang", "5128834", "01/30/1972", "54", "200319011", "555-0109", "Szczepanski, Dorota DO", "Rituximab", "Premed w/ Benadryl 25 mg IV and Tylenol 650 mg PO. No reaction."],
+      ["11/04/2026", "Okonkwo, Chidiebere", "4471023", "05/14/1961", "65", "200318845", "555-0142", "Hargreave, Philip MD", "FOLFOX C4 pump d/c", "Pump disconnect 48h. Pt reports grade 1 neuropathy."],
+      ["11/04/2026", "Abdirahman, Hodan", "6023391", "12/02/1980", "45", "200319120", "555-0163", "Szczepanski, Dorota DO", "Iron sucrose 200 mg", "Interpreter needed (Somali). Husband Yusuf at bedside."]
+    ],
+    "phi": ["11/03/2026", "11/04/2026", "Okonkwo, Chidiebere", "4471023", "05/14/1961", "200318845", "555-0142", "Hargreave, Philip", "Dumont-Lavoie, Genevieve", "3390871", "09/22/1958", "200318902", "555-0177", "Solange", "555-0188", "Tran, Minh Quang", "5128834", "01/30/1972", "200319011", "555-0109", "Szczepanski, Dorota", "Abdirahman, Hodan", "6023391", "12/02/1980", "200319120", "555-0163", "Yusuf"],
+    "keep": ["Premed w/ Benadryl 25 mg IV", "grade 1 neuropathy", "Port accessed, flushed fine"],
+    "category": "routine",
+    "note": "Standard Epic infusion schedule export; same patient on two consecutive days; relatives named in comments with callback number."
+  },
+  {
+    "id": "m8-t02",
+    "kind": "table",
+    "headers": ["Dt", "Pt Name", "MRN", "Pt DOB", "Prov", "Tx", "Chair", "Nurse Comments"],
+    "rows": [
+      ["11/05/26", "Villanueva, Rosalinda", "00928174", "03/08/1955", "Bhattacharya, Anindita MD", "Carboplatin/Paclitaxel C2", "Bay 3", "Pt c/o mild nausea after last cycle, Zofran given pre-tx."],
+      ["11/05/26", "Kowalczyk, Zbigniew", "00871455", "07/19/1949", "Bhattacharya, Anindita MD", "Zoledronic acid", "Bay 5", "Son Tadeusz will pick up, 555-0121."],
+      ["11/05/26", "Villanueva, Rosalinda", "00928174", "03/08/1955", "Bhattacharya, Anindita MD", "Carboplatin/Paclitaxel C2", "Bay 3", "Labs reviewed: ANC 1.8, plt 142. OK to treat per Dr. Bhattacharya."],
+      ["11/05/26", "Haddad, Rami", "00934010", "11/11/1990", "Oyelaran, Femi MD", "Infliximab 5 mg/kg", "Bay 1", "Vitals stable q30 min. Rami requested blanket."],
+      ["11/05/26", "Pham, Bich Ngoc", "00902233", "06/27/1967", "Oyelaran, Femi MD", "Vit B12 1000 mcg IM", "Bay 2", "Quick inj, left 10 min post."],
+      ["11/05/26", "Castellano, Vittoria", "00915566", "02/14/1978", "Oyelaran, Femi MD", "Ocrelizumab", "Bay 4", "Called Dr. Petrosyan (PCP) re: steroid taper."]
+    ],
+    "phi": ["11/05/26", "Villanueva, Rosalinda", "00928174", "03/08/1955", "Bhattacharya, Anindita", "Dr. Bhattacharya", "Kowalczyk, Zbigniew", "00871455", "07/19/1949", "Tadeusz", "555-0121", "Haddad, Rami", "00934010", "11/11/1990", "Oyelaran, Femi", "Rami", "Pham, Bich Ngoc", "00902233", "06/27/1967", "Castellano, Vittoria", "00915566", "02/14/1978", "Dr. Petrosyan"],
+    "keep": ["ANC 1.8, plt 142", "Zofran given pre-tx", "Vitals stable q30 min"],
+    "category": "routine",
+    "note": "Abbreviated headers, two-digit year dates, leading-zero MRNs, attending referenced as Dr. in comments, outside PCP named."
+  },
+  {
+    "id": "m8-t03",
+    "kind": "table",
+    "headers": ["Appointment", "Pat Name (Last, First)", "Med Rec No", "Account", "Primary Phone", "Attending Prov", "Protocol", "Notes"],
+    "rows": [
+      ["11/06/2026 08:30", "Reyes-Bautista, Marisol", "MR2203981", "A-77120045", "(555) 010-0156", "Lindqvist, Erik MD", "Docetaxel q3w C3", "Dexamethasone 8 mg PO taken x2 days prior confirmed."],
+      ["11/06/2026 09:00", "Adeyemi, Oluwaseun", "MR2204117", "A-77120133", "(555) 010-0191", "Lindqvist, Erik MD", "R-CHOP C1 D1", "First cycle, slow rituximab titration. Wife Folasade present."],
+      ["11/06/2026 10:15", "Nakamura-Oh, Seojin", "MR2198720", "A-77119874", "(555) 010-0102", "Farouk, Layla MD", "Pegfilgrastim", "Onpro device applied to abd. Teaching done."],
+      ["11/06/2026 11:00", "Reyes-Bautista, Marisol", "MR2203981", "A-77120045", "(555) 010-0156", "Lindqvist, Erik MD", "Docetaxel q3w C3", "Infusion complete 1405. No reaction. Next appt in 3 wks."],
+      ["11/06/2026 13:00", "Boucher, Jean-Marc", "MR2201105", "A-77120008", "(555) 010-0144", "Farouk, Layla MD", "Daratumumab SC", "Pt requests morning slots only, works nights."]
+    ],
+    "phi": ["11/06/2026", "Reyes-Bautista, Marisol", "MR2203981", "A-77120045", "(555) 010-0156", "Lindqvist, Erik", "Adeyemi, Oluwaseun", "MR2204117", "A-77120133", "(555) 010-0191", "Folasade", "Nakamura-Oh, Seojin", "MR2198720", "A-77119874", "(555) 010-0102", "Farouk, Layla", "Boucher, Jean-Marc", "MR2201105", "A-77120008", "(555) 010-0144"],
+    "keep": ["Dexamethasone 8 mg PO", "slow rituximab titration", "Onpro device applied to abd"],
+    "category": "routine",
+    "note": "Prefixed MRN and account formats, parenthesized area codes, datetime appointment column."
+  },
+  {
+    "id": "m8-t04",
+    "kind": "table",
+    "headers": ["Visit Dt", "Patient", "MRN", "DOB", "Age", "Emerg Contact", "Emerg Phone", "Attending", "Regimen", "Comments"],
+    "rows": [
+      ["11/09/2026", "Mbeki-Thompson, Adaora", "7781203", "08/03/1963", "63", "Thompson, Gerald (spouse)", "555-0135", "Rosenthal, Miriam MD", "Trastuzumab q3w", "Echo last month EF 60%. OK to proceed."],
+      ["11/09/2026", "Sulaiman, Khadija", "7790456", "04/21/1988", "38", "Sulaiman, Omar (brother)", "555-0170", "Rosenthal, Miriam MD", "IVIG 2 g/kg", "Pre-hydrated NS 500 mL. Slow rate for HA hx."],
+      ["11/09/2026", "Grabowski, Henryk", "7702218", "10/30/1946", "80", "Grabowski, Elzbieta (dtr)", "555-0119", "Achebe, Nnamdi MD", "Leucovorin/5FU", "Hard stick, used R hand. Daughter Elzbieta waited in lobby."],
+      ["11/10/2026", "Mbeki-Thompson, Adaora", "7781203", "08/03/1963", "63", "Thompson, Gerald (spouse)", "555-0135", "Rosenthal, Miriam MD", "Trastuzumab q3w", "Rescheduled from 11/09 due to weather."],
+      ["11/10/2026", "Santos, Jericho", "7795522", "12/12/1995", "30", "Santos, Marites (mother)", "555-0183", "Achebe, Nnamdi MD", "Bleomycin test dose", "Test dose given, observed 60 min, no fever."]
+    ],
+    "phi": ["11/09/2026", "11/10/2026", "11/09", "Mbeki-Thompson, Adaora", "7781203", "08/03/1963", "Thompson, Gerald", "555-0135", "Rosenthal, Miriam", "Sulaiman, Khadija", "7790456", "04/21/1988", "Sulaiman, Omar", "555-0170", "Grabowski, Henryk", "7702218", "10/30/1946", "Grabowski, Elzbieta", "555-0119", "Achebe, Nnamdi", "Elzbieta", "Santos, Jericho", "7795522", "12/12/1995", "Santos, Marites", "555-0183"],
+    "keep": ["EF 60%", "Pre-hydrated NS 500 mL", "observed 60 min, no fever"],
+    "category": "routine",
+    "note": "Emergency contact columns with relationship in parentheses; partial date (month/day) inside a comment."
+  },
+  {
+    "id": "m8-t05",
+    "kind": "table",
+    "headers": ["Date", "Last", "First", "MRN", "DOB", "Prov", "Regimen", "Comment"],
+    "rows": [
+      ["2026-11-12", "NGUYEN", "THANH", "00451209", "1959-04-17", "PATEL, R", "Oxaliplatin", "Thanh c/o cold sensitivity, reviewed precautions."],
+      ["2026-11-12", "OYELOWO", "TEMITOPE", "00460031", "1984-09-09", "PATEL, R", "Ferumoxytol", "Mr. Oyelowo declined 2nd dose today, will return."],
+      ["2026-11-12", "LEBLANC", "MARGUERITE", "00448870", "1932-12-28", "KIM, J", "Zoledronic acid", "93 yo, dtr Chantal assisting w/ transfer, 555-0128."],
+      ["2026-11-13", "NGUYEN", "THANH", "00451209", "1959-04-17", "PATEL, R", "5FU pump d/c", "Pump removed, port deaccessed. Thanh asked about next cycle."],
+      ["2026-11-13", "HOSSAIN", "FARIDA", "00472215", "1977-06-06", "KIM, J", "Methotrexate", "Pt vomiting, Dr. Kim notified, held."]
+    ],
+    "phi": ["2026-11-12", "2026-11-13", "NGUYEN", "THANH", "00451209", "1959-04-17", "PATEL, R", "Thanh", "OYELOWO", "TEMITOPE", "00460031", "1984-09-09", "Mr. Oyelowo", "LEBLANC", "MARGUERITE", "00448870", "1932-12-28", "KIM, J", "93", "Chantal", "555-0128", "HOSSAIN", "FARIDA", "00472215", "1977-06-06", "Dr. Kim"],
+    "keep": ["cold sensitivity, reviewed precautions", "Pump removed, port deaccessed", "Pt vomiting"],
+    "category": "hard",
+    "note": "Name split into ALL-CAPS Last/First columns, ISO dates, initial-only provider, age over 89 written as a number, comments use mixed-case first name and Mr. surname."
+  },
+  {
+    "id": "m8-t06",
+    "kind": "table",
+    "headers": ["Appt Dt/Time", "Pt", "MRN", "Pt Age", "Home Ph", "Attending", "Infusion", "RN Notes"],
+    "rows": [
+      ["11/16/2026 0745", "Fernandez, Ignacio", "1120394", "71", "555-0150", "Whitcombe, Alan MD", "Nivolumab 480 mg", "Pt arrived early, TSH pending. Dr. Whitcombe ok'd start."],
+      ["11/16/2026 0800", "Chowdhury, Nasreen", "1133821", "58", "555-0166", "Whitcombe, Alan MD", "Gemcitabine D8", "Plt 98 - below threshold, called Dr. Whitcombe, dose reduced 25%."],
+      ["11/16/2026 0830", "Delacroix, Yvette", "1104477", "66", "555-0199", "Mensah, Kwabena MD", "Abraxane", "Neuropathy grade 2 in feet, pt denies falls."],
+      ["11/16/2026 0900", "Fernandez, Ignacio", "1120394", "71", "555-0150", "Whitcombe, Alan MD", "Nivolumab 480 mg", "Completed 0930, d/c home with wife Pilar."],
+      ["11/16/2026 1000", "Agustin, Joselito", "1140082", "44", "555-0113", "Mensah, Kwabena MD", "Infliximab", "Weight 82 kg, dose confirmed with pharmacy."],
+      ["11/16/2026 1100", "Mazur, Agnieszka", "1127760", "52", "555-0174", "Mensah, Kwabena MD", "Ocrelizumab 600 mg", "Premeds given, methylpred 100 mg IV. No rxn."]
+    ],
+    "phi": ["11/16/2026", "Fernandez, Ignacio", "1120394", "555-0150", "Whitcombe, Alan", "Dr. Whitcombe", "Chowdhury, Nasreen", "1133821", "555-0166", "Delacroix, Yvette", "1104477", "555-0199", "Mensah, Kwabena", "Pilar", "Agustin, Joselito", "1140082", "555-0113", "Mazur, Agnieszka", "1127760", "555-0174"],
+    "keep": ["Plt 98 - below threshold", "Neuropathy grade 2 in feet", "methylpred 100 mg IV"],
+    "category": "routine",
+    "note": "No DOB column, ages under 90 only; military times appended to dates; attending named repeatedly in notes."
+  },
+  {
+    "id": "m8-t07",
+    "kind": "table",
+    "headers": ["Date of Service", "Patient Name", "MRN", "Date of Birth", "Sex", "Insurance", "Member ID", "Attending Physician", "Order", "Comments"],
+    "rows": [
+      ["11/17/2026", "Iqbal, Zainab", "88203411", "05/05/1970", "F", "BlueShield PPO", "ZXK884412097", "Castellanos, Rodrigo MD", "Cyclophosphamide", "Auth on file through 12/31/2026."],
+      ["11/17/2026", "Baptiste, Wilner", "88211029", "09/18/1952", "M", "Medicare", "1EG4-TE5-MK72", "Castellanos, Rodrigo MD", "Denosumab 120 mg", "Creole interpreter via phone. Pt understood teaching."],
+      ["11/17/2026", "Yoon, Haneul", "88190375", "03/23/1986", "F", "Aetna HMO", "W223910556", "Dubois, Celine MD", "Tocilizumab", "BP 148/92 pre, rechecked 132/84. Proceeded."],
+      ["11/18/2026", "Iqbal, Zainab", "88203411", "05/05/1970", "F", "BlueShield PPO", "ZXK884412097", "Castellanos, Rodrigo MD", "Mesna", "Day 2 mesna, UA neg for blood."],
+      ["11/18/2026", "Ekwueme, Chukwuemeka", "88214478", "07/07/1965", "M", "Self-pay", "", "Dubois, Celine MD", "Iron dextran", "Test dose 25 mg given, no rxn, full dose infused."]
+    ],
+    "phi": ["11/17/2026", "11/18/2026", "12/31/2026", "Iqbal, Zainab", "88203411", "05/05/1970", "ZXK884412097", "Castellanos, Rodrigo", "Baptiste, Wilner", "88211029", "09/18/1952", "1EG4-TE5-MK72", "Yoon, Haneul", "88190375", "03/23/1986", "W223910556", "Dubois, Celine", "Ekwueme, Chukwuemeka", "88214478", "07/07/1965"],
+    "keep": ["BP 148/92 pre, rechecked 132/84", "UA neg for blood", "Test dose 25 mg given"],
+    "category": "routine",
+    "note": "Insurance member IDs in several formats including a Medicare MBI-style ID; an authorization expiry date in a comment; one empty cell."
+  },
+  {
+    "id": "m8-t08",
+    "kind": "table",
+    "headers": ["Appt", "Pt Name / MRN", "DOB (Age)", "Phone(s)", "Prov", "Tx", "Comments"],
+    "rows": [
+      ["Mon 11/23", "Olufemi-Barnes, Temidayo / 3301928", "06/12/1974 (52)", "H 555-0139 C 555-0140", "Dr. Anand", "Paclitaxel wkly", "Pt moved to 418 Birchwood Ln, Cedar Falls 50613 - update demographics."],
+      ["Mon 11/23", "Szymanska, Krystyna / 3287641", "01/02/1948 (78)", "555-0187", "Dr. Anand", "Zoledronic acid", "Transport: nephew Mateusz, silver Camry plate KRZ 4471."],
+      ["Mon 11/23", "Gonzalez-Pineda, Araceli / 3310055", "10/19/1981 (45)", "555-0101", "Dr. Osei", "Rituximab maint", "Infusion rate titrated per protocol, max 400 mg/hr."],
+      ["Tue 11/24", "Olufemi-Barnes, Temidayo / 3301928", "06/12/1974 (52)", "H 555-0139 C 555-0140", "Dr. Anand", "Paclitaxel wkly", "Add-on labs; Temidayo asked for letter for employer."],
+      ["Tue 11/24", "Vo, Thi Lan / 3299013", "08/08/1960 (66)", "555-0158", "Dr. Osei", "Pemetrexed", "B12/folate confirmed. Daughter-in-law Huong translates."]
+    ],
+    "phi": ["11/23", "11/24", "Olufemi-Barnes, Temidayo", "3301928", "06/12/1974", "555-0139", "555-0140", "Dr. Anand", "418 Birchwood Ln", "Cedar Falls", "50613", "Szymanska, Krystyna", "3287641", "01/02/1948", "555-0187", "Mateusz", "KRZ 4471", "Gonzalez-Pineda, Araceli", "3310055", "10/19/1981", "555-0101", "Dr. Osei", "Temidayo", "Vo, Thi Lan", "3299013", "08/08/1960", "555-0158", "Huong"],
+    "keep": ["max 400 mg/hr", "B12/folate confirmed", "Add-on labs"],
+    "category": "hard",
+    "note": "Merged name/MRN cell, DOB with age in parentheses, two phones in one cell, weekday-only dates, street address + city + ZIP and a licence plate in comments."
+  },
+  {
+    "id": "m8-t09",
+    "kind": "table",
+    "headers": ["Appt Date", "Patient Name", "MRN", "DOB", "Age", "Acct No", "Phone", "Attending", "Regimen", "Comments"],
+    "rows": [
+      ["11/30/2026", "Ramaswamy, Lakshmi", "2290183", "02/09/1957", "69", "91003342", "555-0126", "Kaczmarek, Piotr MD", "FOLFIRINOX C6", "Pt fatigued, Hgb 9.4. Dr. Kaczmarek aware, proceed."],
+      ["11/30/2026", "Diallo, Mamadou", "2301177", "11/25/1969", "56", "91003410", "555-0195", "Kaczmarek, Piotr MD", "Carboplatin AUC5", "Cr 1.3, dose recalculated by pharmacy."],
+      ["11/30/2026", "Ferraro, Domenico", "2288904", "04/04/1944", "82", "91003298", "555-0111", "Ahmed, Sumaya MD", "Pamidronate", "Pt lives alone, cab voucher given."],
+      ["12/01/2026", "Ramaswamy, Lakshmi", "2290183", "02/09/1957", "69", "91003342", "555-0126", "Kaczmarek, Piotr MD", "5FU pump d/c", "Pump d/c, no leak. Husband Venkat picked up."],
+      ["12/01/2026", "Lavallee, Pierrette", "2310562", "07/14/1975", "51", "91003488", "555-0132", "Ahmed, Sumaya MD", "Vedolizumab", "Pt asymptomatic, 30 min infusion tolerated."],
+      ["12/01/2026", "Diallo, Mamadou", "2301177", "11/25/1969", "56", "91003410", "555-0195", "Kaczmarek, Piotr MD", "Carboplatin AUC5", "Hiccups post-tx, PCP Dr. Mwangi to f/u."]
+    ],
+    "phi": ["11/30/2026", "12/01/2026", "Ramaswamy, Lakshmi", "2290183", "02/09/1957", "91003342", "555-0126", "Kaczmarek, Piotr", "Dr. Kaczmarek", "Diallo, Mamadou", "2301177", "11/25/1969", "91003410", "555-0195", "Ferraro, Domenico", "2288904", "04/04/1944", "91003298", "555-0111", "Ahmed, Sumaya", "Venkat", "Lavallee, Pierrette", "2310562", "07/14/1975", "91003488", "555-0132", "Dr. Mwangi"],
+    "keep": ["Hgb 9.4", "Cr 1.3, dose recalculated", "30 min infusion tolerated"],
+    "category": "routine",
+    "note": "Ordinary export spanning a month boundary; two patients recur; husband and outside PCP named."
+  },
+  {
+    "id": "m8-t10",
+    "kind": "table",
+    "headers": ["Sched Time", "Pt Last, First", "MRN", "Age/Sex", "Attending", "Chair", "Drug", "Pre-Infusion Note", "Post-Infusion Note"],
+    "rows": [
+      ["0730", "Wanjiru-Carter, Beatrice", "5520017", "61 F", "Nowak, Tomasz MD", "C1", "Pembrolizumab", "Vitals WNL", "Tolerated well, d/c 0810"],
+      ["0745", "Esposito, Salvatore", "5511208", "73 M", "Nowak, Tomasz MD", "C2", "Zoledronic acid", "Ca 9.1, Cr 1.0", "Mild flu-like sx anticipated, Tylenol advised"],
+      ["0800", "Than, Aung Kyaw", "5534490", "49 M", "Nowak, Tomasz MD", "C3", "Carbo/Etoposide D1", "ANC 2.1", "Completed 1130, Emend given"],
+      ["0830", "Louissaint, Marie-Carmel", "5529931", "56 F", "Reinholt, Ingrid MD", "C4", "Rituximab", "Premeds given 0820", "Infusion rxn at 0915 - chills, held 30 min, restarted at lower rate, Dr. Reinholt at bedside"],
+      ["0900", "Oduya, Folake", "5541102", "38 F", "Reinholt, Ingrid MD", "C5", "Iron sucrose", "BP 118/76", "No issues, sister Bolanle drove"],
+      ["0930", "Than, Aung Kyaw", "5534490", "49 M", "Nowak, Tomasz MD", "C3", "Hydration 1L NS", "Pt requests extra hydration", "Done"]
+    ],
+    "phi": ["Wanjiru-Carter, Beatrice", "5520017", "Nowak, Tomasz", "Esposito, Salvatore", "5511208", "Than, Aung Kyaw", "5534490", "Louissaint, Marie-Carmel", "5529931", "Reinholt, Ingrid", "Dr. Reinholt", "Oduya, Folake", "5541102", "Bolanle"],
+    "keep": ["Ca 9.1, Cr 1.0", "chills, held 30 min, restarted at lower rate", "ANC 2.1"],
+    "category": "routine",
+    "note": "Daily chair schedule with times only (no dates), age/sex merged, two comment columns, chair IDs that should survive."
+  },
+  {
+    "id": "m8-t11",
+    "kind": "table",
+    "headers": ["Appt Date", "Patient", "MRN", "DOB", "Contact", "Attending", "Regimen", "Comments"],
+    "rows": [
+      ["12/07/2026", "Bartkowiak, Wladyslaw", "9017733", "03/03/1950", "wally.bart1950@example.com", "Dr. Okafor-Reyes", "Bevacizumab", "Pt goes by Wally. Prefers email reminders."],
+      ["12/07/2026", "Nasser, Dalal", "9024410", "09/30/1983", "555-0167", "Dr. Okafor-Reyes", "Ustekinumab", "Dalal asked about travel to see mother in Dearborn next month."],
+      ["12/07/2026", "Hoang, Kieu Oanh", "9031156", "12/24/1962", "555-0115", "Dr. Zielinski", "Irinotecan", "Pt's son Danny (555-0116) is primary contact, not pt."],
+      ["12/08/2026", "Bartkowiak, Wladyslaw", "9017733", "03/03/1950", "wally.bart1950@example.com", "Dr. Okafor-Reyes", "Bevacizumab", "UA protein 1+, BP 142/88. Wally reports HA."],
+      ["12/08/2026", "Abubakar, Fatimah", "9040092", "06/15/1979", "555-0171", "Dr. Zielinski", "Natalizumab", "JCV ab neg. Pt MyChart msg sent re: next infusion."]
+    ],
+    "phi": ["12/07/2026", "12/08/2026", "Bartkowiak, Wladyslaw", "9017733", "03/03/1950", "wally.bart1950@example.com", "Dr. Okafor-Reyes", "Wally", "Nasser, Dalal", "9024410", "09/30/1983", "555-0167", "Dalal", "Dearborn", "Hoang, Kieu Oanh", "9031156", "12/24/1962", "555-0115", "Dr. Zielinski", "Danny", "555-0116", "Abubakar, Fatimah", "9040092", "06/15/1979", "555-0171"],
+    "keep": ["UA protein 1+, BP 142/88", "JCV ab neg", "Prefers email reminders"],
+    "category": "hard",
+    "note": "Email address as contact, nickname not derivable from the name column, city in a comment, relative's phone in parentheses, patient referred to by first name only."
+  },
+  {
+    "id": "m8-t12",
+    "kind": "table",
+    "headers": ["Dt", "Pat Name", "MRN", "Pat DOB", "Pat Phone", "Prov", "Protocol", "Cycle", "Comments"],
+    "rows": [
+      ["12/09/26", "Ocampo, Rogelio", "00119283", "08/21/1958", "555-0147", "Brennan, Siobhan MD", "FOLFOX", "C7D1", "Cold sensitivity persists, pt wearing gloves."],
+      ["12/09/26", "Kone, Aminata", "00120456", "02/17/1986", "555-0180", "Brennan, Siobhan MD", "AC", "C2D1", "Hair loss discussed, wig referral placed."],
+      ["12/09/26", "Petrov, Lyudmila", "00117709", "10/10/1951", "555-0123", "Varghese, Thomas MD", "Paclitaxel", "C3D8", "Pt's granddaughter Katya called to confirm pickup time."],
+      ["12/10/26", "Ocampo, Rogelio", "00119283", "08/21/1958", "555-0147", "Brennan, Siobhan MD", "FOLFOX", "C7D3", "Pump d/c. Wife Norma asked about holiday scheduling."],
+      ["12/10/26", "Nwosu, Ngozi", "00121870", "04/29/1970", "555-0154", "Varghese, Thomas MD", "Trastuzumab/Pertuzumab", "C5", "Echo EF 58%, no change."],
+      ["12/10/26", "Sarmiento, Divina", "00118930", "07/23/1964", "555-0138", "Varghese, Thomas MD", "Zoledronic acid", "q3mo", "Dental clearance on file."],
+      ["12/10/26", "Kone, Aminata", "00120456", "02/17/1986", "555-0180", "Brennan, Siobhan MD", "AC", "C2D1 (cont)", "Delayed start - pharmacy. Completed 1510."]
+    ],
+    "phi": ["12/09/26", "12/10/26", "Ocampo, Rogelio", "00119283", "08/21/1958", "555-0147", "Brennan, Siobhan", "Kone, Aminata", "00120456", "02/17/1986", "555-0180", "Petrov, Lyudmila", "00117709", "10/10/1951", "555-0123", "Varghese, Thomas", "Katya", "Norma", "Nwosu, Ngozi", "00121870", "04/29/1970", "555-0154", "Sarmiento, Divina", "00118930", "07/23/1964", "555-0138"],
+    "keep": ["wig referral placed", "Echo EF 58%", "Dental clearance on file"],
+    "category": "routine",
+    "note": "Seven-row export with cycle column (C7D1 etc. must survive); relatives named by first name only."
+  },
+  {
+    "id": "m8-t13",
+    "kind": "table",
+    "headers": ["Appt", "Patient", "MRN", "DOB", "Age", "Referring Prov", "Ref Phone/Fax", "Attending", "Tx", "Comments"],
+    "rows": [
+      ["12/14/2026", "Long, Patience", "7700219", "01/15/1934", "92", "Dr. Adebayo-Smith", "P 555-0130 F 555-0131", "Morrissey, Declan MD", "Rituximab", "92 yo, hard of hearing, grandson Emeka assists."],
+      ["12/14/2026", "Park, Joon-ho", "7712845", "05/20/1968", "58", "Dr. Hernandez-Cruz", "P 555-0120", "Morrissey, Declan MD", "Pembrolizumab", "Pt asked whether Dr. Hernandez-Cruz got the scan report."],
+      ["12/14/2026", "Said, Ayaan", "7719902", "11/11/2001", "25", "Dr. Lindgren", "P 555-0146 F 555-0149", "Oyinlola, Bukola MD", "Infliximab", "Weight 61 kg. Labs faxed to Dr. Lindgren."],
+      ["12/15/2026", "Long, Patience", "7700219", "01/15/1934", "92", "Dr. Adebayo-Smith", "P 555-0130 F 555-0131", "Morrissey, Declan MD", "Rituximab D2", "Patience tolerated day 2 without premeds beyond Tylenol."],
+      ["12/15/2026", "Russo, Annunziata", "7708861", "03/19/1959", "67", "Dr. Hernandez-Cruz", "P 555-0120", "Oyinlola, Bukola MD", "Denosumab", "Vit D repleted, Ca 9.4."],
+      ["12/15/2026", "Mendoza, Crisanto", "7721134", "09/09/1972", "54", "Dr. Lindgren", "P 555-0146 F 555-0149", "Oyinlola, Bukola MD", "Iron sucrose", "2nd of 5 doses. Pt drives self."]
+    ],
+    "phi": ["12/14/2026", "12/15/2026", "Long, Patience", "7700219", "01/15/1934", "92", "Dr. Adebayo-Smith", "555-0130", "555-0131", "Morrissey, Declan", "Emeka", "Park, Joon-ho", "7712845", "05/20/1968", "Dr. Hernandez-Cruz", "555-0120", "Said, Ayaan", "7719902", "11/11/2001", "Dr. Lindgren", "555-0146", "555-0149", "Oyinlola, Bukola", "Patience", "Russo, Annunziata", "7708861", "03/19/1959", "Mendoza, Crisanto", "7721134", "09/09/1972"],
+    "keep": ["Weight 61 kg", "Vit D repleted, Ca 9.4", "without premeds beyond Tylenol"],
+    "category": "hard",
+    "note": "Surnames and first names that are English words (Long, Patience, Park, Said), age 92 in a column and in a comment, referring providers with phone and fax in one cell."
+  },
+  {
+    "id": "m8-t14",
+    "kind": "table",
+    "headers": ["Appt Date", "Pt Name", "MRN", "DOB", "Phone", "Attending", "Dx", "Regimen", "Nursing Comments"],
+    "rows": [
+      ["12/16/2026", "Quintero, Esperanza", "4409182", "06/30/1966", "555-0162", "Fitzgerald, Nora MD", "Breast CA", "TCHP C3", "Diarrhea grade 1, Imodium reviewed."],
+      ["12/16/2026", "Nwachukwu, Obinna", "4415530", "12/05/1979", "555-0193", "Fitzgerald, Nora MD", "Crohn's", "Infliximab 10 mg/kg", "Dose escalated per GI. Pt tolerated."],
+      ["12/16/2026", "Lam, Wai Kwan", "4401276", "09/14/1953", "555-0108", "Mansour, Yousef MD", "MM", "Daratumumab/Bortezomib", "Bortezomib SC L abd. Dara wk 9 of 24."],
+      ["12/17/2026", "Quintero, Esperanza", "4409182", "06/30/1966", "555-0162", "Fitzgerald, Nora MD", "Breast CA", "Pegfilgrastim", "Onpro checked, pt denies bone pain. Sister Guadalupe drove."],
+      ["12/17/2026", "Abiodun, Kehinde", "4420911", "03/27/1990", "555-0185", "Mansour, Yousef MD", "MS", "Ocrelizumab", "6-mo dose. Premeds given."],
+      ["12/17/2026", "Lam, Wai Kwan", "4401276", "09/14/1953", "555-0108", "Mansour, Yousef MD", "MM", "Zoledronic acid", "Dental cleared."]
+    ],
+    "phi": ["12/16/2026", "12/17/2026", "Quintero, Esperanza", "4409182", "06/30/1966", "555-0162", "Fitzgerald, Nora", "Nwachukwu, Obinna", "4415530", "12/05/1979", "555-0193", "Lam, Wai Kwan", "4401276", "09/14/1953", "555-0108", "Mansour, Yousef", "Guadalupe", "Abiodun, Kehinde", "4420911", "03/27/1990", "555-0185"],
+    "keep": ["Diarrhea grade 1, Imodium reviewed", "Dose escalated per GI", "Bortezomib SC L abd"],
+    "category": "routine",
+    "note": "Diagnosis column (Breast CA, Crohn's, MM, MS) that must survive; ordinary identifiers; one sister named."
+  },
+  {
+    "id": "m8-t15",
+    "kind": "table",
+    "headers": ["Date", "Patient (Last, First)", "MRN", "DOB", "Attending", "Regimen", "Comments"],
+    "rows": [
+      ["01/05/2027", "Castillo-Mendez, Yaritza", "6610023", "02/02/1989", "Dr. S. Nakashima", "IVIG", "Pt verified w/ name + DOB (Feb 2, 1989). ID: SSN last 4 7721. Partner Jadiel in room."],
+      ["01/05/2027", "Achterberg, Willem", "6598741", "11/08/1947", "Dr. S. Nakashima", "Zoledronic acid", "Willem Achterberg - requests no students. Dentist Dr. Rosenbaum cleared him."],
+      ["01/05/2027", "Owusu-Ansah, Akosua", "6622109", "07/31/1975", "Dr. P. Giordano", "Rituximab", "First dose. Neighbor Gladys Fontaine waiting, has pt's keys."],
+      ["01/06/2027", "Castillo-Mendez, Yaritza", "6610023", "02/02/1989", "Dr. S. Nakashima", "IVIG D2", "HA last night, resolved w/ Tylenol. Yaritza slower rate today."],
+      ["01/06/2027", "Luu, Bao", "6631188", "04/18/1957", "Dr. P. Giordano", "Pemetrexed", "Pt's old chart from St. Anselm Hosp in Duluth requested."]
+    ],
+    "phi": ["01/05/2027", "01/06/2027", "Castillo-Mendez, Yaritza", "6610023", "02/02/1989", "Feb 2, 1989", "7721", "Dr. S. Nakashima", "Jadiel", "Achterberg, Willem", "6598741", "11/08/1947", "Willem Achterberg", "Dr. Rosenbaum", "Owusu-Ansah, Akosua", "6622109", "07/31/1975", "Dr. P. Giordano", "Gladys Fontaine", "Yaritza", "Luu, Bao", "6631188", "04/18/1957", "Duluth"],
+    "keep": ["slower rate today", "requests no students", "HA last night, resolved w/ Tylenol"],
+    "category": "hard",
+    "note": "DOB restated in long form inside a comment, SSN last four, patient name written First Last in a comment, a neighbor with full name, outside dentist, city of prior hospital."
+  },
+  {
+    "id": "m8-t16",
+    "kind": "table",
+    "headers": ["Appt Dt", "Patient", "MRN", "Age", "Attending", "Regimen", "Comments"],
+    "rows": [
+      ["01/12/27", "Balogun, Adewale", "3002917", "62", "Lisowski, Marek MD", "Carbo/Pacli C4", "Neuropathy stable grade 1."],
+      ["01/12/27", "Herrera, Dolores", "3011208", "77", "Lisowski, Marek MD", "Zoledronic acid", "Pt c/o jaw pain - hold, Dr. Lisowski notified, dental referral."],
+      ["01/12/27", "Dang, Hoang Phuc", "3020045", "35", "Chaudhary, Meera MD", "Infliximab", "Weight 70 kg, 500 mg dose."],
+      ["01/13/27", "Balogun, Adewale", "3002917", "62", "Lisowski, Marek MD", "Hydration", "Dehydrated after C4, 1L NS given."],
+      ["01/13/27", "Desrosiers, Lucien", "3005560", "69", "Chaudhary, Meera MD", "Nivolumab", "LFTs ok. Son Olivier picked up."]
+    ],
+    "phi": ["01/12/27", "01/13/27", "Balogun, Adewale", "3002917", "Lisowski, Marek", "Dr. Lisowski", "Herrera, Dolores", "3011208", "Dang, Hoang Phuc", "3020045", "Chaudhary, Meera", "Desrosiers, Lucien", "3005560", "Olivier"],
+    "keep": ["Neuropathy stable grade 1", "jaw pain - hold", "1L NS given"],
+    "category": "routine",
+    "note": "Minimal seven-column export with two-digit years and no phone or DOB; ages all under 90."
+  },
+  {
+    "id": "m8-t17",
+    "kind": "table",
+    "headers": ["Appointment", "Patient", "MRN", "Birthdate", "Contact", "Attending", "Regimen", "Comments"],
+    "rows": [
+      ["Wed, Jan 20 2027", "Al-Rashid, Noor", "MRN 5580012", "Jan 3, 1962", "Work 555-0190 x204", "Dr. Thorne", "Rituximab", "Pt's husband Tariq Al-Rashid 555-0191 is HCPOA."],
+      ["Wed, Jan 20 2027", "Ngata, Hemi", "MRN 5571190", "Aug 14, 1979", "555-0175", "Dr. Thorne", "Vedolizumab", "Pt called out sick Jan 18, rescheduled today."],
+      ["Wed, Jan 20 2027", "Pacheco, Milagros", "MRN 5592233", "Dec 25, 1955", "555-0152", "Dr. Abimbola", "Docetaxel", "Grdaughter Yesenia brought pt. Dex taken."],
+      ["Thu, Jan 21 2027", "Al-Rashid, Noor", "MRN 5580012", "Jan 3, 1962", "Work 555-0190 x204", "Dr. Thorne", "Rituximab D2", "No rxn. Noor returned to work after."],
+      ["Thu, Jan 21 2027", "Kwiatkowski, Bogdan", "MRN 5560874", "Mar 30, 1944", "555-0105", "Dr. Abimbola", "Pamidronate", "Pt wandered to wrong floor, escorted. Dtr Halina notified."]
+    ],
+    "phi": ["Jan 20 2027", "Jan 21 2027", "Al-Rashid, Noor", "5580012", "Jan 3, 1962", "555-0190 x204", "Tariq Al-Rashid", "555-0191", "Dr. Thorne", "Ngata, Hemi", "5571190", "Aug 14, 1979", "555-0175", "Jan 18", "Pacheco, Milagros", "5592233", "Dec 25, 1955", "555-0152", "Dr. Abimbola", "Yesenia", "Noor", "Kwiatkowski, Bogdan", "5560874", "Mar 30, 1944", "555-0105", "Halina"],
+    "keep": ["rescheduled today", "Dex taken", "No rxn"],
+    "category": "hard",
+    "note": "All dates in written month form (appointment, birthdate, and a sick-day date in a comment), MRN prefixed inside the cell, work phone with extension, relative with full name."
+  },
+  {
+    "id": "m8-t18",
+    "kind": "table",
+    "headers": ["Appt Date", "Patient Name", "MRN", "DOB", "Acct", "Phone", "Attending", "Tx Plan", "Comments"],
+    "rows": [
+      ["01/26/2027", "Wojcik, Beata", "8120034", "05/09/1973", "3300112", "555-0143", "Gagnon, Luc MD", "AC-T", "Pt anxious, Ativan 0.5 mg PO given pre-tx."],
+      ["01/26/2027", "Adesanya, Babatunde", "8133921", "09/01/1960", "3300178", "555-0157", "Gagnon, Luc MD", "FOLFOX", "Oxaliplatin desens not needed, mild rxn last time resolved."],
+      ["01/26/2027", "Khoury, Nadine", "8109876", "12/19/1982", "3300055", "555-0169", "Mistry, Hetal MD", "Infliximab", "Weight down 3 kg, dose adjusted."],
+      ["01/27/2027", "Wojcik, Beata", "8120034", "05/09/1973", "3300112", "555-0143", "Gagnon, Luc MD", "Pegfilgrastim", "Claritin advised for bone pain. Husband Krzysztof drove."],
+      ["01/27/2027", "Macaraeg, Reynaldo", "8140567", "03/03/1969", "3300201", "555-0184", "Mistry, Hetal MD", "Iron sucrose", "Dose 3 of 5."],
+      ["01/27/2027", "Ali, Hamza", "8151002", "06/22/1998", "3300244", "555-0112", "Mistry, Hetal MD", "IVIG", "Monthly. Premed Tylenol/Benadryl. Tolerated."],
+      ["01/27/2027", "Khoury, Nadine", "8109876", "12/19/1982", "3300055", "555-0169", "Mistry, Hetal MD", "Infliximab (cont)", "Finished 1420, no issues."]
+    ],
+    "phi": ["01/26/2027", "01/27/2027", "Wojcik, Beata", "8120034", "05/09/1973", "3300112", "555-0143", "Gagnon, Luc", "Adesanya, Babatunde", "8133921", "09/01/1960", "3300178", "555-0157", "Khoury, Nadine", "8109876", "12/19/1982", "3300055", "555-0169", "Mistry, Hetal", "Krzysztof", "Macaraeg, Reynaldo", "8140567", "03/03/1969", "3300201", "555-0184", "Ali, Hamza", "8151002", "06/22/1998", "3300244", "555-0112"],
+    "keep": ["Ativan 0.5 mg PO", "Weight down 3 kg, dose adjusted", "Claritin advised for bone pain"],
+    "category": "routine",
+    "note": "Seven-row export with seven-digit account numbers that resemble MRNs; a short surname (Ali); husband named."
+  },
+  {
+    "id": "m8-t19",
+    "kind": "table",
+    "headers": ["Date", "Pt Name", "MRN", "DOB", "Prov", "Infusion", "Pump/Device", "Comments"],
+    "rows": [
+      ["02/02/2027", "Chiamaka Obi", "2201938", "08/16/1976", "Dr. Weatherby", "5FU CI 46h", "CADD SN CP4421873", "Pump SN CP4421873 sent home. Charge RN reviewed alarms w/ pt."],
+      ["02/02/2027", "Esteban Villarreal", "2210467", "01/27/1958", "Dr. Weatherby", "Oxaliplatin", "", "Pt zip 78501 per mileage reimbursement form."],
+      ["02/02/2027", "Hye-jin Baek", "2198552", "10/05/1990", "Dr. Sato-Mullins", "Infliximab", "", "Port placed last wk by Dr. Ferreira (IR), site healing."],
+      ["02/04/2027", "Chiamaka Obi", "2201938", "08/16/1976", "Dr. Weatherby", "Pump d/c", "CADD SN CP4421873", "Pump returned, 0 mL residual. Chiamaka asks about C3 date."],
+      ["02/04/2027", "Abdullahi Warsame", "2215590", "03/12/1948", "Dr. Sato-Mullins", "Zoledronic acid", "", "Interpreter line used. Son Liban 555-0133."]
+    ],
+    "phi": ["02/02/2027", "02/04/2027", "Chiamaka Obi", "2201938", "08/16/1976", "Dr. Weatherby", "CP4421873", "Esteban Villarreal", "2210467", "01/27/1958", "78501", "Hye-jin Baek", "2198552", "10/05/1990", "Dr. Sato-Mullins", "Dr. Ferreira", "Chiamaka", "Abdullahi Warsame", "2215590", "03/12/1948", "Liban", "555-0133"],
+    "keep": ["0 mL residual", "Charge RN reviewed alarms", "site healing"],
+    "category": "hard",
+    "note": "Names in First Last order without a comma, pump serial number in a device column and in a comment, bare ZIP code in a comment, unnamed in-house role (Charge RN) that must survive."
+  },
+  {
+    "id": "m8-t20",
+    "kind": "table",
+    "headers": ["Appt Date", "Pt", "MRN", "DOB", "Age", "Phone", "Attending", "Regimen", "Comments"],
+    "rows": [
+      ["02/09/2027", "Girma, Tsehay", "6690041", "04/11/1965", "61", "555-0129", "Pellegrino, Marco MD", "Carbo/Pacli", "Pt reports tingling fingertips, grade 1."],
+      ["02/09/2027", "Oyinkansola, Adetola", "6701123", "07/20/1987", "39", "555-0192", "Pellegrino, Marco MD", "Rituximab", "Premeds given. Pt sleeping most of infusion."],
+      ["02/09/2027", "Fitzpatrick, Rosaleen", "6684410", "11/02/1950", "76", "555-0106", "Ansari, Nilofar MD", "Denosumab", "Ca 9.0. Dental ok."],
+      ["02/09/2027", "Marchand, Thibault", "6712208", "09/05/1979", "47", "555-0176", "Ansari, Nilofar MD", "Infliximab", "Weight 88 kg. No change."],
+      ["02/10/2027", "Girma, Tsehay", "6690041", "04/11/1965", "61", "555-0129", "Pellegrino, Marco MD", "Carbo/Pacli (cont)", "Returned for D2 hydration. Daughter Meron drove."],
+      ["02/10/2027", "Delgado, Ysabel", "6720391", "06/18/1972", "54", "555-0189", "Ansari, Nilofar MD", "Iron sucrose", "Dose 1 of 5, tolerated."]
+    ],
+    "phi": ["02/09/2027", "02/10/2027", "Girma, Tsehay", "6690041", "04/11/1965", "555-0129", "Pellegrino, Marco", "Oyinkansola, Adetola", "6701123", "07/20/1987", "555-0192", "Fitzpatrick, Rosaleen", "6684410", "11/02/1950", "555-0106", "Ansari, Nilofar", "Marchand, Thibault", "6712208", "09/05/1979", "555-0176", "Meron", "Delgado, Ysabel", "6720391", "06/18/1972", "555-0189"],
+    "keep": ["tingling fingertips, grade 1", "Ca 9.0", "D2 hydration"],
+    "category": "routine",
+    "note": "Plain daily schedule; one patient returns for day-2 hydration; daughter named."
+  }
+]
