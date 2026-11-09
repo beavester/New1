@@ -95,7 +95,7 @@ src/evaluate.js   scorer: token/entity recall, bootstrap CI, over-redaction, lea
 src/ocr.js        offline OCR wrapper (Tesseract.js worker built from inlined assets; OCR build only)
 src/app.js        browser UI: input routing, session registry, self-check, review, downloads
 src/index.html    template; build.js inlines vendor + src into dist/
-vendor/           SheetJS Community Edition 0.18.5 (Apache-2.0); vendor/ocr: Tesseract.js + English model (OCR build)
+vendor/           SheetJS Community Edition 0.20.3 (Apache-2.0, sha256 in vendor/XLSX-VERSION.txt); vendor/ocr: Tesseract.js + English model (OCR build)
 ```
 
 `core.js`, `synth.js` and `evaluate.js` are plain JS with no DOM dependency: the same code runs in Node for tests and in the page. A hospital-network service (the memo's preferred topology) can wrap `processTable` as is.

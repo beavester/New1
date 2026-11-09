@@ -18,6 +18,10 @@ const ocrAssets = () => {
     block('ocr-lang', b('eng.traineddata.gz').toString('base64')),
   ].join('\n');
 };
+const crypto = require('crypto');
+const XLSX_SHA256 = 'cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41';
+const xlsxHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'vendor/xlsx.full.min.js'))).digest('hex');
+if (xlsxHash !== XLSX_SHA256) { console.error('vendor/xlsx.full.min.js hash mismatch: ' + xlsxHash); process.exit(1); }
 const render = (ocr) => tpl
   .replace(/<!--INLINE:([^>]+)-->/g, (_, rel) => {
     const code = escapeScript(fs.readFileSync(path.join(root, rel.trim()), 'utf8'));
