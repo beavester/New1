@@ -1,0 +1,342 @@
+[
+ {
+  "id": "m10-scr-01",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>Infusion Center - Daily Schedule &nbsp; Tue 11/10/2026</div><div class='sub'>Dept: Oncology Infusion 3W &nbsp; | &nbsp; Resource: All Chairs &nbsp; | &nbsp; 5 appointments</div><table><tr><th>Time</th><th>Patient</th><th>MRN</th><th>DOB</th><th>Prov</th><th>Visit Type</th><th>Chair</th><th>Status</th></tr>\n<tr><td>07:30</td><td>Okonkwo, Chidinma</td><td>4471028</td><td>03/14/1968</td><td>Barlow</td><td>CHEMO - FOLFOX C4</td><td>Chair 2</td><td>Arrived</td></tr>\n<tr><td>08:00</td><td>Tran, Bao Nhi</td><td>5120377</td><td>11/02/1955</td><td>Barlow</td><td>IMMUNO - Pembrolizumab 200 mg</td><td>Chair 5</td><td>In Chair</td></tr>\n<tr><td>08:30</td><td>Kowalczyk, Zbigniew</td><td>3398415</td><td>07/21/1949</td><td>Mehta</td><td>INJ - Zoledronic acid</td><td>Chair 1</td><td>Scheduled</td></tr>\n<tr><td>09:15</td><td>Villanueva-Reyes, Marisol</td><td>6082231</td><td>09/30/1981</td><td>Mehta</td><td>CHEMO - AC C2</td><td>Chair 7</td><td>Scheduled</td></tr>\n<tr><td>10:00</td><td>Park, Seo-yeon</td><td>2217640</td><td>01/08/1974</td><td>Barlow</td><td>HYDRATION 1L NS</td><td>Chair 3</td><td>Scheduled</td></tr></table></body></html>"
+  ],
+  "phi": [
+   "11/10/2026",
+   "Okonkwo, Chidinma",
+   "4471028",
+   "03/14/1968",
+   "Tran, Bao Nhi",
+   "5120377",
+   "11/02/1955",
+   "Kowalczyk, Zbigniew",
+   "3398415",
+   "07/21/1949",
+   "Villanueva-Reyes, Marisol",
+   "6082231",
+   "09/30/1981",
+   "Park, Seo-yeon",
+   "2217640",
+   "01/08/1974"
+  ],
+  "keep": [
+   "FOLFOX C4",
+   "Pembrolizumab 200 mg",
+   "Zoledronic acid"
+  ],
+  "category": "routine",
+  "note": "Plain daily schedule grid, light theme, 13px."
+ },
+ {
+  "id": "m10-scr-02",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>Snapboard - Infusion Bay A</div>\n<div class='tile'><b>Al-Rashidi, Khalid</b><br>MRN 7731904 &nbsp; 62 y.o. M<br>Oxaliplatin / 5-FU<br>Premeds given 09:05<br>Chair A1 - Infusing</div>\n<div class='tile'><b>Ramaswamy, Lakshmi</b><br>MRN 8820163 &nbsp; 58 y.o. F<br>Trastuzumab maint<br>Vitals stable<br>Chair A2 - Infusing</div>\n<div class='tile'><b>Bertolucci, Graziella</b><br>MRN 1904572 &nbsp; 91 y.o. F<br>Darbepoetin inj<br>Waiting on labs<br>Chair A3 - Arrived</div>\n<div class='tile'><b>Thibodeau, Remi</b><br>MRN 6650289 &nbsp; 47 y.o. M<br>Iron sucrose 200 mg<br>Hgb 9.1 pre<br>Chair A4 - Infusing</div>\n<div class='tile'><b>Warsame, Hodan</b><br>MRN 3127748 &nbsp; 36 y.o. F<br>Rituximab C3<br>Dx: DLBCL<br>Chair A5 - Checked out</div></body></html>"
+  ],
+  "phi": [
+   "Al-Rashidi, Khalid",
+   "7731904",
+   "Ramaswamy, Lakshmi",
+   "8820163",
+   "Bertolucci, Graziella",
+   "1904572",
+   "91",
+   "Thibodeau, Remi",
+   "6650289",
+   "Warsame, Hodan",
+   "3127748"
+  ],
+  "keep": [
+   "Oxaliplatin / 5-FU",
+   "Premeds given",
+   "Iron sucrose 200 mg"
+  ],
+  "category": "routine",
+  "note": "Snapboard tiles; one patient aged 91 (over 89) listed as the bare number."
+ },
+ {
+  "id": "m10-scr-03",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='hdr'><b>Dimaculangan, Joselito</b> &nbsp; Male, 66 y.o., 04/19/1960 &nbsp; MRN: 5583921 &nbsp; Acct: 100244871 &nbsp; Phone: 555-0147<br>Allergies: Sulfa (rash) &nbsp; Wt: 71.2 kg &nbsp; BSA: 1.84 m2 &nbsp; Attending: Fenwick</div><div class='bar'>Treatment Plan Orders - Cycle 3 Day 1 - 11/12/2026</div><table><tr><th>Order</th><th>Dose</th><th>Route</th><th>Duration</th><th>Status</th></tr>\n<tr><td>Ondansetron 16 mg IV</td><td>16 mg</td><td>IV push</td><td>-</td><td>Signed</td></tr>\n<tr><td>Dexamethasone 12 mg</td><td>12 mg</td><td>IV</td><td>15 min</td><td>Signed</td></tr>\n<tr><td>Carboplatin AUC 5</td><td>580 mg</td><td>IV</td><td>30 min</td><td>Pharmacy verify</td></tr>\n<tr><td>Paclitaxel 175 mg/m2</td><td>322 mg</td><td>IV</td><td>3 hr</td><td>Pharmacy verify</td></tr>\n<tr><td>Sodium chloride 0.9%</td><td>500 mL</td><td>IV</td><td>Hydration</td><td>Signed</td></tr></table><div class='sub'>Referring: Dr. Antonia Guzman-Padilla, Lakeshore Medical Group &nbsp; Next appt 12/03/2026</div></body></html>"
+  ],
+  "phi": [
+   "Dimaculangan, Joselito",
+   "04/19/1960",
+   "5583921",
+   "100244871",
+   "555-0147",
+   "11/12/2026",
+   "Antonia Guzman-Padilla",
+   "12/03/2026"
+  ],
+  "keep": [
+   "Carboplatin AUC 5",
+   "Ondansetron 16 mg IV",
+   "BSA: 1.84 m2"
+  ],
+  "category": "routine",
+  "note": "Order summary with patient banner and outside referring physician."
+ },
+ {
+  "id": "m10-scr-04",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>Infusion Schedule - Wed 11/18/2026 - Pod B</div><table><tr><th>Appt</th><th>Pt Name</th><th>MRN</th><th>DOB</th><th>Regimen</th><th>Chair</th><th>Status</th></tr>\n<tr><td>08:15</td><td>Pierre-Louis, Marjorie</td><td>9012847</td><td>06/11/1972</td><td>CAPOX C2</td><td>B1</td><td>Arrived</td></tr>\n<tr><td>08:45</td><td>Abernathy, Clyde</td><td>2238519</td><td>12/25/1946</td><td>Nivolumab 480 mg q4w</td><td>B2</td><td>Scheduled</td></tr>\n<tr><td>09:30</td><td>Nwachukwu, Ifeoma</td><td>7415630</td><td>02/03/1989</td><td>Ferric carboxymaltose</td><td>B3</td><td>Scheduled</td></tr></table></body></html>",
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>Snapboard - Pod B</div>\n<div class='tile'><b>Pierre-Louis, Marjorie</b><br>MRN 9012847<br>CAPOX C2<br>Oxaliplatin infusing, 45 min left<br>B1</div>\n<div class='tile'><b>Abernathy, Clyde</b><br>MRN 2238519<br>Nivolumab 480 mg q4w<br>Labs pending - K 3.4<br>B2</div>\n<div class='tile'><b>Nwachukwu, Ifeoma</b><br>MRN 7415630<br>Ferric carboxymaltose<br>Premeds not required<br>B3</div></body></html>"
+  ],
+  "phi": [
+   "11/18/2026",
+   "Pierre-Louis, Marjorie",
+   "9012847",
+   "06/11/1972",
+   "Abernathy, Clyde",
+   "2238519",
+   "12/25/1946",
+   "Nwachukwu, Ifeoma",
+   "7415630",
+   "02/03/1989"
+  ],
+  "keep": [
+   "CAPOX C2",
+   "Nivolumab 480 mg q4w",
+   "Ferric carboxymaltose"
+  ],
+  "category": "routine",
+  "expectPatients": 3,
+  "note": "Same three patients on a schedule and a snapboard."
+ },
+ {
+  "id": "m10-scr-05",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='hdr'><b>Huynh, Thanh Lam</b> &nbsp; F &nbsp; 53 y.o. &nbsp; DOB 08/27/1973 &nbsp; MRN 4409118 &nbsp; CSN 882014477<br>Allergies: NKDA &nbsp; Wt 58.4 kg &nbsp; Ht 157 cm &nbsp; BSA 1.59 m2 &nbsp; Code: Full</div><div class='bar'>MAR - Infusion Visit 11/09/2026</div><table><tr><th>Medication</th><th>Dose</th><th>Scheduled</th><th>Given</th><th>By</th><th>Site/Rate</th></tr>\n<tr><td>Acetaminophen</td><td>650 mg PO</td><td>08:30</td><td>08:32</td><td>RN</td><td>-</td></tr>\n<tr><td>Diphenhydramine 25 mg IV</td><td>25 mg</td><td>08:30</td><td>08:35</td><td>RN</td><td>Port, L chest</td></tr>\n<tr><td>Rituximab 375 mg/m2</td><td>596 mg in 500 mL NS</td><td>09:00</td><td>09:04</td><td>RN</td><td>50 mL/hr, titrate q30min</td></tr>\n<tr><td>Sodium chloride 0.9% flush</td><td>10 mL</td><td>PRN</td><td>12:40</td><td>RN</td><td>Port</td></tr></table><div class='sub'>Emergency contact: Huynh, Duc (spouse) 555-0162</div></body></html>"
+  ],
+  "phi": [
+   "Huynh, Thanh Lam",
+   "08/27/1973",
+   "4409118",
+   "882014477",
+   "11/09/2026",
+   "Huynh, Duc",
+   "555-0162"
+  ],
+  "keep": [
+   "Rituximab 375 mg/m2",
+   "Diphenhydramine 25 mg IV",
+   "50 mL/hr, titrate q30min"
+  ],
+  "category": "routine",
+  "note": "MAR with patient header, CSN and emergency contact."
+ },
+ {
+  "id": "m10-scr-06",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>MyChart Message - Re: Side effects after Tuesday infusion</div>\n<div class='msg'><div class='from'>From: Szczepanski, Dorota &nbsp; Sent: 11/06/2026 7:42 PM</div>Hi, this is Dorota Szczepanski (DOB 5/16/1965). Since my Tuesday infusion I have had nausea most of the day and the ondansetron is not helping much. My daughter Agnieszka says I look pale. Best number is 555-0188 or email dszczep65@fastmail.example. Should I come in early Thursday?</div>\n<div class='msg me'><div class='from'>From: Oncology Infusion RN Pool &nbsp; Sent: 11/07/2026 8:15 AM</div>Thank you for letting us know. Please continue ondansetron every 8 hours and add prochlorperazine 10 mg as prescribed. If you are unable to keep fluids down or have a fever over 100.4 F, call the clinic line. We will plan extra hydration at Thursday's visit.</div>\n<div class='msg'><div class='from'>From: Szczepanski, Dorota &nbsp; Sent: 11/07/2026 9:02 AM</div>Thank you. My neighbor Tomasz Grabowski will drive me, he will wait at 418 Harbor View Dr if that matters for parking.</div></body></html>"
+  ],
+  "phi": [
+   "Szczepanski, Dorota",
+   "11/06/2026",
+   "Dorota Szczepanski",
+   "5/16/1965",
+   "Agnieszka",
+   "555-0188",
+   "dszczep65@fastmail.example",
+   "11/07/2026",
+   "Tomasz Grabowski",
+   "418 Harbor View Dr"
+  ],
+  "keep": [
+   "nausea",
+   "prochlorperazine",
+   "extra hydration"
+  ],
+  "category": "routine",
+  "note": "MyChart thread with patient-written identifiers inside prose: relative first name, email, neighbor, address."
+ },
+ {
+  "id": "m10-scr-07",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>Front Desk Check-In - Infusion - 11/13/2026</div><table><tr><th>Arr</th><th>Patient</th><th>MRN</th><th>Payer</th><th>Member ID</th><th>Group</th><th>Copay</th><th>Auth</th><th>Status</th></tr>\n<tr><td>07:52</td><td>Quinones, Esteban</td><td>6671203</td><td>BCBS PPO</td><td>XJW884120375</td><td>70412</td><td>$40</td><td>Prior auth approved</td><td>Roomed</td></tr>\n<tr><td>08:10</td><td>Jeong, Min-jun</td><td>3350981</td><td>Medicare</td><td>4EG7-TK2-MW91</td><td>-</td><td>$0</td><td>N/A</td><td>Labs drawn</td></tr>\n<tr><td>08:21</td><td>Haddad, Rania</td><td>9924715</td><td>Aetna HMO</td><td>W223019874</td><td>GRP-55810</td><td>$25</td><td>Auth pending - called</td><td>Waiting</td></tr>\n<tr><td>08:40</td><td>Venkataraman, Priya</td><td>1183067</td><td>UHC Choice</td><td>901443827-01</td><td>168422</td><td>$30</td><td>Prior auth approved</td><td>Pending vitals</td></tr></table></body></html>"
+  ],
+  "phi": [
+   "11/13/2026",
+   "Quinones, Esteban",
+   "6671203",
+   "XJW884120375",
+   "Jeong, Min-jun",
+   "3350981",
+   "4EG7-TK2-MW91",
+   "Haddad, Rania",
+   "9924715",
+   "W223019874",
+   "Venkataraman, Priya",
+   "1183067",
+   "901443827-01"
+  ],
+  "keep": [
+   "Prior auth approved",
+   "Labs drawn",
+   "Pending vitals"
+  ],
+  "category": "routine",
+  "note": "Check-in board with payer member IDs; payer names and copays not listed as PHI."
+ },
+ {
+  "id": "m10-scr-08",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>RN Handoff Report - PM Shift</div><div class='sub'>Printed 11/16/2026 14:05 &nbsp; | &nbsp; Unit: Infusion 2E</div><table><tr><th>Pat Name</th><th>MRN</th><th>Appt Dt</th><th>Emerg Contact</th><th>Ph</th><th>Tx</th><th>Comments</th></tr>\n<tr><td>Castellano, Benedetta</td><td>2290456</td><td>11/16/26</td><td>Castellano, Luca (son)</td><td>555-0109</td><td>Hydration 1L NS</td><td>Port flush done, tolerating well</td></tr>\n<tr><td>Levesque, Ghislaine</td><td>7708321</td><td>11/16/26</td><td>Bouchard, Jean-Guy</td><td>555-0174</td><td>Docetaxel C2</td><td>Infusion reaction grade 1 at 10:20, resolved w/ diphenhydramine</td></tr>\n<tr><td>Farah, Abdirahman</td><td>5541890</td><td>11/16/26</td><td>Elmi, Fadumo (wife)</td><td>555-0131</td><td>Pemetrexed/Cis</td><td>Needs B12 inj before next cycle</td></tr>\n<tr><td>Dalisay, Corazon</td><td>8137702</td><td>11/16/26</td><td>-</td><td>-</td><td>Pamidronate</td><td>Creatinine 1.1, ok to proceed</td></tr></table></body></html>"
+  ],
+  "phi": [
+   "11/16/2026",
+   "Castellano, Benedetta",
+   "2290456",
+   "11/16/26",
+   "Castellano, Luca",
+   "555-0109",
+   "Levesque, Ghislaine",
+   "7708321",
+   "Bouchard, Jean-Guy",
+   "555-0174",
+   "Farah, Abdirahman",
+   "5541890",
+   "Elmi, Fadumo",
+   "555-0131",
+   "Dalisay, Corazon",
+   "8137702"
+  ],
+  "keep": [
+   "Hydration 1L NS",
+   "Infusion reaction grade 1",
+   "Creatinine 1.1"
+  ],
+  "category": "routine",
+  "note": "Abbreviated Epic headers (Pat Name, Appt Dt, Emerg Contact, Ph); relatives names in a contact column."
+ },
+ {
+  "id": "m10-scr-09",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>Appt Comments - 11/20/2026</div><table style='table-layout:fixed;width:560px'><tr><th style='width:150px'>Pt</th><th style='width:70px'>MRN</th><th style='width:70px'>Dt</th><th>Comment</th></tr>\n<tr><td>Jean-Baptiste, Wilner</td><td>6619034</td><td>11/20/26</td><td style='font-size:12px;white-space:normal'>Pt requests late afternoon chair; his wife Nadege Desrosiers will pick up, her cell is 555-0126. Pt is hard of hearing, speak slowly. Keppra held per neuro.</td></tr>\n<tr><td>Pemberton, Harriet</td><td>3302178</td><td>11/20/26</td><td style='font-size:12px;white-space:normal'>Transfer of care from Dr. Olusegun Adebayo at Riverbend Hematology, records faxed 555-0190 on 11/14/26. Needs new port teaching. Hgb 8.7 last draw.</td></tr>\n<tr><td>Ngo, Phuong</td><td>8845120</td><td>11/20/26</td><td style='font-size:12px;white-space:normal'>Lives at 2207 Alder Ct Apt 4B, Millbrook 60541, needs cab voucher home. Pt age 93, daughter Mai Ngo present at all visits. Continue CAPOX dose reduction 20%.</td></tr></table></body></html>"
+  ],
+  "phi": [
+   "11/20/2026",
+   "Jean-Baptiste, Wilner",
+   "6619034",
+   "11/20/26",
+   "Nadege Desrosiers",
+   "555-0126",
+   "Pemberton, Harriet",
+   "3302178",
+   "Olusegun Adebayo",
+   "555-0190",
+   "11/14/26",
+   "Ngo, Phuong",
+   "8845120",
+   "2207 Alder Ct Apt 4B",
+   "Millbrook",
+   "60541",
+   "93",
+   "Mai Ngo"
+  ],
+  "keep": [
+   "Keppra held",
+   "port teaching",
+   "CAPOX dose reduction 20%"
+  ],
+  "category": "hard",
+  "note": "Narrow fixed-width comment column at 12px forces wrapping mid-sentence; names, address, ZIP, age 93, outside provider embedded in prose."
+ },
+ {
+  "id": "m10-scr-10",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#e8e8e8;background:#1e1e1e}table{border-collapse:collapse;width:100%}th{background:#2d3a4d;text-align:left;padding:5px 7px;border:1px solid #3c4a60}td{padding:5px 7px;border:1px solid #333f52}td,th{white-space:nowrap}.bar{background:#0f2c52;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.tile{border:1px solid #4a5a72;border-radius:3px;padding:6px 8px;margin:6px;background:#262f3d;display:inline-block;vertical-align:top;width:210px;color:#e8e8e8}.tile b{font-size:14px;color:#fff}</style></head><body><div class='bar'>Infusion Schedule (Dark) - Mon 11/23/2026</div><table><tr><th>Time</th><th>Patient</th><th>MRN</th><th>DOB</th><th>Visit</th><th>Status</th></tr>\n<tr><td>09:00</td><td>Wisniewski, Tadeusz</td><td>4420917</td><td>10/05/1951</td><td>Bortezomib SC + Dex</td><td>Arrived</td></tr>\n<tr><td>09:30</td><td>Zamora-Ibarra, Rocio</td><td>7186403</td><td>03/22/1979</td><td>Trastuzumab/Pertuzumab</td><td>Scheduled</td></tr>\n<tr><td>10:00</td><td>Choi, Hyun-woo</td><td>9053812</td><td>12/14/1966</td><td>Daratumumab wk 3</td><td>Scheduled</td></tr></table></body></html>",
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#e8e8e8;background:#1e1e1e}table{border-collapse:collapse;width:100%}th{background:#2d3a4d;text-align:left;padding:5px 7px;border:1px solid #3c4a60}td{padding:5px 7px;border:1px solid #333f52}td,th{white-space:nowrap}.bar{background:#0f2c52;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.tile{border:1px solid #4a5a72;border-radius:3px;padding:6px 8px;margin:6px;background:#262f3d;display:inline-block;vertical-align:top;width:210px;color:#e8e8e8}.tile b{font-size:14px;color:#fff}</style></head><body><div class='bar'>Snapboard (Dark) - Pod C</div>\n<div class='tile'><b>Wisniewski, Tadeusz</b><br>MRN 4420917<br>Bortezomib SC + Dex<br>Platelets 142, ok</div>\n<div class='tile'><b>Zamora-Ibarra, Rocio</b><br>MRN 7186403<br>Trastuzumab/Pertuzumab<br>EF 60% on echo</div>\n<div class='tile'><b>Choi, Hyun-woo</b><br>MRN 9053812<br>Daratumumab wk 3<br>Montelukast premed given</div></body></html>"
+  ],
+  "phi": [
+   "11/23/2026",
+   "Wisniewski, Tadeusz",
+   "4420917",
+   "10/05/1951",
+   "Zamora-Ibarra, Rocio",
+   "7186403",
+   "03/22/1979",
+   "Choi, Hyun-woo",
+   "9053812",
+   "12/14/1966"
+  ],
+  "keep": [
+   "Bortezomib SC + Dex",
+   "Daratumumab wk 3",
+   "Platelets 142"
+  ],
+  "category": "hard",
+  "expectPatients": 3,
+  "note": "Dark theme (light text on #1e1e1e), same three patients across a schedule and a snapboard."
+ },
+ {
+  "id": "m10-scr-11",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div class='bar'>Chair View - Side by Side</div><table style='width:640px'><tr><td style='width:50%;border:none;padding:0'>\n<div class='tile' style='width:280px'><b>Mansour, Layla</b><br>MRN 5570294<br>DOB 02/17/1983<br>Acct 300871552<br>Ph 555-0115<br>Regimen: R-CHOP C2<br>Vincristine capped 2 mg<br>Status: Infusing - cyclophosphamide</div></td><td style='width:50%;border:none;padding:0'>\n<div class='tile' style='width:280px'><b>Chaudhary, Deepak</b><br>MRN 2203658<br>DOB 09/09/1958<br>Acct 300871610<br>Ph 555-0151<br>Regimen: Gem/Abraxane<br>ANC 1.6 today<br>Status: Waiting for pharmacy</div></td></tr>\n<tr><td style='border:none;padding:0'><div class='tile' style='width:280px'><b>Fiorentino, Alessandra</b><br>MRN 8812047<br>DOB 06/30/1990<br>Acct 300871799<br>Ph 555-0138<br>Regimen: Ocrelizumab<br>Dx: RRMS<br>Status: Observation 1 hr</div></td><td style='border:none;padding:0'><div class='tile' style='width:280px'><b>Bacani, Rodrigo</b><br>MRN 6409871<br>DOB 11/11/1944<br>Acct 300871803<br>Ph 555-0192<br>Regimen: Leucovorin/5-FU pump<br>Pump disconnect 48 hr<br>Status: Checked out</div></td></tr></table></body></html>"
+  ],
+  "phi": [
+   "Mansour, Layla",
+   "5570294",
+   "02/17/1983",
+   "300871552",
+   "555-0115",
+   "Chaudhary, Deepak",
+   "2203658",
+   "09/09/1958",
+   "300871610",
+   "555-0151",
+   "Fiorentino, Alessandra",
+   "8812047",
+   "06/30/1990",
+   "300871799",
+   "555-0138",
+   "Bacani, Rodrigo",
+   "6409871",
+   "11/11/1944",
+   "300871803",
+   "555-0192"
+  ],
+  "keep": [
+   "R-CHOP C2",
+   "Vincristine capped 2 mg",
+   "Pump disconnect 48 hr"
+  ],
+  "category": "hard",
+  "note": "Two tile columns side by side so row-wise OCR interleaves two patients per line."
+ },
+ {
+  "id": "m10-scr-12",
+  "htmls": [
+   "<!doctype html><html><head><meta charset='utf-8'><style>body{margin:0;font-family:'DejaVu Sans',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff}table{border-collapse:collapse;width:100%}th{background:#dfe7f2;text-align:left;padding:4px 6px;border:1px solid #b9c5d6;font-weight:bold}td{padding:4px 6px;border:1px solid #d5dbe4;vertical-align:top}td,th{white-space:nowrap}.bar{background:#1f4e8c;color:#fff;padding:6px 10px;font-size:14px;font-weight:bold}.sub{background:#eef2f7;padding:4px 10px;font-size:12px;color:#333;border-bottom:1px solid #b9c5d6}.tile{border:1px solid #a9b7cc;border-radius:3px;padding:6px 8px;margin:6px;background:#f7f9fc;display:inline-block;vertical-align:top;width:220px}.tile b{font-size:14px}.hdr{background:#f1f4f8;border-bottom:2px solid #1f4e8c;padding:6px 10px;font-size:13px}.hdr b{font-size:15px}.msg{border:1px solid #ccd;border-radius:4px;padding:8px 10px;margin:8px 10px;max-width:620px}.me{background:#e8f1ff}.from{font-size:11px;color:#555;margin-bottom:4px}</style></head><body><div style='width:690px;overflow:hidden'><div class='bar' style='width:900px'>Infusion Worklist - 11/24/2026 - Pod D (scroll right for notes)</div><table style='width:900px;table-layout:fixed'><tr><th style='width:170px'>Patient</th><th style='width:70px'>MRN</th><th style='width:80px'>DOB</th><th style='width:90px'>Phone</th><th style='width:170px'>Regimen</th><th>Notes</th></tr>\n<tr><td>Whitcombe, Edgar</td><td>3317820</td><td>05/02/1957</td><td>555-0167</td><td>Atezolizumab q3w</td><td>TSH 6.2 - endocrine notified, continue</td></tr>\n<tr><td>Okafor, Folasade</td><td>7762015</td><td>08/19/1976</td><td>555-0122</td><td>Cisplatin/Etoposide</td><td>Mag 1.6, replete 2 g IV before cisplatin</td></tr>\n<tr><td>Nguyen-Pham, Thao</td><td>1150893</td><td>01/27/1963</td><td>555-0183</td><td>Bevacizumab 7.5 mg/kg</td><td>BP 148/92 recheck prior to start</td></tr>\n<tr><td>Olowokandi, Temitope</td><td>4498306</td><td>07/07/1998</td><td>555-0156</td><td>Infliximab 5 mg/kg</td><td>Crohn's, premed with hydrocortisone</td></tr></table></div></body></html>"
+  ],
+  "phi": [
+   "11/24/2026",
+   "Whitcombe, Edgar",
+   "3317820",
+   "05/02/1957",
+   "555-0167",
+   "Okafor, Folasade",
+   "7762015",
+   "08/19/1976",
+   "555-0122",
+   "Nguyen-Pham, Thao",
+   "1150893",
+   "01/27/1963",
+   "555-0183",
+   "Olowokandi, Temitope",
+   "4498306",
+   "07/07/1998",
+   "555-0156"
+  ],
+  "keep": [
+   "Atezolizumab q3w",
+   "Cisplatin/Etoposide",
+   "Infliximab 5 mg/kg"
+  ],
+  "category": "hard",
+  "note": "900px-wide table inside a 690px overflow:hidden container; Notes column cropped at right edge, all identifier and regimen columns fully visible on the left."
+ }
+]

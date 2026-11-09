@@ -109,6 +109,7 @@
     // identifier columns that are not record numbers: authorizations, device serials, vehicle plates, placards, claims
     { role: 'drop', re: /\b(?:auth(?:orization)?\s*(?:#|no|num|number|id|code)?|prior\s*auth|serial|s\/n|sn\s*#|plate|vehicle|placard|permit|claim\s*(?:#|no|id)|implant\s*(?:id|#)|device\s*(?:id|#)|udi)\b|^\s*(?:sn|auth)\s*#?\s*$/i, not: /\b(?:note|notes|comment|comments|status|date|type|reason|instruction|instructions|remarks?)\b/i },
     { role: 'patient_name', re: /^\s*(pt|patient|client|resident)\s*\.?\s*$/i },
+    { role: 'patient_name', re: /\b(?:nick\s*name|nickname|preferred\s*(?:name|nm)|goes\s*by|alias|aka|known\s*as|pref\s*name)\b/i },
     { role: 'patient_name', re: /\b(pt|patient)?\s*(name|full name|pt name|patient name|last,? first|legal name)\b/i, not: /provider|physician|attending|md|\bdr\b|nurse|pharmacist|chair|regimen|drug|protocol|order|user|entered|signed|location|dept|department|clinic|facility|insurance|plan|study|trial/i },
     { role: 'text', re: /\b(comment|note|notes|instruction|remark|reason|indication|message|description|free\s*text|narrative|sched(uling)?\s*note|appt\s*note|special|alert|question|answer|response|reply|detail)/i },
     { role: 'date', re: /\b(date|appt|appointment|scheduled|sched|dos|visit|start|end|due|due date|next|last|time stamp|timestamp|created|updated|entered on|ordered on)\b/i, not: /time\s*$/i },
@@ -492,7 +493,7 @@
     // a day written as an ordinal word: "born March fourth 1931", "the twenty-first of June"
     { kind: 'Mwy', re: new RegExp(`(?<![\\w])${MONTH_RE}\\.?[ \\t]+(${ORD_WORD_RE})(?:,?[ \\t]+((?:18|19|20)\\d{2}))?(?![\\w-])`, 'gi') },
     { kind: 'wMy', re: new RegExp(`(?<![\\w-])(${ORD_WORD_RE})[ \\t]+of[ \\t]+${MONTH_RE}(?:,?[ \\t]+((?:18|19|20)\\d{2}))?(?![\\w])`, 'gi') },
-    { kind: 'md', re: new RegExp('(?<![\\d\\w/.-])(\\d{1,2})([\\/\\-])(\\d{1,2})(?![\\d/-])(?!\\.\\d)(?![ \\t]*(?:mg|mcg|g|ml|tab|tabs|dose|x|units?|%|of|tablet|cap|caps|hr|hrs|h|min|cc|L|strength|NS|D5)\\b)', 'g') },
+    { kind: 'md', re: new RegExp('(?<![\\d\\w/.-])(\\d{1,2})([\\/\\-])(\\d{1,2})(?![\\d/])(?!-(?!\\d{1,2}\\/))(?!\\.\\d)(?![ \\t]*(?:mg|mcg|g|ml|tab|tabs|dose|x|units?|%|of|tablet|cap|caps|hr|hrs|h|min|cc|L|strength|NS|D5)\\b)', 'g') },
   ];
   const UNIT_AFTER = /^[ \t]*(mg|mcg|g|ml|mL|tab|tabs|dose|x|unit|units|%|of|tablet|cap|caps|hr|hrs|h|min|cc|L|strength|NS|D5W?|AM|PM)\b/;
 
@@ -618,7 +619,7 @@
     // "DOB:03041951" written without separators
     DOB_COMPACT: /\b(?:dob|d\.o\.b\.?|birth\s*date|born)\s*[:#]?\s*((?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])(?:19|20)\d{2})(?!\d)/gi,
     // last four of a social security number: "SSN ending 4471", "SS# last 4: 4471", "social ends in 4471"
-    SSN_LAST4: /\b(?:ssn|ss#|ss\s*#|social(?:\s+security)?(?:\s+(?:number|no\.?|#))?)\s*(?:on\s+file\s*)?(?:ending(?:\s+in)?|ends(?:\s+(?:in|with))?|last\s*(?:4|four)(?:\s+digits)?|xxx-xx-)?(?:[^\n\d]{0,20}?)[:#]?\s*(\d{4})(?![\d-])/gi,
+    SSN_LAST4: /\b(?:(?:last\s+)?ssn[\s-]*4|ssn|ss#|ss\s*#|social(?:\s+security)?(?:\s+(?:number|no\.?|#))?)\s*(?:on\s+file\s*)?(?:ending(?:\s+in)?|ends(?:\s+(?:in|with))?|last\s*(?:4|four)(?:\s+digits)?|xxx-xx-)?(?:[^\n\d]{0,20}?)[:#]?\s*(\d{4})(?![\d-])/gi,
     // a street without a house number, named by its suffix: "near Brighton Rd", "on Sheridan Dr in"; "Dr." followed by a
     // capitalized word is an honorific and is excluded by the lookahead
     STREET: /\b((?:[A-Z][A-Za-z]+\s){1,2}(?:Rd|Dr|St|Ave|Blvd|Pkwy|Ln|Ct|Hwy|Rte|Route|Way|Pl|Cir|Ter|Trl)\.?)(?![A-Za-z])(?!\.?\s*[A-Z][a-z])/g,
@@ -890,7 +891,7 @@
       const core = raw.replace(/['’]s$/i, '').replace(/\.$/, '');
       toks.push({
         raw, core, start: m.index, end: m.index + core.length, fullEnd: m.index + raw.length,
-        cap: /^\p{Lu}[\p{Ll}\p{M}'’\-]*$/u.test(core) || /^\p{Lu}[\p{Ll}\p{M}]+-\p{Lu}[\p{Ll}\p{M}]+$/u.test(core) || /^(?:al|el|ad|ar|as|ash|at|az|an|bin|ibn|ben|bint|abu|ould)-[A-Z][a-z'’]+(?:-[A-Z][a-z'’]+)?$/.test(core) || /^[A-Z][a-z]+-[A-Z][a-z]+$/.test(core) || (/^[A-Z][A-Za-z'’\-]*[a-z]$/.test(core) && (core.match(/[A-Z]/g) || []).length <= 3 && /^(Mc|Mac|De|Di|Da|La|Le|Van|Von|O'|O’|D'|D’|St|Fitz|Del|Des|Du)[A-Z'’]/.test(core)),
+        cap: /^\p{Lu}[\p{Ll}\p{M}'’\-]*$/u.test(core) || /^\p{Lu}[\p{Ll}\p{M}]+-\p{Lu}[\p{Ll}\p{M}]+$/u.test(core) || /^\p{Lu}[\p{Ll}\p{M}]+-[\p{Ll}\p{M}]{2,}$/u.test(core) || /^(?:al|el|ad|ar|as|ash|at|az|an|bin|ibn|ben|bint|abu|ould)-[A-Z][a-z'’]+(?:-[A-Z][a-z'’]+)?$/.test(core) || /^[A-Z][a-z]+-[A-Z][a-z]+$/.test(core) || (/^[A-Z][A-Za-z'’\-]*[a-z]$/.test(core) && (core.match(/[A-Z]/g) || []).length <= 3 && /^(Mc|Mac|De|Di|Da|La|Le|Van|Von|O'|O’|D'|D’|St|Fitz|Del|Des|Du)[A-Z'’]/.test(core)),
         allcaps: /^\p{Lu}[\p{Lu}\p{M}'’\-]{2,}$/u.test(core),
         initial: /^\p{Lu}\.?$/u.test(raw) && raw.length <= 2,
         word: /^\p{L}/u.test(raw), num: /^\d/.test(raw), punct: !/^[\p{L}\d]/u.test(raw),
