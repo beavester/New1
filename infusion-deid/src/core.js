@@ -723,6 +723,67 @@
   // (nouns that also follow a date, "11/24-26 slots", "Dec 3 to 5 visits", are not counted: a date left unshifted would leak)
   const COUNT_AFTER = /^[ \t]*(?:days?|weeks?|wks?|months?|mos?|years?|yrs?|cycles?|doses?|infusions?|treatments?|rounds?|courses?|patients?|pts|people|times|hours?|minutes?|mins?|lbs?|kgs?|pounds?|vials?|bags?|units?|tabs?|pills?|refills?)\b/i;
 
+  // A named holiday is a date: left alone it gives the real date away, and beside a shifted date it gives the offset away
+  // ("seen day after Thanksgiving ... next visit 12/3"). It becomes "[holiday]" in every profile (a shifted holiday would
+  // be a different named day and would mean nothing). Only forms that name the day are matched: "Memorial Day" but not
+  // "Memorial Hospital", "Labor Day" but not "labor and delivery", "Independence Day" but not "independence with ADLs",
+  // "Christmas" but not "Christmas disease" (hemophilia B), and never "holiday" alone ("drug holiday", "holiday schedule").
+  // A year written right after it ("Thanksgiving 2025") goes with it. "July 4th" and "4th of July" with a year are an
+  // ordinary date (shifted, or a birthdate after "born"); without one they are the holiday.
+  const HOLIDAY_RE = new RegExp('(?<![A-Za-z0-9])(?:' + [
+    "thanksgiving(?:[ \\t]+(?:day|eve))?", "hallowe'?en", 'juneteenth', 'kwanzaa', '(?:c?hann?ukk?ah|chanukk?ah)', 'diwali', 'deepavali',
+    'passover', 'pesach', 'rosh[ \\t]+hashann?ah?', 'yom[ \\t]+kippur', 'purim', 'sukkot', 'mardi[ \\t]+gras', 'cinco[ \\t]+de[ \\t]+mayo',
+    '(?:christmas|x-?mas)(?:[ \\t]+(?:eve|day))?(?![ \\t]+(?:disease|factor|tree|pattern|island|cactus))',
+    "(?:lunar|chinese)[ \\t]+new[ \\t]+year(?:'?s)?", "new[ \\t]+year(?:'s|s'?)(?:[ \\t]+(?:eve|day))?", "New[ \\t]+Year(?:[ \\t]+(?:Eve|Day))?", 'NYE',
+    '(?:martin[ \\t]+luther[ \\t]+king|mlk)(?:,?[ \\t]+jr\\.?)?[ \\t]+day', "presidents?'?(?:'s)?[ \\t]+day", "washington'?s[ \\t]+birthday",
+    'memorial[ \\t]+day', 'labou?r[ \\t]+day', 'independence[ \\t]+day', 'columbus[ \\t]+day', "indigenous[ \\t]+peoples?'?(?:'s)?[ \\t]+day",
+    "veterans?'?(?:'s)?[ \\t]+day", 'election[ \\t]+day', 'boxing[ \\t]+day', "valentine'?s[ \\t]+day", "(?:st\\.?|saint)[ \\t]+(?:patrick|paddy)'?s[ \\t]+day",
+    "mother'?s[ \\t]+day", "father'?s[ \\t]+day", 'black[ \\t]+friday', 'cyber[ \\t]+monday', 'good[ \\t]+friday', 'ash[ \\t]+wednesday', 'palm[ \\t]+sunday',
+    'easter(?:[ \\t]+(?:sunday|monday))?', 'ramadan', 'eid(?:[ \\t]+(?:al|ul|el)[- \\t](?:fitr|adha))?',
+    'july[ \\t]+(?:4|4th|fourth)', '(?:the[ \\t]+)?(?:4th|fourth)[ \\t]+of[ \\t]+july',
+  ].join('|') + ")(?![A-Za-z0-9'])(?:,?[ \\t]+((?:19|20)\\d{2})(?![\\d\\/.:-]))?", 'gi');
+  // holiday words that are also names: "Dr. Easter", "Ramadan, Omar", "Eid" as a surname. Census patients and providers win
+  // over a holiday span anyway (higher priority); these guards keep a cue-detected name with its own surrogate.
+  const HOLIDAY_NAMELIKE = /^(?:easter|ramadan|eid|passover|valentine)/i;
+  const HOLIDAY_LEAD = /^(?:happy|over|since|before|after|until|till|by|for|during|at|on|around|post|pre|last|next|this|due|from|thru|through)$/i;
+  function holidaySpans(text) {
+    const out = []; HOLIDAY_RE.lastIndex = 0; let m;
+    while ((m = HOLIDAY_RE.exec(text))) {
+      let start = m.index; const end = m.index + m[0].length;
+      const lead = m[0].match(/^the[ \t]+/i); if (lead) start += lead[0].length;
+      const core = text.slice(start, end).replace(/,?[ \t]+(?:19|20)\d{2}$/, '');
+      const before = text.slice(Math.max(0, start - 24), start), after = text.slice(end);
+      // "July 4th, 1931", "the 4th of July 1931": a dated day, left to the date patterns (shifted, or a birthdate after "born")
+      if (/^(?:july|(?:4th|fourth)[ \t]+of)/i.test(core) && (m[1] || /^,?[ \t]*\d/.test(after))) continue;
+      // "had a good friday", "black friday deals" in lower case are words; "nye" in lower case is a surname as often as not
+      if (/^(?:good|black|cyber)[ \t]/i.test(core) && !/^[A-Z]/.test(core)) continue;
+      if (/^nye$/i.test(core) && core !== 'NYE') continue;
+      // "in the new year" is not a day; "New Year's", "new years eve", "New Year" (capitalised) are
+      if (/^new[ \t]+year/i.test(core) && !/^New[ \t]+Year/.test(core) && !/(?:'s|s'?)$/i.test(core.replace(/[ \t]+(?:eve|day)$/i, ''))) continue;
+      if (HOLIDAY_NAMELIKE.test(core)) {
+        if (/\b(?:dr|mr|mrs|ms|mx|miss|prof|pt|patient|nurse|rn|np|pa|son|daughter|wife|husband|sister|brother|mother|father|mom|dad)\.?[ \t]+$/i.test(before)) continue;
+        const prev = (before.match(/([A-Z][a-z]+)[ \t]+$/) || [])[1];
+        if (prev && !HOLIDAY_LEAD.test(prev) && LEX.isCuratedName(prev)) continue;
+        const next = (after.match(/^,?[ \t]+([A-Z][a-z]+)/) || [])[1];
+        if (next && LEX.isCuratedName(next) && !/^(?:christmas|easter|thanksgiving|halloween|passover|ramadan|eid|diwali|hanukkah|chanukah)$/i.test(next)) continue;
+        // a person's act right after the word: "Eid called back", "Easter asked about parking"
+        if (!/[ \t]/.test(core) && /^(?:'s)?[ \t]+(?:called|calls|phoned|said|says|asked|asks|reports|reported|states|stated|arrived|left|wants|wanted|came|is[ \t]+here|was[ \t]+here|signed|agreed|declined|consented|spoke|texted|emailed|messaged)\b/i.test(after)) continue;
+      }
+      out.push({ start, end, type: 'DATE', source: 'rule', text: text.slice(start, end), date: null, holiday: true });
+    }
+    return out;
+  }
+  // A birthdate in a note: after "born", "born on the", "b.", "birthday (is)", "bday", "DOB", "date of birth" the date is a
+  // birthdate, written with or without a year ("birthday is March 3"); it follows the DOB setting like the DOB column.
+  // Between the cue and the date only a few linking words may stand ("born on the 4th of July 1931", "DOB: 7/4/31",
+  // "birthday was on March 3"); "b." needs a year ("b. 7/4/31") so an abbreviation before a visit date is not read as one.
+  const DOB_CUE_RE = /(?:\b(?:dob|d\.o\.b\.?|date[ \t]+of[ \t]+birth|birth[ \t]*date|birthdate|birthday|b-?day|born)|(?<![A-Za-z.])b\.)(?:[ \t]*(?:[:#=\-]|\bis\b|\bwas\b|\bon\b|\bthe\b|\bin\b|\bof\b|\bas\b)){0,4}[ \t]*$/i;
+  function dobCue(text, start, hasYear) {
+    const m = DOB_CUE_RE.exec(text.slice(Math.max(0, start - 40), start));
+    if (!m) return false;
+    return hasYear || !/^b\./i.test(m[0]);
+  }
+
   function parseDateMatch(kind, m) {
     let dayFirst = false, y, mo, d, hasYear = true, yearDigits = 4, monthStyle = null, sep = '/', monthTok = null, ordinal = '';
     if (kind === 'iso') { y = +m[1]; sep = m[2]; mo = +m[3]; d = +m[4]; }
@@ -1172,12 +1233,17 @@
     run(RULES.PHONE_PLAIN, 'PHONE');
     // a date cut off by a line wrap ("1970-02-" then "09" on the next line, "3/26/" then "1976"): still a date
     run(/(?<![\w\/\-])(?:(?:19|20)\d{2}-\d{1,2}-(?!\d)|\d{1,2}\/\d{1,2}\/(?!\d))/gm, 'DATE');
-    // dates
+    // dates. Named holidays first: a yearless "July 4th" or "4th of July" is the holiday, not a date pattern's match
+    const holidays = holidaySpans(text);
+    for (const h of holidays) { if (dobCue(text, h.start, true)) h.type = 'DOB'; spans.push(h); }
+    // holiday spans are sorted and disjoint: a binary search keeps the overlap test cheap on a long cell
+    const inHoliday = (s, e) => { let lo = 0, hi = holidays.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (holidays[mid].end <= s) lo = mid + 1; else hi = mid; } return lo < holidays.length && holidays[lo].start < e; };
     for (const p of DATE_PATTERNS) {
       p.re.lastIndex = 0; let m;
       while ((m = p.re.exec(text))) {
         const pd = parseDateMatch(p.kind, m);
         if (!pd) continue;
+        if (holidays.length && inHoliday(m.index, m.index + m[0].length)) continue;
         if (p.kind === 'My' && !/^[A-Z]/.test(m[0])) continue; // "may 2026" in lower case is a verb more often than a month
         const after = text.slice(m.index + m[0].length);
         if (!pd.hasYear && UNIT_AFTER.test(after)) continue;
@@ -1187,7 +1253,19 @@
           // "C1D1"-style, "cycle 1/2", "days 1-3" are not dates
           const before = text.slice(Math.max(0, m.index - 10), m.index);
           const nextCycle = /next\s+cycle\s*$/i.test(text.slice(Math.max(0, m.index - 14), m.index));
-          if (RANGE_BEFORE.test(before) && !nextCycle) {
+          // A count written N/M after a count word is not a date: "1/2 of 11/12" ("of" after a number), "fx 11/12", "#3/5",
+          // "dose 3/6", "cycle 5/6". A count has N at most M, a slash and no zero padding. After dose or cycle a word that
+          // dates it keeps a date ("Second dose 11/12.", "last dose 9/16", "next cycle 12/19"), and so does a time or visit
+          // word after it ("dose 11/12 at 10:00"); "week of 11/23", "as of 11/1", "results of 11/05" stay dates.
+          const wide = text.slice(Math.max(0, m.index - 30), m.index);
+          const datedDose = /\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|last|next|prev(?:ious)?|prior|final|half|due|\d{1,2}(?:st|nd|rd|th))[ \t]+(?:[A-Za-z]+[ \t]+)?(?:doses?|cycles?|infusions?)[ \t]*#?[ \t]*$/i.test(wide);
+          if (pd.m <= pd.d && pd.sep === '/' && !/^0|\/0/.test(m[0]) && !/^\s*(?:timing|appt|appointment|visit|at[ \t]+\d|@|\d{1,2}:\d{2})/i.test(after)) {
+            if (/(?:^|[^\w\/.])\d{1,3}(?:\/\d{1,3})?[ \t]+of[ \t]*$/i.test(wide) || /#[ \t]*$/.test(wide) || /\b(?:fx|fractions?)[ \t]*#?[ \t]*$/i.test(wide)) continue;
+            if (/\b(?:doses?|cycles?)[ \t]*#?[ \t]*$/i.test(wide) && !datedDose) continue;
+          }
+          // "last dose 9/16", "Next dose 11/12": a dated dose is a date wherever the sentence ends (a small fraction aside)
+          if (datedDose && !(pd.m <= 3 && pd.d <= 4) && pd.sep === '/') { /* a date */ }
+          else if (RANGE_BEFORE.test(before) && !nextCycle) {
             // a score, grade or ratio ("fatigue 6/10", "grade 1/4", "ratio 1/2") is never a date; after dose/day/cycle an
             // m/d is a date unless it looks like a small fraction ("dose 1/2", "cycle 3/6") -- "Second dose 11/12." is a date
             const scoreCtx = /(?:pain|fatigue|nausea|distress|anxiety|depression|dyspnea|scores?|rated?|rating|scale|severity|intensity|vas|nrs|esas|ratio|grade|levels?|pages?|items?|fractions?|fx|sessions?|times|courses?|x|q)\s*$/i.test(before);
@@ -1202,7 +1280,7 @@
             if (!DATE_CTX_BEFORE.test(ctxBefore) && !DATE_CTX_AFTER.test(after)) continue;
           }
         }
-        const dobLabel = pd.hasYear && /\b(?:dob|d\.o\.b\.?|birth\s*date|birthdate|born|b\.)\s*[:#]?\s*$/i.test(text.slice(Math.max(0, m.index - 14), m.index));
+        const dobLabel = dobCue(text, m.index, pd.hasYear);
         spans.push({ start: m.index, end: m.index + m[0].length, type: dobLabel ? 'DOB' : 'DATE', source: 'rule', text: m[0], date: pd });
       }
     }
@@ -3473,7 +3551,21 @@
     // A date written without a year ("11/24", "Nov 30") moves by the offset modulo a year: an offset near a whole year
     // (340 or 365 days) would leave it almost or exactly where it was. Such a draw is drawn again, so a year-less date
     // always moves by at least the smallest shift of the range (a few tries; a range that allows nothing else keeps its draw).
+    // Every offset is a whole number of weeks: a weekday written beside a date ("Tuesday 11/3") stays true after the shift, so
+    // a kept weekday word can never mark a date as shifted or give away the offset modulo 7. The pool holds the multiples of 7
+    // inside the range that pass the near-a-whole-year check above (all multiples of 7 in the range when none passes); only a
+    // range that holds no multiple of 7 at all falls back to a draw by days. An offset already stored on a patient or the
+    // registry (a restored session key, possibly from an earlier version that drew by days) is never re-drawn here.
+    let weekPool = null;
+    const weekOffsets = () => {
+      if (weekPool) return weekPool;
+      const wLo = Math.ceil(range[0] / 7), wHi = Math.floor(range[1] / 7), all = [], ok = [];
+      for (let w = wLo; w <= wHi; w++) { const mag = 7 * w, r = mag % 365; all.push(mag); if (!(range[0] > 0) || Math.min(r, 365 - r) >= range[0]) ok.push(mag); }
+      return (weekPool = ok.length ? ok : all);
+    };
     const randOffset = () => {
+      const pool = weekOffsets();
+      if (pool.length) { const mag = pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))]; return rng() < 0.5 ? -mag : mag; }
       let mag = range[0] + Math.floor(rng() * (range[1] - range[0] + 1));
       for (let tries = 0; tries < 24 && Number.isFinite(mag) && range[0] > 0; tries++) {
         const r = ((mag % 365) + 365) % 365;
@@ -3726,7 +3818,10 @@
           case 'ID_OTHER': return fakeId(orig);
           case 'DOB':
           case 'DATE': {
-            const pd = span.date || (() => { for (const p of DATE_PATTERNS) { p.re.lastIndex = 0; const m = p.re.exec(orig); if (m && m[0] === orig) return parseDateMatch(p.kind, m); } return null; })();
+            // a named holiday has no date of its own to shift: a neutral placeholder in every profile (a birthdate given as a
+            // holiday, "born on Christmas Day 1931", follows the DOB setting below)
+            if (span.holiday && !(span.type === 'DOB' && cfg.surrogate.dob !== 'shift')) return '[holiday]';
+            const pd = span.date ||(() => { for (const p of DATE_PATTERNS) { p.re.lastIndex = 0; const m = p.re.exec(orig); if (m && m[0] === orig) return parseDateMatch(p.kind, m); } return null; })();
             // a birthdate in free text follows the DOB setting, like the DOB column: removed (default), year only, or shifted
             if (span.type === 'DOB' && cfg.surrogate.dob !== 'shift') return cfg.surrogate.dob === 'year' && pd && pd.hasYear && new Date().getFullYear() - pd.y < 90 ? String(pd.y) : '[dob]';
             if (!cfg.surrogate.dateShift) return span.type === 'DOB' ? '[dob]' : '[date]';

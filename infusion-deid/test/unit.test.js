@@ -248,7 +248,7 @@ test('"Last, First" with structural evidence is a name; comma lists are not', ()
   assert.deepEqual(names('Social Work, Dietitian, Chaplain consulted. Pharmacy, Radiology notified.'), []);
 });
 test('date context: ranges and fractions are not dates; DOB/appt context makes small m/d a date', () => {
-  const dates = (t) => D.ruleSpans(t, cfg()).filter((s) => s.type === 'DATE').map((s) => s.text);
+  const dates = (t) => D.ruleSpans(t, cfg()).filter((s) => s.type === 'DATE' || s.type === 'DOB').map((s) => s.text); // "DOB 1/2" is a birthdate (DOB) span
   assert.deepEqual(dates('days 1-3 dex; weeks 1-2 off; dose 1/2 today, 1/2 tomorrow; ratio 1/2 NS; NEXT TX 12/02.'), ['12/02']);
   assert.deepEqual(dates('DOB 1/2 verified; seen 1/3 and 2/4; next cycle 1/2'), ['1/2', '1/3', '2/4', '1/2']);
   assert.deepEqual(dates('next cycle 12/19\nhome address 4110 Niagara Dr'), ['12/19']);
