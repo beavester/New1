@@ -4668,6 +4668,48 @@
       if (/^[.,;:)]+$/.test(lines[i + 1].trim())) { lines[i] += lines[i + 1].trim(); lines[i + 1] = ''; }
       if (!lines[i + 1].trim()) lines.splice(i + 1, 1);
     }
+    // Values cut by the wrap of a narrow grid column, where the rest sits in the same column of the next line between other
+    // columns' text: the year of a date in the first cell ("11/23/202" over "6", "11/16/2" over "026"), the last digits of
+    // a record number ("912003" over "47" under it), the last four digits of a phone number that ends its line ("555-"
+    // over "... 0126 for pickup"). The rest is moved up and its place is left blank, so the columns stay where they were.
+    for (let i = 0; i + 1 < lines.length; i++) {
+      if (o.sectionMarker && (o.sectionMarker.test(lines[i]) || o.sectionMarker.test(lines[i + 1]))) continue;
+      const blank = (line, at, len) => line.slice(0, at) + ' '.repeat(len) + line.slice(at + len);
+      // the end of a record number, under it
+      { const idRe = /(?<![\w\/\-.:#])(?:[A-Z]{1,2})?\d{6,9}(?![\w\/\-.:]|,\d)/g; let t; const next = lines[i + 1];
+        // the line under it is no record line of its own: no record number, no full date
+        if (!/(?<![\w\/\-.:])[A-Z]{0,2}\d{6,}(?![\w\/\-.:])/.test(next) && !/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(next)) {
+          while ((t = idRe.exec(lines[i]))) {
+            // not a phone, a dose or a labelled other number
+            if (/(?:ph|phone|cell|tel|fax|call|text|#|ref|auth|claim|order|lot|id)\s*[:#]?\s*$/i.test(lines[i].slice(Math.max(0, t.index - 10), t.index)) || /^\s*(?:mg|mcg|ml|units?|cells|copies)\b/i.test(lines[i].slice(t.index + t[0].length))) continue;
+            const tailRe = /(?:^|(?<=\s{2}))(\d{1,3})(?=\s{2}|\s*$)/g; let q, hit = null, count = 0; // the rest is alone in its cell: "AUC 5" and "Chair 9" are not
+            while ((q = tailRe.exec(next))) { if (q.index >= t.index - 2 && q.index <= t.index + t[0].length + 3) { hit = q; count++; } }
+            if (!hit || count !== 1) continue;
+            // only in a grid: the line above the rest must go on after the number, and the rest line must hold other cells
+            if (!/\S/.test(next.slice(0, hit.index)) && !/\S/.test(next.slice(hit.index + hit[1].length))) continue;
+            const ins = t.index + t[0].length;
+            lines[i] = lines[i].slice(0, ins) + hit[1] + lines[i].slice(ins + (/^ {2}/.test(lines[i].slice(ins + hit[1].length - 1)) ? hit[1].length : 0));
+            lines[i + 1] = blank(next, hit.index, hit[1].length);
+            break;
+          }
+        }
+      }
+      // the year of the date in the first cell
+      const dm = lines[i].match(/^(\s*\d{1,2}[\/\-]\d{1,2}[\/\-])(\d{1,3})(?=\s|$)/);
+      if (dm) {
+        const rest = lines[i + 1].match(/^(\s*)(\d{1,3})(?=\s|$)/);
+        if (rest && /^(?:19|20)\d\d$/.test(dm[2] + rest[2])) {
+          lines[i] = dm[1] + dm[2] + rest[2] + lines[i].slice(dm[0].length + (/^ {2}/.test(lines[i].slice(dm[0].length + rest[2].length)) ? rest[2].length : 0));
+          lines[i + 1] = blank(lines[i + 1], rest[1].length, rest[2].length);
+        }
+      }
+      // the last four digits of a phone number, at the start of a cell of the next line
+      if (/(?<![\w])(?:\(?\d{3}\)?[-.\s])?\d{3}-$/.test(lines[i]) && !/^\s*\d{4}(?!\d)/.test(lines[i + 1])) {
+        const cells = [...lines[i + 1].matchAll(/(?<=\s{2})(\d{4})(?=[\s.,;)]|$)/g)];
+        if (cells.length === 1) { const c = cells[0]; lines[i] += c[1]; lines[i + 1] = blank(lines[i + 1], c.index, 4); }
+      }
+      if (!lines[i + 1].trim()) lines.splice(i + 1, 1);
+    }
     // a dose cut by the wrap of a narrow column: the number ends one line and its unit sits in the same column of the next
     // ("... Oxaliplatin 85" / "Hartley, Rosalind |[MRN      mg/m2 over 2 hr"): the unit is moved up beside its number
     for (let i = 0; i + 1 < lines.length; i++) {
