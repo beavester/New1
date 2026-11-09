@@ -5048,7 +5048,7 @@
     return { hits, providerHits, coincidences, unnamed: unnamedHits, patients: census.patients.size };
   }
 
-  const VERSION = '0.1.0';
+  const VERSION = '0.11.0';
   // Release scan: an independent check of the protected output against the SOURCE, written apart from the detectors so a
   // miss in them is not repeated here. It never changes the output; it only reports.
   //  identifiers: an identifier-column value (patient last name, MRN, account, phone) that still appears anywhere in the output

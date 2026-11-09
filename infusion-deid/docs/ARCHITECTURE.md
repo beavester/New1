@@ -1,4 +1,4 @@
-# Infusion De-ID — page architecture (v0.10)
+# Infusion De-ID — page architecture (v0.11)
 
 One HTML file, no server, no install, no network. Everything below runs inside the browser tab.
 

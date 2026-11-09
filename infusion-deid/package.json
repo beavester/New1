@@ -1,6 +1,6 @@
 {
   "name": "infusion-deid",
-  "version": "0.1.0",
+  "version": "0.11.0",
   "private": true,
   "description": "Offline, single-file de-identification for Epic infusion schedule and ordering exports: census dictionary + rules + cue detector + hide-in-plain-sight surrogates.",
   "scripts": {
