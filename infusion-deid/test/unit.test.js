@@ -1505,3 +1505,11 @@ test('a place word before a side, a cycle or a muscle is not a town', () => {
   const run = (t) => D.processTable({ headers: ['Comments'], rows: [[t]] }, {}).rows[0][0];
   for (const t of ['Pt hard of hearing, speak to L side.', 'Flu shot given today in L deltoid.', 'needs echo prior to C1 trastuzumab.']) assert.equal(run(t), t);
 });
+
+test('round 15 patterns: address with direction and unit, (555)-012-9944, a bracketed lower-case name after a relation, Appt 11/11, Prov First columns', () => {
+  const run = (t) => D.processTable({ headers: ['Comments'], rows: [[t]] }, {}).rows[0][0];
+  const cases = [['staying at 1220 W Alvarado St Apt 3, ok', 'Alvarado'], ['work (555)-012-9944 x31.', '012-9944'], ['husband (ike) says pt fell', '(ike)'], ['MRN 1234567 - Appt 11/11  h', '11/11']];
+  for (const [t, gone] of cases) assert.ok(!run(t).includes(gone), `${t} -> ${run(t)}`);
+  for (const t of ['Plt 88 next 2/3 of dose', 'cycle 3/4 given; rtc 2 wk']) assert.equal(run(t), t);
+  assert.equal(D.classifyColumns(['Prov Last', 'Prov First'], [['Okafor', 'Lena']]).map((c) => c.role).join(' '), 'provider provider');
+});

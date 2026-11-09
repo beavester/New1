@@ -144,7 +144,7 @@
     { role: 'provider', re: /\b(provider|attending|physician|ordering|prescrib|doctor|\bdr\b|oncologist|referring|pcp|nurse|\brn\b|pharmacist|md\b|signed by|entered by|authoriz)/i, not: /\b(note|notes|comment|comments|instruction|instructions|remark|remarks|message|narrative|fax|phone|tel)\b/i },
     { role: 'age', re: /^\s*age\b|\b(?:pt|pat|patient)\s*age\b|\bage\s*\(?(?:y|yr|yrs|years)?\)?\s*$/i },
     { role: 'dob', re: /\bbirth\s*(?:dt|date)?\b|\bb\.?day\b/i },
-    { role: 'provider', re: /^\s*(?:(?:ref|refer|referring|ord|ordering|outside|consult|sched|admitting|treating|primary)\.?\s*)?(?:prov|prov\.|provider|attending|attend|md|phys|physician|doc|dr|onc|oncologist|pcp)\s*$|^\s*referring\s*$/i },
+    { role: 'provider', re: /^\s*(?:(?:ref|refer|referring|ord|ordering|outside|consult|sched|admitting|treating|primary)\.?\s*)?(?:prov|prov\.|provider|attending|attend|md|phys|physician|doc|dr|onc|oncologist|pcp)\s*(?:last|first|name|ln|fn|last\s*name|first\s*name)?\s*$|^\s*referring\s*$/i },
     { role: 'drop', re: /\b(?:emerg(?:ency)?\s*contact|emerg\s*cont|e\.?c\.?\s*name|contact\s*name|next\s*of\s*kin|\bnok\b|kin\b|guar(?:antor)?\b|caregiver\s*name|poa\s*name|proxy\s*name|spouse\s*name)/i },
     // a patient name split over two columns ("Pt Last" / "Pt First", "Last Name" / "First Name", "Surname" / "Given")
     { role: 'patient_name', re: /^\s*(?:pt|pat|patient)?\s*\.?\s*(?:last|first|sur|given|family|middle)\s*(?:name|nm)?\s*$/i },
@@ -898,6 +898,15 @@
       while ((pm = MRNS.exec(text))) { const win = text.slice(pm.index, pm.index + 90); const re = /\d[\d\-]{4,}\d/g; let d; while ((d = re.exec(win))) { if (d[0].replace(/\D/g, '').length >= 6) pushId(pm.index + d.index, pm.index + d.index + d[0].length, 'MRN'); } }
       const DL = /\b(?:DL|D\.L\.|driver'?s?\s+licen[cs]e|licen[cs]e)\b\s*(?:#|no\.?|number)?\s*[:(]?\s*([A-Z]{0,2}\d[\dA-Z\-]{5,}\d)/g;
       while ((pm = DL.exec(text))) { const v = pm[1]; const a = pm.index + pm[0].length - v.length; pushId(a, a + v.length, 'ID_OTHER'); }
+      // a street address with a direction letter and a unit ("1220 W Alvarado St Apt 3")
+      const ADDR2 = /\b\d{1,6}\s+(?:[NSEW]|NE|NW|SE|SW|North|South|East|West)\.?\s+(?:\p{Lu}[\p{L}'’\-]*\s+){1,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Pkwy|Ter|Terrace|Cir|Hwy)\b\.?(?:,?\s*(?:Apt|Apartment|Unit|Ste|Suite|#)\.?\s*#?[A-Za-z]?\d+[A-Za-z]?)?/gu;
+      while ((pm = ADDR2.exec(text))) pushId(pm.index, pm.index + pm[0].length, 'ADDRESS');
+      // a phone written "(555)-012-9944"
+      const PH2 = /\(\d{3}\)\s*[-.]\s*\d{3}[-.\s]\d{4}\b/g;
+      while ((pm = PH2.exec(text))) pushId(pm.index, pm.index + pm[0].length, 'PHONE');
+      // a day and month after a visit word ("Appt 11/11", "RTC 3/4")
+      const VISIT_DM = /\b(?:appt|appointment|visit|seen|due|scheduled|sched|return|rtc|f\/u|follow[- ]?up)\b\.?:?\s+(\d{1,2}\/\d{1,2})(?![\/\d])/gi;
+      while ((pm = VISIT_DM.exec(text))) { const v = pm[1], a = pm.index + pm[0].length - v.length; const [mo, da] = v.split('/').map(Number); if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) pushId(a, a + v.length, 'DATE'); }
       const ALNUM = /\b[A-Z]{1,4}\d{7,12}\b(?!\s*(?:mg|mcg|ml|units?|iu)\b)/g;
       while ((pm = ALNUM.exec(text))) pushId(pm.index, pm.index + pm[0].length, 'ID_OTHER');
     }
@@ -2802,6 +2811,9 @@
       const near = nameSpans.some((sp) => (sp.end <= m.index && m.index - sp.end <= 2) || (sp.start >= m.index + m[0].length && sp.start - (m.index + m[0].length) <= 2) || (sp.start <= m.index && sp.end >= b));
       if (near && !LEX.isClinical(m[1]) && nickOk(m[1]) && !/^(?:Mom|Dad|Son|Wife|Husband|Spouse|Daughter|Sister|Brother|Aunt|Uncle|Pt|Patient|Self|Hcp|Poa|Guardian|Rn|Md|Np|Pa)$/i.test(m[1])) { nicks.add(m[1]); if (free(a, b)) add.push({ start: a, end: b, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); }
     }
+    // a lower-case name in brackets after a relation word: "husband (ike) says"
+    { const REL_PAREN = /\b(?:husband|wife|spouse|partner|son|daughter|mother|mom|father|dad|sister|brother|aunt|uncle|niece|nephew|grandson|granddaughter|friend|neighbou?r|caregiver|cousin)\s*\(([\p{L}'’]{2,15})\)/giu; let rm;
+      while ((rm = REL_PAREN.exec(text))) { const a = rm.index + rm[0].length - rm[1].length - 1; if ((LEX.isFirstName(rm[1]) || !LEX.isDictWord(rm[1])) && !LEX.isClinical(rm[1]) && free(a, a + rm[1].length)) add.push({ start: a, end: a + rm[1].length, type: 'NAME_OTHER', source: 'strict', conf: 0.5 }); } }
     const NICK_CUE = /\b(?:goes\s+by|go(?:es)?\s+by|known\s+as|a\.?k\.?a\.?|nick-?named|prefers\s+to\s+be\s+called|likes\s+to\s+be\s+called|call\s+(?:him|her|them)|calls\s+(?:him|her)self)\s+["“']?(\p{Lu}[\p{Ll}'’]{1,14})/gu;
     while ((m = NICK_CUE.exec(text))) {
       if (LEX.isClinical(m[1]) || !nickOk(m[1])) continue;
