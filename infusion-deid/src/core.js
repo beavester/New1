@@ -3184,6 +3184,8 @@
       if (parts.some((x) => x.length >= 5 && (LEX.isClinical(x) || DRUG_STEM.test(x) || LEX.hasDrugStem(x) || LEX.isDrugVocab(x)))) return false;
       const plain = (x) => x.length < 3 ? !/^(?:al|el|o|d|de|di|la|le|mc|bo|jo|li|xi|yu|an|su|ji|ha|mi|da|do|vy|ye|ae|eu|in|ok|so)$/.test(x) || false : (LEX.isDictWord(x) || LEX.isEnglishWord(x) || LEX.isClinical(x) || DRUG_STEM.test(x) || LEX.hasDrugStem(x) || COMMON_LOWER.has(x));
       if (parts.every((x) => x.length < 3)) return false;
+      // every part a given name ("min-jun", "mary-ann", "anne-marie"): a compound of ordinary words is never that
+      if (parts.every((x) => x.length >= 2 && LEX.isFirstName(x)) && !parts.every((x) => monthIndex(x)) && parts.some((x) => x.length >= 3 && !COMMON_LOWER.has(x))) return true;
       return parts.some((x) => x.length >= 3 && !plain(x)) || (parts.every((x) => x.length < 3 || nameListed(x)) && parts.some((x) => x.length >= 3 && nameListed(x) && !LEX.isEnglishWord(x)));
     };
     // the strict pass's own vocabulary: what an unknown capitalised word is when its shape, a real word list or the slot it
@@ -3195,7 +3197,9 @@
       // (one that is also a surname only as written in notes, in lower case: "Endo called back" is a person)
       if (LEX.SPECIALTY_SHORT.has(lw) && !(named && !/^\p{Ll}/u.test(w)) && !/(?:\b(?:dr|mr|mrs|ms|miss|pt|patient)\.?[ \t]+)$/i.test(before)) return true;
       // a national insurer or patient-assistance organisation; one that is also a surname only beside insurance words
-      if (LEX.PAYER_WORD_SET.has(lw) && (!named || LEX.PAYER_CONTEXT.test(before) || LEX.PAYER_CONTEXT.test(after))) return true;
+      // (or beside another payer: "Aetna/Cigna", "Humana and Anthem")
+      const payerNear = (s) => (s.match(/[A-Za-z]{3,}/g) || []).some((x) => LEX.PAYER_WORD_SET.has(x.toLowerCase()));
+      if (LEX.PAYER_WORD_SET.has(lw) && (!named || LEX.PAYER_CONTEXT.test(before) || LEX.PAYER_CONTEXT.test(after) || payerNear(before.slice(-16)) || payerNear(after.slice(0, 16)))) return true;
       // a car after a colour or beside a vehicle word ("silver Camry", "drives a Tiguan", "plate 7KXR219, white Ford")
       {
         const pw = (before.match(/([A-Za-z]+)[ \t]+(?:(?:19|20)\d\d[ \t]+|\d\d[ \t]+)?$/) || [])[1] || '';
