@@ -4697,8 +4697,10 @@
       // the year of the date in the first cell
       const dm = lines[i].match(/^(\s*\d{1,2}[\/\-]\d{1,2}[\/\-])(\d{1,3})(?=\s|$)/);
       if (dm) {
-        const rest = lines[i + 1].match(/^(\s*)(\d{1,3})(?=\s|$)/);
-        if (rest && /^(?:19|20)\d\d$/.test(dm[2] + rest[2])) {
+        // the rest stands alone in its cell ("6            Villanueva,"), and the part above is no complete two-digit year:
+        // "3/4/20 C1D1 given" over "25 mg Benadryl" is a date and a dose
+        const rest = lines[i + 1].match(/^(\s*)(\d{1,3})(?=\s{2}|\s*$)/);
+        if (rest && dm[2].length !== 2 && /^(?:19|20)\d\d$/.test(dm[2] + rest[2])) {
           lines[i] = dm[1] + dm[2] + rest[2] + lines[i].slice(dm[0].length + (/^ {2}/.test(lines[i].slice(dm[0].length + rest[2].length)) ? rest[2].length : 0));
           lines[i + 1] = blank(lines[i + 1], rest[1].length, rest[2].length);
         }
@@ -4815,7 +4817,7 @@
       // ("Dec", "Monday", "Mississippi", "Aetna", "Ocrevus", "Labs").
       const strong = LEX.isStrongName(w), listed = curated || strong;
       if (HEAD_WEEKDAY.test(w)) return -3;
-      if (monthIndex(w)) return slot === 'first' ? (LEX.isFirstName(w) && listed ? (curated ? 1 : 0.5) : -3) : (curated ? -1 : -3);
+      if (monthIndex(w)) return slot === 'first' ? (LEX.isFirstName(w) && listed ? (curated ? 1 : 0.5) : -3) : (listed && w.length > 3 ? -1 : -3); // "March, Rose" may be a person; "Dec, CBC" is not
       if (LINE_LABEL_WORD.test(w) || NOT_NAME.test(w) || LEX.ORG_SUFFIX_SET.has(lw) || LEX.CREDENTIAL_SET.has(lw)) return -3;
       if (HEAD_PAYER.test(w)) return listed ? 1 : -3;
       if (slot === 'first' && PLACE_COUNTRY.test(w) && !curated) return LEX.isFirstName(w) && strong ? -2 : -3; // "Paris, France", "Florence, Italy"
@@ -4841,9 +4843,13 @@
       const lastParts = last.split(/[ -]/).filter((w) => w && !NAME_PARTICLE.test(w.replace(/\.$/, '')));
       const ls = lastParts.map((w) => headPartScore(w, 'last', pairCaps));
       // a compound surname is judged by its worst part when one is positively not a name, else by its best
-      let score = (ls.length ? (Math.min(...ls) <= -2 ? Math.min(...ls) : Math.max(...ls)) : 0) + headPartScore(first, 'first', pairCaps);
+      // a country in the given-name slot that is a given name too ("Garcia, Israel") counts as one beside a curated surname;
+      // beside any other word it is the country ("Paris, France")
+      let fs = headPartScore(first, 'first', pairCaps);
+      if (fs === -2 && PLACE_COUNTRY.test(first)) fs = lastParts.some((w) => LEX.isCuratedName(w) && LEX.isSurname(w)) ? 0 : -3;
+      let score = (ls.length ? (Math.min(...ls) <= -2 ? Math.min(...ls) : Math.max(...ls)) : 0) + fs;
       // a town and its state ("Paris, Texas", "Jackson, Mississippi"): the state counts against the pair even when it is a given name too
-      let hardNeg = ls.some((x) => x <= -3) || headPartScore(first, 'first', pairCaps) <= -3;
+      let hardNeg = ls.some((x) => x <= -3) || fs <= -3;
       { const PL = placeData(); if (LEX.STATE_NAME_SET.has(first.toLowerCase()) && lastParts.some((w) => LEX.CITY_SET.has(w.toLowerCase()) || (PL && PL.isMajor && PL.isMajor(w)))) { score -= 3; hardNeg = true; } }
       let idEvidence = false;
       // beside the pair
@@ -5202,7 +5208,11 @@
       return hit || w;
     });
     // the surname "O" read as a zero at the start of a cell, before its comma and given name: "0, SEUNG-HEE"
-    t = t.replace(/(^|\n[ \t]*|[ \t]{2,})0(?=,[ \t]?\p{Lu}[\p{L}'’\-]+)/gu, '$1O');
+    t = t.replace(/(^|\n[ \t]*|[ \t]{2,})0(?=,[ \t]?\p{Lu}[\p{L}'’\-]{2,}(?:[ \t]{2,}|[ \t]*(?:\n|$)))/gu, (m, pre, off, str) => {
+      // ("Pain   0, Nausea 1" and "ECOG   0, KPS 90" are scores: the word after the comma must end its cell and be no clinical word)
+      const w = str.slice(off + m.length).match(/^,[ \t]?(\p{Lu}[\p{L}'’]+)/u);
+      return w && !LEX.isClinical(w[1]) ? pre + 'O' : m;
+    });
     // a capital I read as a lower-case l at the start of a grid cell: "llesanmi," (an English word almost never starts "ll" + vowel)
     t = t.replace(/(^|\n[ \t]*|[ \t]{2,})ll(?=[aeiou][a-z]{2,}\b)/g, '$1Il');
     return t
