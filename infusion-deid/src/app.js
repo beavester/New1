@@ -55,7 +55,9 @@
     if (s === 'lexicon' || s === 'cue') return 'Found by: a word clue (less certain)';
     // a name or place found with a clue somewhere else in this input; a name can also come from an earlier input of the
     // session (a relative or visitor named there is looked for here too)
-    if (s === 'propagate') return place ? 'Found by: the same place was found elsewhere in this file' : 'Found by: the same name was found elsewhere in this file, or in an earlier file of this session';
+    // (a place the file names with a clue is marked this way where the clue stands too, so the label must hold for a place
+    // written once)
+    if (s === 'propagate') return place ? 'Found by: a place that a clue in this file points to (a state, a ZIP, "lives in" or the like, here or in another row)' : 'Found by: the same name was found elsewhere in this file, or in an earlier file of this session';
     if (s === 'strict') return 'Found by: unrecognised word (strict check; may be an ordinary word)';
     if (s === 'column') return 'Found by: a contact or family column of this file';
     if (s === 'custom') return 'Found by: your "Always remove" list';
@@ -1280,6 +1282,11 @@
     }).filter((d) => !q || d.cells.some((c) => c.original.toLowerCase().includes(q)));
   }
   function renderReview(item) {
+    // the "unexplained word" view, once its last word is settled, has nothing left to show: back to the lines that need a look
+    if ($('reviewFilter').value === 'residue') {
+      if (residueOpen(item).length) item.residueView = true;
+      else if (item.residueView) { item.residueView = false; $('reviewFilter').value = item.flagged > 0 ? 'model' : 'all'; }
+    }
     const list = filteredDetails(item);
     const shown = list.slice(0, state.page * PAGE);
     const certain = certainCount(item);
