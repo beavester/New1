@@ -4864,7 +4864,7 @@
       return score;
     };
     // every "Last, First" on a line that has the structure of a census entry (first is the line's patient)
-    const lineNames = (line) => {
+    const lineNames = (line, next) => {
       const out = [];
       const hasIdOnLine = /\b(?:mrn|dob|acct|csn)\b/i.test(line) || /(?<![\w\/\-.:])[A-Z]{0,2}[0-9OIlSB]{6,10}(?![\w\/\-.:])/.test(line) || /\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/.test(line);
       LINE_NAME_RE.lastIndex = 0; let m;
@@ -4912,6 +4912,21 @@
         if (!structural && (LEX.isClinical(last) || LEX.isClinical(first) || LEX.CITY_SET.has(last.toLowerCase()))) continue;
         out.push({ text: mText.trim(), index: mIndex, structural, hasIdOnLine });
       }
+      // A surname of one letter ("O, Seung-hee", "U, Thant"): a person only alone in its cell, with a record number,
+      // birthdate or age and sex beside it or right under it, and a given name that is no label, drug or ordinary word.
+      { const re = /(?:^|(?<=\s{2})|(?<=[|\t]\s?))(\p{Lu}),[ \t]{0,2}(\p{Lu}[\p{L}'’]+(?:-\p{Lu}?[\p{L}'’]+)?)(?=\s{2,}|\s*$|\s*[|(]|\s+(?:MRN|MR#|DOB)\b|\s+#?\d)/gu; let s1;
+        const ID_NEAR = /^\s*[|(]?\s*(?:(?:MRN|MR#|DOB|D\.O\.B)\b|#?\s*[A-Z]{0,2}\d{6,10}(?![\w])|\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}|\d{1,3}\s*(?:y\/?o\b|yrs?\b|[yY]?\s?[MF]\b))/;
+        while ((s1 = re.exec(line))) {
+          if (out.some((x) => x.index <= s1.index && s1.index < x.index + x.text.length)) continue;
+          const given = s1[2].split('-');
+          if (given.some((w) => nameWordBad(w) || w.length < 2 || (LEX.isEnglishWord(w) && !LEX.isFirstName(w)))) continue;
+          const after = line.slice(s1.index + s1[0].length);
+          const beside = ID_NEAR.test(after), under = !/\S/.test(after.replace(/^\s*[|]?/, '').slice(0, 2)) && next != null && ID_NEAR.test(next.slice(Math.max(0, s1.index - 3)).replace(/^\S*\s*/, (x) => (/^\s/.test(next.slice(Math.max(0, s1.index - 3))) ? x : '')));
+          if (!beside && !under) continue;
+          out.push({ text: s1[0].trim(), index: s1.index, structural: true, hasIdOnLine });
+        }
+        out.sort((a, b) => a.index - b.index);
+      }
       return out;
     };
     // "First Last" tiles side by side, separated by wide gaps ("Seraphina Hollenbeck      Tobiah Oyelaran      Eulalia Castellanos-Ruiz")
@@ -4939,7 +4954,7 @@
       return ids.filter((t) => !phoneLike(t) && !phone7(t) && !measured(t) && !otherLabel(t) && !/^\d{4}-\d{2}-\d{2}$/.test(t.raw));
     };
     const lineDates = (line) => ruleSpans(line, { mrnRegex: null, accountRegex: null, extraRegexes: [] }).filter((sp) => (sp.type === 'DATE' || sp.type === 'DOB') && sp.date && sp.date.hasYear && !/^(?:My|my|ord)$/.test(sp.date.kind) && sp.date.y <= thisYear - 1 && sp.date.y >= 1900);
-    const info = lines.map((line) => isMarker(line) ? null : { names: lineNames(line), segs: segmentNames(line), ids: lineIds(line), dates: lineDates(line) });
+    const info = lines.map((line, idx) => isMarker(line) ? null : { names: lineNames(line, lines[idx + 1]), segs: segmentNames(line), ids: lineIds(line), dates: lineDates(line) });
 
     // A name that wrapped over two or three lines of a narrow first column: "0800 Kowalczyk-" / "Hartley, Rosalind |MRN" /
     // "Esperanza   40071823", or "1000 | Ibarrondo   01/05/1962" / "Etxeberria,   MRN" / "Teodoro   40115569".
@@ -5001,7 +5016,7 @@
       if (!(/[-,]$/.test(L.text) || (!L.text.includes(',') && /,$/.test(N1.text)) || N1.cont || commaLost)) continue;
       let acc = L.text + (commaLost ? ',' : ''); const chain = [li]; const pieces = [{ li, start: L.start, text: L.text, part: 'last' }];
       // the surname may sit on the line above the record line it belongs to (".   Pellegrino-Vasquez," over "08:00 Annunziata  73310492")
-      const aboveRecord = !led && /,$/.test(L.text);
+      const aboveRecord = !led && !info[li].ids.length && /[,-]$/.test(L.text); // ("Tremblay, Jean-" over "10:00  Guy   40290034")
       let skipped = false;
       for (let n = li + 1; n < lines.length && chain.length < 7; n++) {
         // what is left of the wrapped date cell of this record ("026" under "11/16/2") does not start the next record
@@ -5186,6 +5201,8 @@
       const hit = OCR_RELATIONS.find((r) => r.length === w.length && [...r].filter((c, i) => c !== w[i]).length === 1);
       return hit || w;
     });
+    // the surname "O" read as a zero at the start of a cell, before its comma and given name: "0, SEUNG-HEE"
+    t = t.replace(/(^|\n[ \t]*|[ \t]{2,})0(?=,[ \t]?\p{Lu}[\p{L}'’\-]+)/gu, '$1O');
     // a capital I read as a lower-case l at the start of a grid cell: "llesanmi," (an English word almost never starts "ll" + vowel)
     t = t.replace(/(^|\n[ \t]*|[ \t]{2,})ll(?=[aeiou][a-z]{2,}\b)/g, '$1Il');
     return t
