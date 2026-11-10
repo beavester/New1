@@ -1380,7 +1380,7 @@
     const scoreSeen = [];
     const SCORE_LINK = '(?:[ \\t]+(?:is|was|now|at|of|to|down|up|currently|about|around|approx|still|a|an|remains?|level|only|as|today|improved|improving|decreased|increased|dropped|went|rated|rates|score|scale|(?:down|up|improved|decreased|increased|dropped|went)[ \\t]+from))';
     const SCORE_SYMPTOM = new RegExp('\\b(?:pain|fatigue|nausea|distress|anxiety|depression|dyspnea|sob|headache|ha|cramping|cramps|discomfort|itching|pruritus|neuropathy|scores?|rated?|rates|rating|scale|severity|intensity|vas|nrs|esas)' + SCORE_LINK + '{0,3}[ \\t]*[:=(]?[ \\t]*$', 'i');
-    const SCORE_GRADED = new RegExp('\\b(?:grade|gr|ecog|kps|strength|motor|power|mrc|gcs|reflex(?:es)?|dtrs?|pulses?|edema|mucositis|ctcae|stage|ratio)' + SCORE_LINK + '{0,2}[ \\t]*[:=(]?[ \\t]*$', 'i');
+    const SCORE_GRADED = new RegExp('(?<![A-Za-z])(?:grade|gr|ecog|kps|strength|motor|power|mrc|gcs|reflex(?:es)?|dtrs?|pulses?|edema|mucositis|ctcae|stage|ratio|murmurs?|a[ \\t]?(?:&|\\+)[ \\t]?o|aao|tanner|mallampati|grip|clonus)' + SCORE_LINK + '{0,2}[ \\t]*[:=(]?[ \\t]*$', 'i');
     for (const p of DATE_PATTERNS) {
       p.re.lastIndex = 0; let m;
       while ((m = p.re.exec(text))) {
@@ -1416,12 +1416,18 @@
               const graded = SCORE_GRADED.test(sentence);
               // nothing but a separator, a connective or a when/where phrase may stand between the two ("6/10 at arrival, 2/10",
               // "8/10 -> 3/10", "6/10 before and 2/10 after"): a new noun governs its own pair ("pain 8/10, PRBC 2/10" is a date)
-              const carried = scoreSeen.slice(-1).some((x) => x.d === pd.d && m.index > x.end && m.index - x.end <= 40 && /^(?:[ \t]*(?:,|-+>|→|=>|\(|\)|\/|(?:at|on|upon|with|w\/|after|before|pre|post|during|while|then|and|to|now|down|up|but|or|later|earlier|initially|currently|rest|resting|movement|moving|activity|arrival|admission|baseline|discharge|worst|best|max|min|peak|average|avg|am|pm|morning|evening|night|today|yesterday|this|last|in|the|its|is|was)\b))*[ \t]*$/i.test(text.slice(x.end, m.index)) && !/\b(?:on|last|this|in|the|with|w\/|at|during|before|after|upon)[ \t]*$/i.test(text.slice(x.end, m.index)));
-              const symptomAfter = pd.d === 10 && /^[ \t]+(?:pain|nausea|fatigue|headache|ha|sob|dyspnea|cramping|discomfort|severity|intensity)\b(?![ \t]+(?:clinic|mgmt|management|team|service|consult|appt|appointment|visit|meds?|rx|refill|specialist|doctor|dr|np|f\/u|follow))/i.test(after) && /\b(?:c\/o|complains?[ \t]+of|reports?|reporting|rates?|rated|endorses?|having|has|had|with|w\/|states?|describes?|denies)[ \t]*:?[ \t]*$/i.test(sentence);
+              // a list of the same exam item by side or site: the qualifier of the first pair, a comma, then the next pair
+              // ("Strength 5/5 BUE, 4/5 BLE", "pulses 2/4 R, 1/4 L"); a new noun before the second pair governs it ("pain 8/10, PRBC 2/10")
+              const lm = sentence.match(/^(.*?)\d{1,2}\/(\d{1,2})(?:[ \t]+(?!(?:on|since|until|seen|due|appt|rtc|next|last)\b)[A-Za-z][A-Za-z&\/]{0,11}){0,2}[ \t]*[,;][ \t]*(?:and[ \t]+)?$/i);
+              const listed = (!!lm && +lm[2] === pd.d && (SCORE_GRADED.test(lm[1]) || SCORE_SYMPTOM.test(lm[1]))) || scoreSeen.slice(-1).some((x) => x.d === pd.d && m.index > x.end && m.index - x.end <= 24 && /^(?:[ \t]+(?!(?:on|since|until|seen|due|appt|rtc|next|last)\b)[A-Za-z][A-Za-z&\/]{0,11}){0,2}[ \t]*[,;][ \t]*(?:and[ \t]+)?$/i.test(text.slice(x.end, m.index)));
+              // the same scale rated again in a clause of its own, after a score on that scale ("Pain 6/10 at arrival. Now 2/10.", "today 4/10.")
+              const rerated = pd.d === 10 && scoreSeen.some((x) => x.d === 10 && m.index > x.end && m.index - x.end <= 120) && /^[ \t]*(?:(?:today|now|currently|later|then|still|no|yes|and|but|after|post|pre|before|at[ \t]+rest|at[ \t]+d\/c|at[ \t]+discharge|on[ \t]+arrival|on[ \t]+d\/c)[ \t]*,?[ \t]*){0,3}$/i.test(sentence) && /^[ \t]*(?:[.,;)!?]|$|\n)/.test(after) && !/^[ \t]*[.,;]?[ \t]*$/.test(sentence) ;
+              const carried = listed || rerated || scoreSeen.slice(-1).some((x) => x.d === pd.d && m.index > x.end && m.index - x.end <= 40 && /^(?:[ \t]*(?:,|-+>|→|=>|\(|\)|\/|(?:at|on|upon|with|w\/|after|before|pre|post|during|while|then|and|to|now|down|up|but|or|later|earlier|initially|currently|rest|resting|movement|moving|activity|arrival|admission|baseline|discharge|worst|best|max|min|peak|average|avg|am|pm|morning|evening|night|today|yesterday|this|last|in|the|its|is|was)\b))*[ \t]*$/i.test(text.slice(x.end, m.index)) && !/\b(?:on|last|this|in|the|with|w\/|at|during|before|after|upon)[ \t]*$/i.test(text.slice(x.end, m.index)));
+              const symptomAfter = pd.d === 10 && /^[ \t]+(?:pain|nausea|fatigue|headache|ha|sob|dyspnea|cramping|discomfort|severity|intensity)\b(?![ \t]+(?:clinic|mgmt|management|team|service|consult|appt|appointment|visit|meds?|rx|refill|specialist|doctor|dr|np|f\/u|follow))/i.test(after) && /(?:^|\b(?:c\/o|complains?[ \t]+of|reports?|reporting|rates?|rated|endorses?|having|has|had|with|w\/|states?|describes?|denies|today|now|still|currently)[ \t]*:?|[,:(])[ \t]*$/i.test(sentence);
               const strengthAfter = pd.d <= 5 && /^[ \t]+(?:strength|motor|power)\b/i.test(after);
               const countAfter = /^[ \t]+(?:doses?|cycles?|fractions?|treatments?|infusions?|injections?|units?|bags?|sessions?)[ \t]+(?:given|complete[d]?|received|done|administered|infused|so[ \t]+far|remaining|left|total)\b/i.test(after);
               const courseDay = pd.m < pd.d && pd.d <= 7 && /(?:^|[\s(,:])day[ \t]*#?[ \t]*$/i.test(sentence) && !/\b(?:next|same|that|last|following|previous|clinic|appt|treatment|infusion|every|each|the|this)[ \t]+day[ \t]*#?[ \t]*$/i.test(sentence);
-              if ((symptom && (pd.d === 10 || /\b(?:scores?|rated?|rates|rating|scale|severity|intensity|vas|nrs|esas)\b/i.test(sentence.slice(-40)))) || (graded && pd.d <= 5) || carried || symptomAfter || strengthAfter || countAfter || courseDay) { scoreSeen.push({ end: m.index + m[0].length, d: pd.d }); continue; }
+              if ((symptom && (pd.d === 10 || /\b(?:scores?|rated?|rates|rating|scale|severity|intensity|vas|nrs|esas)\b/i.test(sentence.slice(-40)))) || (graded && (pd.d <= 5 || (pd.d === 6 && /murmurs?[^A-Za-z]*$/i.test(sentence)))) || carried || symptomAfter || strengthAfter || countAfter || courseDay) { scoreSeen.push({ end: m.index + m[0].length, d: pd.d }); continue; }
             }
           }
           if (pd.m <= pd.d && pd.sep === '/' && !/^0|\/0/.test(m[0]) && !/^\s*(?:timing|appt|appointment|visit|at[ \t]+\d|@|\d{1,2}:\d{2})/i.test(after)) {
@@ -2876,7 +2882,35 @@
   // "Will to return Monday", "Will reports", "May here for C2").
   const MODAL_NAME = /^(?:Will|May|Can|Might|Must|Shall|Should|Would|Could)$/;
   const NOT_BARE_VERB = /^(?:to|is|was|are|were|am|has|had|does|did|will|would|can|could|should|shall|may|might|must|here|aware|and|or|with|in|at|for|on|per|who|that|the|a|an|of|from|re|said|came|left|felt|went|got|took|brought|drove|fell|saw|told|slept|ate|drank|knew|thought|understood|agreed|made|gave|sent|spoke|woke|sat|stood|ran|lost|kept|paid|met|wrote|read|forgot|chose|began|became|threw|rode|swore|hurt|quit|put|let|cut|held|bled|heard|found|won|stable|better|worse|home|back|alert|well|fine|ok|okay|good|sick|ill|weak|upset|pleasant|comfortable|asleep|awake|present|late|early|due|able|unable|ready|out|up|down|off|happy|sad|eager|tired|new|last|next|today|tomorrow|yesterday)$/i;
+  // A name that is also an everyday word, read as the word by its slot. The guard for Will and May, for every such name:
+  //   'month'  a month name after a word of time, no person verb after it ("See in June.", "Last tx in April.")
+  //   'count'  a clinical word before a number ("Day 8 held")
+  //   'verb'   in lower case before a direction or manner word ("pt rose from chair w/o assist")
+  // A person verb or a possessive after it, an honorific or another name beside it, keeps the person ("June called",
+  // "April's ride", "Mrs. Day", "Long, Rose", "Rose Long tolerated"). A word-name at the start of a sentence before a bare
+  // noun ("Long infusion", "Price check", "Grant application") is NOT read as the word: in the patient's own row nothing
+  // tells the two apart, and the name is the safe reading.
+  const WORD_TIME_BEFORE = /(?:^|[^A-Za-z])(?:in|last|next|since|until|till|early|late|mid|this|during|through|thru|every|each|(?:end|beginning|start|middle|week|month)[ \t]+of)[ \t]+$/i;
+  function wordUse(text, start, end) {
+    const w = text.slice(start, end);
+    const cap = /^\p{Lu}\p{Ll}+$/u.test(w), lower = /^\p{Ll}+$/u.test(w);
+    if (!cap && !lower) return '';
+    if (!(monthIndex(w) || LEX.isAmbiguous(w) || LEX.isClinical(w) || (LEX.isDictWord(w) && LEX.isEnglishWord(w) && !LEX.isFirstName(w)))) return '';
+    const pre = text.slice(Math.max(0, start - 40), start), post = text.slice(end, end + 40);
+    const x = personSlotOf(text, start, end);
+    if (x.verb || /^['’]s/.test(post) || /^,[ \t]*\p{Lu}/u.test(post)) return '';
+    if (/(?:\b(?:mr|mrs|ms|miss|mx|dr)\.?|,)[ \t]*$/i.test(pre)) return '';
+    if (lower) return /^[ \t]+(?:from|up|above|slightly|overnight|w\/o)(?![A-Za-z])/.test(post) && LEX.isDictWord(w) && !/(?:^|[^A-Za-z0-9])(?:w\/|with|to|for|per|called|calling|call|phoned|spoke(?:[ \t]+(?:with|w\/?|to))?|talked(?:[ \t]+(?:with|w\/?|to))?|told|tell|asked|ask|texted|emailed|messaged|re:?|by)[ \t]*$/i.test(pre) ? 'verb' : '';
+    // another name beside it: "Rose Long", "Hope Price"
+    const nb = [(pre.match(/(\p{Lu}[\p{Ll}'’\-]+)[ \t]+$/u) || [])[1], (post.match(/^[ \t]+(\p{Lu}[\p{Ll}'’\-]+)/u) || [])[1]];
+    if (nb.some((n) => n && !COMMON_CAP.has(n.toLowerCase()) && (LEX.isFirstName(n) || LEX.isSurname(n)) && !relWord(n) && !LEX.isClinical(n))) return '';
+    if (monthIndex(w) && WORD_TIME_BEFORE.test(pre)) return 'month';
+    const cue = x.cue && !/[.!?;][ \t]*$/.test(pre); // a contact cue, not the last word of the sentence before
+    if (LEX.isClinical(w) && !monthIndex(w) && /^[ \t]*#?\d{1,2}(?![\d:\/])/.test(post) && !PERSON_VERB_AFTER.test(post.replace(/^[ \t]*#?\d{1,2}/, '')) && !cue) return 'count';
+    return '';
+  }
   function modalUse(text, start, end) {
+    if (wordUse(text, start, end)) return true;
     if (!MODAL_NAME.test(text.slice(start, end))) return false;
     const pre = text.slice(Math.max(0, start - 40), start);
     if (!/(?:^|[.!?;\n][ \t]*|^[ \t]*[-•*][ \t]*|[ \t][-–—|][ \t]*)$/.test(pre)) return false;
@@ -3563,6 +3597,14 @@
   // countries, regions and peoples that are also the names of US towns: larger than a state, so no identifier on their own
   const PLACE_COUNTRY = /^(?:england|scotland|ireland|wales|britain|mexico|canada|belgium|norway|denmark|sweden|finland|poland|holland|germany|france|spain|portugal|italy|greece|russia|ukraine|turkey|egypt|lebanon|israel|jordan|syria|iran|iraq|persia|palestine|india|china|japan|korea|vietnam|cuba|peru|chile|brazil|panama|jamaica|trinidad|malta|sudan|samoa|greenland|scandinavia|europe|asia|africa|america|midwest|atlantic|pacific|canadian|yukon|patagonia|darfur|falkland|christmas|easter)$/i;
   const PLACE_WORDISH_ST = /^(?:OK|IN|OR|ME|HI|DE|PA|MD|ID|MA|MO|OH|AL|AR|GA|LA|MS|MT|NE|VA|WA|CO|CT)$/;
+  // a residence cue: where the patient or a relative lives, moved or comes from. The strongest place context there is: after
+  // it a listed town is a town in lower case too, and when its name is also a clinical or everyday word ("Lives with
+  // daughter in Normal.", "lives w/ son in peoria.", "Pt from kalamazoo.")
+  const PLACE_RESIDE = /(?:\b(?:lives?|living|resides?|residing|moved|moving|relocat\w*|born|raised|grew|stay(?:s|ing|ed)?|retired|snowbirds?)(?:[ \t]+(?!(?:in|to|from|near|outside)\b)[\p{L}'’\/\-]+){0,3}[ \t]+(?:in|to|near|outside|from|around)|\b(?:pt|patient|originally|he|she|they|is|are|was|were|family|wife|husband|son|daughter|dtr)[ \t]+(?:is[ \t]+|are[ \t]+)?from)[ \t]$/iu;
+  const PLACE_LABEL = /(?:^|[\n.;|,(]|\b(?:pt|patient)['’]?s?)[ \t]*(?:home|home[ \t]?town|city|town|residence|resides|lives|city\/state|city\/town)[ \t]*[:=][ \t]*$/i;
+  // a body site, a device or a finding before the preposition: what follows is anatomy or a position, never a town
+  // ("pain in Achilles", "tip in SVC from Brachial approach")
+  const PLACE_BODY_LEAD = /\b(?:pain|ache|aching|sore(?:ness)?|swelling|swollen|rash|clot|dvt|thrombus|tip|access(?:ed)?|port|picc|line|iv|piv|catheter|lesion|mass|nodule|wound|ulcer|tender(?:ness)?|numb(?:ness)?|tingling|bruis\w*|erythema|edema|redness|infiltrat\w*|site|position(?:ed)?|placed|inserted|injection|inj|stick|draw|tear|strain|sprain|rupture[d]?|tendonitis|tendinitis|weakness|cramp\w*|spasm\w*)(?:[ \t]+[\p{L}\/\-]+){0,2}[ \t]+(?:in|near|around|from|to|of|at|outside)[ \t]$/iu;
   function placeSpans(text, spans, cfg) {
     const PL = placeData(); if (!PL || !text) return spans;
     const toks = tokenize(text); if (!toks.length) return spans;
@@ -3589,7 +3631,27 @@
       return false;
     };
     const cands = [];
+    // after a residence cue or a place label a lower-case word is looked up too
+    const plain = (t) => t && t.word && !t.initial && /^\p{L}[\p{L}\p{M}'’\-]*$/u.test(t.core);
     for (let i = 0; i < toks.length; i++) {
+      if (!eligible(toks[i]) && plain(toks[i]) && free(toks[i].start, toks[i].end)) {
+        const lead = text.slice(Math.max(0, toks[i].start - 48), toks[i].start);
+        if (PLACE_RESIDE.test(lead) || PLACE_LABEL.test(lead)) {
+          let hit = 0;
+          for (let len = Math.min(PL.maxWords || 4, toks.length - i); len >= 1 && !hit; len--) {
+            const run = toks.slice(i, i + len);
+            if (!run.every((t, k) => plain(t) && !/\p{Lu}/u.test(t.core) && (k === 0 || /^[ \t]$/.test(text.slice(run[k - 1].end, t.start))))) continue;
+            const name = run.map((t) => t.core).join(' ');
+            const letters = LEX.fold(name).replace(/[^a-z]/g, '').length;
+            // never an everyday word ("lives in mobile home", "from work", "moved to hospice", "lives in town")
+            if (letters < 4 || !PL.has(name) || LEX.STATE_NAME_SET.has(name) || run.every((t) => LEX.isDictWord(t.core) || COMMON_LOWER.has(t.core) || COMMON_CAP.has(t.core) || LEX.isClinical(t.core) || relWord(t.core) || !!monthIndex(t.core)) && !(len >= 2 && PL.isMajor && PL.isMajor(name))) continue;
+            if (!free(run[0].start, run[len - 1].end)) continue;
+            hit = len;
+            cands.push({ i, e: i + len, a: run[0].start, b: run[len - 1].end, end: run[len - 1].end, name, single: len === 1, conf: 0.6, why: 'residence' });
+          }
+          if (hit) { i += hit - 1; continue; }
+        }
+      }
       if (!eligible(toks[i]) || !free(toks[i].start, toks[i].end)) continue;
       // the longest run of capitalised words that is a place name ("Port St. Lucie", "Fond du Lac", "Cedar Rapids", "Flint")
       let e = -1;
@@ -3640,7 +3702,12 @@
       const credential = st && /^(?:PA|MD)$/.test(st) && single && (given || (prev && prev.word && (prev.cap || isHon(prev)) && /^[ \t]$/.test(text.slice(prev.fullEnd, a)))) && !toward;
       if (st && PL.hasPair(name, st) && !credential && (comma || !PLACE_WORDISH_ST.test(st) || zipAfter || toward || capsCell) && free(a, stEnd)) { c.end = stEnd; c.conf = 0.85; c.why = 'state'; }
       else if (zipAfter && !other && !clinical && !eponym) { c.end = st && free(a, stEnd) ? stEnd : b; c.conf = 0.8; c.why = 'zip'; }
-      else if (other || eponym || (single && letters < 4)) { /* not a place here */ }
+      else if (eponym || (single && letters < 4)) { /* not a place here */ }
+      // a residence cue or a place label: the town, whatever else its name means
+      else if (other && !(toward && PLACE_RESIDE.test(before) && !capsCell && single && !monthIndex(name) && !STRICT_SKIP.test(name) && !relWord(name) && !LEX.CREDENTIAL_SET.has(lname) && !LEX.HONORIFIC_SET.has(lname) && !DRUG_STEM.test(lname) && !MED_MORPH.test(lname) && !DOSE_AFTER.test(after) && /^[ \t]*(?:[.,;)!?\n]|$)/.test(after))) { /* not a place here */ }
+      else if (toward && PLACE_RESIDE.test(before) && !capsCell && /^(?:['’]s)?[ \t]*(?:[.,;:)!?\n]|$|(?:w\/|with|and|but|area|x[ \t]?\d|for[ \t]+\d|since|until|now|currently)(?![\p{L}]))/i.test(after)) { c.conf = 0.6; c.why = 'residence'; }
+      else if (PLACE_LABEL.test(before) && !capsCell && (!single || !allDict) && /^[ \t]*(?:[.,;)\n]|$)/.test(after)) { c.conf = 0.6; c.why = 'label'; }
+      else if (PLACE_BODY_LEAD.test(before) && !PLACE_RESIDE.test(before)) { /* anatomy, a device site or a position */ }
       else if (toward && !clinical && ((!allDict && !given) || ((PLACE_FOLLOW.test(after) || PLACE_SITE.test(after)) && (!allDict || PLACE_LEFT.test(before))))) { c.conf = allDict || given ? 0.6 : 0.7; c.why = 'prep'; }
       else if (PLACE_SITE.test(after) && !clinical && !(sentenceStart && allDict && single)) { c.conf = allDict || given ? 0.6 : 0.7; c.why = 'site'; }
       else {
@@ -3699,7 +3766,7 @@
     if (cfg.layers.model) spans = spans.concat(tag(lexiconSpans(text, cfg)));
     if (cfg.layers.propagate && ctx.propagateRegex) {
       ctx.propagateRegex.lastIndex = 0; let m;
-      while ((m = ctx.propagateRegex.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: 'propagate', conf: 0.65, text: m[0], fullText: text });
+      while ((m = ctx.propagateRegex.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'NAME_OTHER', source: m.weak ? 'strict' : 'propagate', conf: m.weak ? 0.5 : 0.65, text: m[0], fullText: text });
       if (ctx.propagateRegex.places) {
         const pl = ctx.propagateRegex.places; pl.lastIndex = 0;
         while ((m = pl.exec(text))) spans.push({ start: m.index, end: m.index + m[0].length, type: 'LOCATION', source: 'propagate', conf: 0.6, text: m[0], fullText: text });
@@ -3769,7 +3836,12 @@
   // parts, each part alone, and without its accents. seedTerms are the names earlier inputs of the session found.
   // A name that is also an ordinary or clinical word (Will, Rose, Port) never gets these forms: it stays on the
   // ambiguous path (as written, near where it was found, mid-sentence or before a person verb).
-  const propagationForms = (term) => {
+  // strongTerm: the name was found on evidence of its own in this input (a cue, the name lexicon, a person column). Such a
+  // name is re-found in CAPITALS and in lower case whatever its length ("Daughter Joan" ... "witnessed by JOAN", "spoke w/
+  // joan"): freely when it is no dictionary word and has four letters or more, and otherwise only where a person stands
+  // (gated: a person verb or a possessive after it, a contact cue before it), so "ANA positive", "art line" stay.
+  const formClear = (w) => !LEX.isAmbiguous(w) && !LEX.isClinical(w) && !LEX.isDictWord(w) && !COMMON_CAP.has(w) && !COMMON_LOWER.has(w) && !monthIndex(w) && !relWord(w) && !LEX.LANGUAGE_SET.has(w) && !LEX.CREDENTIAL_SET.has(w) && !LEX.HONORIFIC_SET.has(w) && !DRUG_STEM.test(w) && !MED_MORPH.test(w);
+  const propagationForms = (term, strongTerm, gated) => {
     const forms = new Set([term]);
     const single = !/[\s,]/.test(term);
     if (single && /[-]/.test(term) && /^[\p{L}'’\-]+$/u.test(term)) joinForms(term).forEach((x) => forms.add(x));
@@ -3783,6 +3855,11 @@
       // dotted initials stay as written ("T.J.")
       if (up !== x && !/\./.test(x) && (words.length > 1 ? letters >= 6 : (letters >= 6 || (letters === 5 && notWord(lo))))) forms.add(up);
       if (lo !== x && !/\./.test(x) && (words.length === 1 ? notWord(lo) : (words.length <= 3 && letters >= 7 && words.every((w) => w.length >= 3 && !COMMON_LOWER.has(w)) && words.some(notWord)))) forms.add(lo);
+      if (strongTerm && words.length === 1 && letters >= 3 && /^\p{L}+$/u.test(x)) {
+        const free = letters >= 4 && formClear(lo) && !NAME_PARTICLE.test(x);
+        if (free) { forms.add(up); forms.add(lo); }
+        else if (gated && LEX.isFirstName(lo) && !LEX.isAmbiguous(lo) && !LEX.isClinical(lo)) { gated.add(up); gated.add(lo); }
+      }
     });
     [...forms].forEach((x) => { const fx = foldName(x); if (fx !== x) forms.add(fx); });
     return forms;
@@ -3791,7 +3868,35 @@
   // ends at a word boundary, case-sensitive), but by a lookup: the cost does not grow with the number of forms, and a
   // letter of any script bounds a match. The object stands in for that regex: exec(text) and lastIndex, as a /g regex.
   const isWordChar = (text, i) => { const c = text.charCodeAt(i); return c < 128 ? ((c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122)) : /[\p{L}\p{M}\p{N}]/u.test(text[i]); };
-  const formMatcher = (forms) => {
+  // Where a propagated name stands. A name that is also a word, an abbreviation or two letters long (gated) is the person
+  // only in a person slot; and a name that is also an ordinary or clinical word is not the person when the next word makes
+  // it a thing or a test ("Foley catheter", "Coombs test", "Alpha-1 antitrypsin") - the test the census path applies.
+  const PROP_TO_VERB = /^[ \t]+to[ \t]+(?:drive|call|bring|pick|come|stay|sign|be|wait|help|translate|transport|accompany|assist|give|take|return)\b/i;
+  const PROP_CONTACT = /(?:^|[^A-Za-z0-9])(?:w\/|spoke[ \t]+(?:with|w\/?|to)|talked[ \t]+(?:with|w\/?|to)|called|phoned|told|asked|texted|emailed|notified|reminded|lvm[ \t]+(?:for|w\/?)|left[ \t]+(?:a[ \t]+)?(?:vm|voicemail|message|msg)[ \t]+(?:for|with|w\/?)|per|by)[ \t]*$/i;
+  const propWordish = (w) => !!monthIndex(w) || LEX.isAmbiguous(w) || LEX.isClinical(w) || (LEX.isDictWord(w) && LEX.isEnglishWord(w) && !LEX.isFirstName(w));
+  const propThingUse = (text, i, e, sub) => {
+    if (/[\s,]/.test(sub)) return false;
+    const post = text.slice(e, e + 32);
+    if (/^-\d/.test(post)) return true;
+    if (!propWordish(sub)) return false;
+    if (/^-\p{Ll}/u.test(post)) return true;
+    if (/(?:\b(?:direct|indirect|via)|\b\d{2}[ \t]?g(?:a|auge)?)[ \t]+$/i.test(text.slice(Math.max(0, i - 12), i))) return true;
+    const nx = (post.match(/^(?:['’]s?)?[ \t]+([A-Za-z]+)/) || [])[1];
+    return !!nx && (LEX.EPONYM_FOLLOW.has(nx.toLowerCase()) || MED_SUFFIX.test(nx) || RESIDUE_THING.test(nx));
+  };
+  const propPersonGate = (text, i, e) => {
+    const x = personSlotOf(text, i, e);
+    if (x.eponym || modalUse(text, i, e)) return false;
+    const post = text.slice(e, e + 40);
+    if (/^[ \t]*(?:[:=<>#\/]|-?\d)|^[ \t]+(?:pos|neg|positive|negative|pending|titer|level|panel|screen|ab|igg|igm)\b/i.test(post)) return false;
+    const nx = (post.match(/^(?:['’]s?)?[ \t]+([A-Za-z]+)/) || [])[1];
+    if (nx && RESIDUE_THING.test(nx)) return false;
+    const poss = /^['’]s[ \t]+\p{Ll}/u.test(post);
+    if (/^\p{Ll}/u.test(text.slice(i, e)) && LEX.isDictWord(text.slice(i, e))) return poss || (x.lineStart && x.verb) || ((x.close || x.verb) && PROP_CONTACT.test(text.slice(Math.max(0, i - 24), i)));
+    return x.verb || (x.cue && x.close) || poss || PROP_TO_VERB.test(post) || /(?:^|[^A-Za-z])by[ \t]+$/i.test(text.slice(Math.max(0, i - 4), i));
+  };
+  const formMatcher = (forms, gated, weak) => {
+    if (gated && gated.size) { gated = new Set([...gated].filter((g) => !forms.has(g))); forms = new Set([...forms, ...gated]); } else gated = null;
     const lens = [...new Set([...forms].map((f) => f.length))].sort((x, y) => y - x);
     const firsts = new Set([...forms].map((f) => f[0]));
     // (a RegExp object that never matches, with its exec replaced: lastIndex, test() and instanceof keep working)
@@ -3804,7 +3909,10 @@
             const e = i + L;
             if (e > n || (e < n && isWordChar(text, e))) continue;
             const sub = text.slice(i, e);
-            if (forms.has(sub)) { this.lastIndex = e; const m = [sub]; m.index = i; m.input = text; return m; }
+            if (forms.has(sub)) {
+              if ((gated && gated.has(sub) && !propPersonGate(text, i, e)) || propThingUse(text, i, e, sub)) continue;
+              this.lastIndex = e; const m = [sub]; m.index = i; m.input = text; if (weak && weak.has(sub)) m.weak = true; return m;
+            }
           }
         }
         this.lastIndex = 0; return null;
@@ -3813,10 +3921,14 @@
   };
   function collectPropagation(allSpans, cfg, seedTerms, ambiguousOnly) {
     const terms = new Set(), ambTerms = new Set(), handleParts = new Set(), placeTerms = new Set(), cueOnly = new Set();
+    // names the input itself introduces as a person by a cue ("goes by Bo", "Mrs. Hickman", "Wife Grace") that are also a
+    // word, a clinical term or two letters long: the cue outranks the lists, and the name is re-found as written wherever a
+    // person stands ("Bo tolerated", "Hickman agrees", "Grace will bring"); "Hickman line", "h/o TIA" stay
+    const gatedTerms = new Set();
     // the names found on evidence of their own (a cue, the name lexicon, a person column), not only by the strict pass
     const strong = new Set();
     const partOk = (h) => h.length >= 4 && /^\p{Lu}/u.test(h) && !NAME_PARTICLE.test(h) && !LEX.isClinical(h) && !LEX.isAmbiguous(h) && !COMMON_CAP.has(h.toLowerCase()) && !COMMON_LOWER.has(h.toLowerCase()) && !LEX.HONORIFIC_SET.has(h.toLowerCase()) && !LEX.CREDENTIAL_SET.has(h.toLowerCase()) && !(cfg.allowSet && cfg.allowSet.has(h.toLowerCase())) && (LEX.isFirstName(h) || LEX.isSurname(h) || !LEX.isDictWord(h));
-    if (seedTerms) for (const t of seedTerms) { const x = String(t || ''); if (x.length >= 3 && x.length <= 80 && !(cfg.allowSet && cfg.allowSet.has(x.toLowerCase()))) terms.add(x); }
+    if (seedTerms) for (const t of seedTerms) { const x = String(t || ''); if (x.length >= 3 && x.length <= 80 && !(cfg.allowSet && cfg.allowSet.has(x.toLowerCase()))) { terms.add(x); strong.add(x); } }
     const titleCase = (w) => w.toLowerCase().replace(/(^|[-'’])([a-z])/g, (m, a, b) => a + b.toUpperCase());
     for (const s of allSpans) {
       // the words of a user name or e-mail address ("rosie.delgado62", "lally.marchbanks@...") are the person's names, and
@@ -3870,16 +3982,18 @@
       const parts = full.split(/[\s,]+/).filter(Boolean);
       for (const tok of parts) {
         const core = tok.replace(/['’]s$/, '').replace(/\.$/, '');
+        const cued = /cue:(?:alias|relation|honorific|bracket)/.test(s.source || '') && /^\p{Lu}\p{Ll}+$/u.test(core) && !LEX.HONORIFIC_SET.has(core.toLowerCase()) && !LEX.CREDENTIAL_SET.has(core.toLowerCase()) && !NAME_PARTICLE.test(core) && !relWord(core) && !(cfg.allowSet && cfg.allowSet.has(core.toLowerCase()));
+        if (cued && core.length === 2) gatedTerms.add(core);
         if (core.length < 3 || !/^\p{Lu}/u.test(core)) continue;
         if (LEX.HONORIFIC_SET.has(core.toLowerCase()) || LEX.CREDENTIAL_SET.has(core.toLowerCase())) continue;
         if (cfg.allowSet && cfg.allowSet.has(core.toLowerCase())) continue;
         // a month that is also a given name (June, April) of a full name found by a cue: re-found only right before a person
         // verb or a possessive ("June's husband", "April called back"), never as the month ("in June", "June 5")
-        if (LEX.isClinical(core)) { if (monthIndex(core) && LEX.isFirstName(core) && parts.length >= 2 && core.length >= 4) { const tc = titleCase(core); ambTerms.add(tc); cueOnly.add(tc); } continue; }
+        if (LEX.isClinical(core)) { if (monthIndex(core) && LEX.isFirstName(core) && parts.length >= 2 && core.length >= 4) { const tc = titleCase(core); ambTerms.add(tc); cueOnly.add(tc); } else if (cued && !monthIndex(core)) { gatedTerms.add(core); if (core.length >= 3) gatedTerms.add(core.toLowerCase()); } continue; }
         // a word-name (Grace, Will, Hope) of a full name found by a cue is re-found elsewhere, but only mid-sentence
         // (see detectText), so "Told Grace that is fine" is caught while "Will call back" stays
         // (a word-name the patient goes by, "goes by Rose", is named by its cue as surely as by a surname)
-        if (LEX.isAmbiguous(core)) { if (parts.length >= 2 || /cue:alias/.test(s.source)) ambTerms.add(core.length > 1 && core === core.toUpperCase() ? titleCase(core) : core); continue; }
+        if (LEX.isAmbiguous(core)) { if (cued) { if (parts.length === 1 && !/cue:alias/.test(s.source)) gatedTerms.add(core); if (core.length >= 3 && LEX.isFirstName(core)) { gatedTerms.add(core.toUpperCase()); gatedTerms.add(core.toLowerCase()); } } if (parts.length >= 2 || /cue:alias/.test(s.source)) ambTerms.add(core.length > 1 && core === core.toUpperCase() ? titleCase(core) : core); continue; }
         addTerm(core);
         // each half of a hyphenated name is used alone ("Marie" of Marie-Ève, "Okonkwo" of Okonkwo-Bello)
         if (/-/.test(core)) core.split('-').forEach((h) => { if (partOk(h)) addTerm(h); });
@@ -3887,12 +4001,15 @@
         if (core === core.toUpperCase() && /[A-Z]{3}/.test(core)) addTerm(titleCase(core));
       }
     }
-    if (!terms.size && !ambTerms.size && !handleParts.size && !placeTerms.size) return null;
+    if (!terms.size && !ambTerms.size && !handleParts.size && !placeTerms.size && !gatedTerms.size) return null;
     const mk = (set) => new RegExp(`(?<![A-Za-z0-9])(?:${[...set].sort((a, b) => b.length - a.length).map(escapeRe).join('|')})(?![A-Za-z0-9])`, 'g'); // case-sensitive on purpose
     // the names, in every form each is written in (a letter of any script bounds a match: "ania" is not found inside "Bośnia")
     // (a "name" longer than any name is not looked for again: the lookup stays linear on a hostile cell)
-    const allForms = new Set(); if (!ambiguousOnly) terms.forEach((t) => { if (t.length <= 80) propagationForms(t).forEach((x) => allForms.add(x)); });
-    const re = terms.size && !ambiguousOnly ? formMatcher(allForms) : /(?!)/g;
+    const allForms = new Set(), gatedForms = new Set(gatedTerms), strongForms = new Set();
+    if (!ambiguousOnly) terms.forEach((t) => { if (t.length <= 80) propagationForms(t, strong.has(t), gatedForms).forEach((x) => { allForms.add(x); if (strong.has(t)) strongForms.add(x); }); });
+    // a name only the strict pass guessed stays a guess wherever it is found again (m.weak, see detectText)
+    const weakForms = new Set([...allForms].filter((x) => !strongForms.has(x)));
+    const re = (terms.size || gatedTerms.size) && !ambiguousOnly ? formMatcher(allForms, gatedForms, weakForms) : /(?!)/g;
     re.terms = [...terms];
     // the names worth keeping for the rest of the session (see processTableCore): found on evidence of their own, and no
     // ordinary, clinical or drug word, so one input's mistake is not repeated in the next
@@ -4369,12 +4486,20 @@
     // one made-up surname for a whole multi-part surname: the surname's own entry first, then a fake its last word already
     // has (a relative "de la Cruz" of a patient Cruz shares the patient's made-up surname), else a new one, recorded as
     // written so the key restores "Van der Berg" and not its lower-case form
+    // One person, one made-up name, however the name is typed: with or without its accents, in any letter case ("Zdeněk
+    // Dvořák", "ZDENEK DVORAK", "Dvorak"; "Demirtaş" in one input and "Demirtas" in the next). A name token is looked up by
+    // its exact lower-case form first, then by its accent-folded form among the tokens already given a made-up value.
+    const foldKeyOf = (k) => foldName(k).toLowerCase();
+    const foldIdx = new Map();
+    for (const k of tokenMap.keys()) { const fk = foldKeyOf(k); if (!foldIdx.has(fk)) foldIdx.set(fk, k); }
+    const tmKey = (k) => { if (tokenMap.has(k)) return k; const o = foldIdx.get(foldKeyOf(k)); return o !== undefined && tokenMap.has(o) ? o : k; };
+    const tmSet = (k, v) => { tokenMap.set(k, v); const fk = foldKeyOf(k); if (!foldIdx.has(fk)) foldIdx.set(fk, k); };
     const surnameUnit = (written) => {
       const low = written.toLowerCase();
       const key = low.replace(/[.,]/g, '').replace(/['’]\s+/g, "'").replace(/\s+/g, ' ').trim();
-      const core = key.split(/[\s\-]+/).pop();
+      const core = tmKey(key.split(/[\s\-]+/).pop());
       const sk = `NAME|${key}`;
-      let fake = tokenMap.get(key) || tokenMap.get(low) || (stringMap.has(sk) ? stringMap.get(sk).Surrogate : null);
+      let fake = tokenMap.get(tmKey(key)) || tokenMap.get(low) || (stringMap.has(sk) ? stringMap.get(sk).Surrogate : null);
       // the last word already has a made-up value of its own (a patient or provider "Cruz"): that value stands for "Cruz"
       // alone in the key, so the particles stay as written around it and the text still restores word for word
       if (!fake && core.length > 1 && tokenMap.has(core)) { const cut = written.length - (written.match(/[A-Za-z'’]+$/) || [''])[0].length; return written.slice(0, cut) + matchCase(written.slice(cut), tokenMap.get(core)); }
@@ -4395,16 +4520,18 @@
       const cred = parsed.credentials ? ' ' + parsed.credentials : '';
       const tok = (t, asFirst) => {
         if (!t) return '';
-        const k = t.toLowerCase().replace(/[.,]/g, '');
-        if (!k) return '';
+        const k0 = t.toLowerCase().replace(/[.,]/g, '');
+        if (!k0) return '';
+        const k = tmKey(k0);
         if (/^[a-z]$/.test(k)) return t; // initial
         if (/^(?:[A-Z]\.){2,3}$|^(?:[A-Z]\.){1,2}[A-Z]$/.test(t)) return fakeInitials(t); // J.R.
-        if (t === t.toLowerCase() && NAME_PARTICLE.test(k)) return t; // van der, de la, bin: particles stay as written
+        // van der, de la, bin: particles stay as written (a name of its own that looks like one, "Mac", "Ben", is the name)
+        if (t === t.toLowerCase() && NAME_PARTICLE.test(k) && !(tokenMap.has(k) && parsed.format === 'single')) return t;
         if (/^(?:al|el|ad|ar|as|ash|at|az|an|bin|ibn|ben|bint|abu|ould)-./i.test(t) && !tokenMap.has(k)) return surnameUnit(t); // al-Harbi: one surname
         if (!asFirst && /\s/.test(t) && PART_ANY.test(bareParticle(t.split(/\s+/)[0])) && !tokenMap.has(k)) return surnameUnit(t); // "van der Merwe, Pieter"
         // Haddad-Khalil: each half on its own, so the half shared with a patient keeps that patient's fake surname
         if (k.includes('-') && !tokenMap.has(k)) return k.split('-').map((h, i) => tok(t.split('-')[i] || h, false)).join('-');
-        if (!tokenMap.has(k)) tokenMap.set(k, asFirst ? pickFirst(sexOf(t, before, after)) : pickLast());
+        if (!tokenMap.has(k)) tmSet(k, asFirst ? pickFirst(sexOf(t, before, after)) : pickLast());
         return matchCase(t, tokenMap.get(k));
       };
       let out;
@@ -5820,6 +5947,8 @@
   // carry, and standard ward shorthand that is pronounceable (so the shape test below cannot clear it)
   const RESIDUE_INN = /(?:tadine|ramine|faxine|oxetine|triptyline|azine|idone|setron|pitant|dipine|afil|gliptin|gliflozin|glutide|parin|xaban|gatran|caine|curium|relbine|tabine|rabine|tansine|vedotin|tecan|poside|mustine|bazine|trexate|trexed|amide|olone|asone|isone|terol|tropium|lukast|profen|coxib|triptan|penem|bactam|ciclovir|cyclovir|fungin|pime|axone|zolin|usate|maltose|dextran|gluconate|sucrose|citrate|sulfate|phosphate|chloride|acetate|tartrate|succinate|mesylate|maleate|fumarate|stim)$/i;
   const RESIDUE_ABBR = new Set(('covid apap emla fmla sbar cauti clabsi stemi nstemi cpap nicu micu sicu perrla rchop hidac codox ivac mopp hcpoa aarp ivpb adls ltac ltach aaox').split(' '));
+  // a thing named after a person or a maker: the noun after the name says so ("Foley catheter", "Hoyer lift", "Huber needle")
+  const RESIDUE_THING = /^(?:catheters?|cath|needles?|lines?|drains?|lifts?|pads?|tubing|tubes?|suction|pumps?|ports?|bags?|stents?|clamps?|clips?|forceps|retractors?|masks?|cannulas?|valves?|filters?|dressings?|splints?|braces?|collars?|boots?|stockings?|slings?|monitors?|assays?|stains?|titers?|antibod(?:y|ies)|boosters?|vaccines?|shots?|bore|gauge)$/i;
   function residueTokens(result, opts) {
     const o = opts || {};
     const out = { tokens: 0, rows: 0, words: [] };
@@ -5833,10 +5962,13 @@
     (Array.isArray(result.headers) ? result.headers : []).forEach((h) => (cellToString(h).match(/\p{L}[\p{L}\p{M}]+/gu) || []).forEach((w) => labels.add(w.toLowerCase())));
     // the word alone: is it in any list the detectors use?
     const knownCache = new Map();
+    // known only by its ending (a drug stem), in no word list: a capitalised word of that kind after a contact cue needs
+    // drug context of its own ("lvm for Casparin", "Called Brixolone at home" are people)
+    const stemOnly = new Set();
     const listed = (w) => {
       const lw = w.toLowerCase();
       if (LEX.isEnglishWord(w) || LEX.isDictWord(w) || LEX.isClinical(w)) return true;
-      if (DRUG_STEM.test(lw) || MED_MORPH.test(lw)) return true;
+      if (DRUG_STEM.test(lw) || MED_MORPH.test(lw)) { stemOnly.add(w); return true; }
       if (STRICT_SKIP.test(w) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || HEADER_WORD.has(lw) || labels.has(lw) || monthIndex(w) || relWord(w)) return true;
       if (LEX.CREDENTIAL_SET.has(lw) || LEX.HONORIFIC_SET.has(lw) || LEX.STATE_ABBR_SET.has(w) || LEX.STATE_NAME_SET.has(lw)) return true;
       if (LEX.ORG_SUFFIX_SET.has(lw) || LEX.ORG_NAMEWORD_SET.has(lw) || LEX.ORG_PREFIX_SET.has(lw) || LEX.GEO_SUFFIX_SET.has(lw)) return true;
@@ -5853,7 +5985,7 @@
       if (!v) v = RESIDUE_ABBR.has(lw);
       // the rules below are this scan's own, wider than the detectors': never for a word from the name lists
       if (!v && (LEX.isFirstName(w) || LEX.isSurname(w))) { knownCache.set(w, false); return false; }
-      if (!v) v = RESIDUE_INN.test(lw);
+      if (!v) v = /^\p{Ll}/u.test(w) && RESIDUE_INN.test(lw);
       // the plural of a known word or abbreviation (appts, PFTs, NSAIDs)
       if (!v && /[^s]s$/i.test(w) && w.length >= 4) v = known(w.slice(0, -1));
       // an ordinary prefix on a known word (redose, deaccessed, self-inj), or two ordinary words run together (chairside, rideshare)
@@ -5870,6 +6002,44 @@
     const drugContext = (text, t) => {
       const after = text.slice(t.fullEnd, t.fullEnd + 24);
       return /^\s*\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|gm|units?|iu|ml|mL|meq|mmol|%)(?![A-Za-z])/.test(after) || /^\s*(?:C\d+(?:D\d+)?|D\d+|wk\s*\d|week\s*\d|q\d+\s*(?:w|wk|wks|weeks?|d|h|mo)\b)/i.test(after);
+    };
+    // The net is stricter than the detectors, and shares none of their exemptions for a word that could be a person.
+    // A word that only a dose or a cycle day explains is a drug when it is written like one (lower case, or a drug word
+    // before it: "on", "given", "started", "hold"); a capitalised unknown word that opens a schedule line before "C2D1"
+    // or "40 mg" is as likely the patient ("Zybrowski C2D1 today").
+    const DRUG_LEAD = /(?:\b(?:on|of|given|gave|giving|gets|getting|got|received?|receiving|started|starting|start|starts|restart(?:ed)?|resumed?|continues?|continued|continuing|hold|held|holding|d\/c|dc|stopped|stop|taking|takes|took|rx|ordered|order|orders|premeds?|premedicated|infus(?:e|ed|ing)|administer(?:ed)?|dose[ds]?|dosing|switch(?:ed)?[ \t]+(?:to|from)|change[ds]?[ \t]+to|add(?:ed)?|plus|and|then|maintenance|loading|weekly|monthly|daily|cycle|c\d+(?:d\d+)?|d\d+|#\d+)[ \t]*:?|[+,\/;(&])[ \t]*$/i;
+    const DRUG_TAIL = /^\s*(?:daily|bid|tid|qid|qd|qhs|prn|q\d|x\s?\d|dose|drip|gtt|taper|refill|rx|level|allergy|premed|infusion|injection|inj|ordered|held|given|started|stopped|d\/c|dc'?d)\b/i;
+    const MED_HEADER = /\b(?:med(?:ication)?s?|drugs?|regimens?|treatments?|therap(?:y|ies)|infusions?|orders?|rx|protocols?|agents?|products?|premeds?)\b/i;
+    const drugLike = (text, t, shape, header) => drugContext(text, t) && (shape === 'lower' || MED_HEADER.test(header || '') || DRUG_LEAD.test(text.slice(Math.max(0, t.start - 24), t.start)) || /^\s*\d+(?:\.\d+)?\s*(?:mg|mcg|g|units?|ml|mL)(?:\/(?:kg|m2))?\s+(?:iv|im|po|sq|sc|subq|ivpb|sl|pr|top|inh)\b/i.test(text.slice(t.fullEnd, t.fullEnd + 28)));
+    const innLike = (text, t, shape, header) => RESIDUE_INN.test(t.core) && (shape === 'lower' || MED_HEADER.test(header || '') || drugContext(text, t) || DOSE_AFTER.test(text.slice(t.fullEnd, t.fullEnd + 24)) || DRUG_TAIL.test(text.slice(t.fullEnd, t.fullEnd + 16)) || DRUG_LEAD.test(text.slice(Math.max(0, t.start - 24), t.start)));
+    // a word that is a name and also something else: an ordinary, clinical or calendar word. It is a person only where a
+    // person stands (a person verb or a possessive after it, a contact cue before it)
+    const wordLike = (w) => { const lw = w.toLowerCase(); return LEX.isAmbiguous(w) || LEX.isClinical(w) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || !!monthIndex(w) || relWord(w) || STRICT_SKIP.test(w) || LEX.CREDENTIAL_SET.has(lw) || LEX.HONORIFIC_SET.has(lw) || (LEX.LANGUAGE_SET && LEX.LANGUAGE_SET.has(lw)) || allow.has(lw) || ((LEX.isEnglishWord(w) || LEX.isDictWord(w)) && !LEX.isFirstName(w) && !LEX.isSurname(w)); };
+    const clearName = (w) => (LEX.isFirstName(w) || LEX.isSurname(w)) && LEX.isStrongName(w) && !wordLike(w) && !DRUG_STEM.test(w) && !MED_MORPH.test(w) && !LEX.STATE_ABBR_SET.has(w) && !labels.has(w.toLowerCase()) && !HEADER_WORD.has(w.toLowerCase());
+    const personAt = (text, t) => { const x = personSlotOf(text, t.start, t.end); return !x.eponym && (x.verb || (x.cue && x.close) || /^['’]s[ \t]+\p{Ll}/u.test(text.slice(t.end, t.end + 6))); };
+    // a name that is also a dictionary word (Deb, Joe, Van, Echo, Card): only what a person does or has makes it a person
+    const SPEECH_AFTER = /^(?:['’]s[ \t]+(?:\p{Ll}+[ \t]+)?(?:husband|wife|son|daughter|dtr|mom|mother|dad|father|sister|brother|ride|phone|cell|number|appt|chart)\b|[ \t]+(?:called|calls|phoned|asked|asks|says|said|states|stated|reports|reported|wants|wanted|requests|requested|prefers|preferred|agrees|agreed|declined|declines|denies|denied|refused|refuses|texted|emailed|signed|paged|verbalized|verbalizes|understands|confirmed|confirms|aware|here|will[ \t]+(?:call|fax|come|bring|be|drive|pick))\b)/iu;
+    const speaks = (text, t) => SPEECH_AFTER.test(text.slice(t.end, t.end + 40));
+    const notPerson = (text, t) => { const after = text.slice(t.fullEnd, t.fullEnd + 24); const nx = (after.match(/^(?:['’]s?)?[ \t]+([A-Za-z]+)/) || [])[1] || ''; return (!!nx && (LEX.EPONYM_FOLLOW.has(nx.toLowerCase()) || MED_SUFFIX.test(nx) || RESIDUE_THING.test(nx))) || /^[ \t]*(?:[:=<>#]|-?\d|[ \t](?:pos|neg|positive|negative|pending|titer|level|panel|screen|ab|igg|igm)\b)/i.test(after) || DOSE_AFTER.test(after) || /\p{L}-$/u.test(text.slice(Math.max(0, t.start - 2), t.start)); };
+    // a word the note itself introduces as a person: after an honorific, "goes by", a kin word or a credential ("Dr. Oh",
+    // "goes by Tia", "Son Al waited", "NP Li saw pt", "Husband's JIM here"). Whatever its length, and whatever list it is
+    // in: the cue outranks the lists. An abbreviation in capitals after a kin word stays ("Wife's CPAP", "Son's ADHD meds").
+    const introducedAs = (text, t, shape) => {
+      if (shape === 'lower') return false;
+      const w = t.core, lw = w.toLowerCase();
+      if (LEX.CREDENTIAL_SET.has(lw) || LEX.HONORIFIC_SET.has(lw) || relWord(w) || monthIndex(w) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || STRICT_SKIP.test(w) || labels.has(lw) || allow.has(lw) || notPerson(text, t)) return false;
+      const pre = text.slice(Math.max(0, t.start - 32), t.start);
+      const named = LEX.isFirstName(w) || LEX.isSurname(w);
+      const verbish = personAt(text, t) || /^[ \t]+(?:\p{Ll}{3,}(?:s|ed)|present|here|waiting|drove|at|in|w\/|with|to[ \t]+\p{Ll}+)(?![\p{L}])/u.test(text.slice(t.fullEnd, t.fullEnd + 16));
+      if (/(?:^|[^\p{L}])(?:dr|mr|mrs|ms|miss|mx)\.?[ \t]+$/iu.test(pre)) return shape === 'cap' && !(LEX.isDictWord(w) && !named && w.length > 3 && !verbish);
+      if (/\b(?:goes[ \t]+by|aka|a\.k\.a\.?|known[ \t]+as|nicknamed?|prefers[ \t]+to[ \t]+be[ \t]+called)[ \t]*:?[ \t]*['"“‘]?$/i.test(pre)) return shape === 'cap' || named;
+      const km = pre.match(/(?:^|[^\p{L}])(\p{L}[\p{L}\-]{1,20})(['’]s)?[ \t]+$/u);
+      if (km && relWord(km[1])) {
+        if (shape === 'caps') return LEX.isFirstName(w) && LEX.isStrongName(w) && !LEX.isClinical(w) && !(LEX.LANGUAGE_SET && LEX.LANGUAGE_SET.has(lw));
+        return km[2] ? (named && verbish) : (named ? (!LEX.isClinical(w) || verbish) : ((!LEX.isDictWord(w) && !LEX.isEnglishWord(w)) || (w.length <= 4 && verbish)));
+      }
+      if (/(?:^|[^\p{L}])(?:NP|PA|RN|LPN|MA|CNA|APRN|PA-C|CRNP|FNP|RPh|PharmD|LCSW|MSW|Tech|Nurse)[ \t]+$/u.test(pre)) return shape === 'cap' && (named || !LEX.isDictWord(w)) && (w.length <= 3 ? LEX.isSurname(w) || verbish : !wordLike(w));
+      return false;
     };
     // every name, place and organisation word this run replaced, and every census patient's name words
     // (the replaced words are filed by length and first letter, the two things a word one letter off must share with them)
@@ -5888,6 +6058,12 @@
     try { const c = result.census; if (c && c.patients && typeof c.patients.forEach === 'function') c.patients.forEach((p) => { if (!p) return; if (p.names && typeof p.names.forEach === 'function') p.names.forEach(addHidden); if (p.entity && p.entity.nicks && typeof p.entity.nicks.forEach === 'function') p.entity.nicks.forEach(addHidden); }); } catch (e) { /* the census of a merged result may be partial: the replaced words are enough */ }
     // (answered once per word: a word written ten thousand times is compared with the replaced words once)
     const likeCache = new Map();
+    // the words replaced as a person's name here (not an organisation or a place), from two letters on: the same word written
+    // again is the same person in any letter case, unless it is also an ordinary word and stands where no person stands
+    const hiddenName = new Set();
+    const addName = (s) => (String(s || '').match(/\p{L}[\p{L}\p{M}]+/gu) || []).forEach((w) => { const lw = w.toLowerCase(); if (!LEX.HONORIFIC_SET.has(lw) && !LEX.CREDENTIAL_SET.has(lw) && !(NAME_PARTICLE.test(w) && !LEX.isFirstName(w)) && !relWord(w)) hiddenName.add(key(w)); });
+    result.details.forEach((d) => ((d && d.cells) || []).forEach((c) => (c.replacements || []).forEach((r) => { if (COARSE(r.type) === 'NAME') addName(r.original); })));
+    try { const c = result.census; if (c && c.patients && typeof c.patients.forEach === 'function') c.patients.forEach((p) => { if (p && p.names && typeof p.names.forEach === 'function') p.names.forEach(addName); }); } catch (e) { /* as above */ }
     const likeHidden = (k) => {
       if (hidden.has(k)) return true;
       if (k.length < 5) return false;
@@ -5897,7 +6073,7 @@
       likeCache.set(k, v); return v;
     };
     // pass 1: the candidates (words no list explains), with the patient whose row they are in
-    const cands = [], groups = new Map();
+    const cands = [], groups = new Map(), introduced = new Set(), shorts = [];
     result.details.forEach((d) => ((d && d.cells) || []).forEach((c) => {
       c.residue = [];
       const text = typeof c.original === 'string' ? c.original : ''; if (!text) return;
@@ -5914,9 +6090,28 @@
         const k = key(t.core); const len = k.length;
         const upper = /\p{Lu}/u.test(t.core), lower = /\p{Ll}/u.test(t.core);
         const shape = upper && !lower ? 'caps' : upper ? 'cap' : 'lower';
-        if (len < (shape === 'lower' ? 4 : 3)) continue;
-        if (known(t.core)) continue;
         if (unhid.some((r) => r[0] < t.end && t.start < r[1])) continue; // the reviewer un-hid this by hand
+        // before any list is asked: a name of this input written again, a word introduced as a person, a well-known name
+        let first = '';
+        if (len >= 2 && hiddenName.has(k) && !(shape === 'caps' && len <= 3 && LEX.isClinical(t.core) && !personAt(text, t))) {
+          // in lower case a dictionary word is the word ("wheelchair van", "reset link") unless a person stands there
+          const lowWord = shape === 'lower' && (LEX.isDictWord(t.core) || COMMON_LOWER.has(k) || /^(?:she|he|her|hers|his|him|they|them|their|you|your|we|our|it|its|me|my)$/.test(k));
+          const lowPerson = () => !COMMON_LOWER.has(k) && !/^(?:she|he|her|hers|his|him|they|them|their|you|your|we|our|it|its|me|my)$/.test(k) && (speaks(text, t) || (PROP_CONTACT.test(text.slice(Math.max(0, t.start - 24), t.start)) && personSlotOf(text, t.start, t.end).close));
+          if (lowWord) { if (lowPerson() && !notPerson(text, t)) first = 'hidden-elsewhere'; }
+          else if (len >= 3 && clearName(t.core)) first = 'hidden-elsewhere';
+          else if (personAt(text, t) && !notPerson(text, t)) first = 'hidden-elsewhere';
+        }
+        if (!first && len >= 2 && introducedAs(text, t, shape)) { first = (LEX.isFirstName(t.core) || LEX.isSurname(t.core)) ? 'listed-name' : shape === 'caps' ? 'unknown-caps' : 'unknown-cap'; introduced.add(shape + ':' + k); }
+        if (!first && len >= 3 && clearName(t.core) && !notPerson(text, t)) {
+          const ps = personSlotOf(text, t.start, t.end), person = LEX.isDictWord(t.core) ? speaks(text, t) : personAt(text, t);
+          const word = LEX.isEnglishWord(t.core) || LEX.isDictWord(t.core);
+          if (shape === 'caps') { if (LEX.isFirstName(t.core) ? (len >= 6 || person || (len >= 4 && !LEX.isDictWord(t.core)) || (ps.cue && !word)) : (len >= 5 && !word)) first = 'listed-name'; }
+          else if (shape === 'cap') { if (!word || person) first = 'listed-name'; }
+          else if (len >= 4 && (!word || (LEX.isFirstName(t.core) && !LEX.isDictWord(t.core) && (ps.verb || (ps.cue && ps.close))))) first = 'listed-name';
+        }
+        if (first) { if (!groups.has(k)) groups.set(k, new Set()); groups.get(k).add(d.patientCode || ''); cands.push({ d, c, t, k, len, shape, text, delta, code: false, first }); continue; }
+        if (len < (shape === 'lower' ? 4 : 3)) { if (len >= 2 && shape !== 'lower') shorts.push({ d, c, t, k, len, shape, text, delta, code: false }); continue; }
+        if (known(t.core) && !(shape === 'cap' && stemOnly.has(t.core) && !MED_MORPH.test(t.core) && personSlotOf(text, t.start, t.end).cue && !MED_HEADER.test(c.header || '') && !drugContext(text, t) && !DOSE_AFTER.test(text.slice(t.fullEnd, t.fullEnd + 24)) && !DRUG_TAIL.test(text.slice(t.fullEnd, t.fullEnd + 16)))) { if (shape !== 'lower' && len <= 6) shorts.push({ d, c, t, k, len, shape, text, delta, code: false }); continue; }
         // a shape no name has: letters glued to digits (CD20, HER2, PD-L1, 5FU, B12), no vowel at all (VSS, WNL, CXR, tmrw),
         // or capitals inside a short word (CrCl, QTc, mEq)
         const code = (len <= 5 && (/[0-9]$/.test(text.slice(Math.max(0, t.start - 1), t.start)) || /^(?:[0-9]|[-\/][0-9])/.test(text.slice(t.end, t.end + 2))))
@@ -5929,6 +6124,10 @@
     }));
     // pass 2: the reason, or none
     const words = new Map(); const rowSet = new Set();
+    // a word introduced as a person once is that person where it is written the same way again and a person stands
+    // ("Pt goes by Tia. Tia here for C3.", "Son Al waited. Al asked about parking."); "h/o TIA", "dex 12 mg" are not
+    if (introduced.size) for (const x of shorts) if (introduced.has(x.shape + ':' + x.k) && !cands.some((y) => y.c === x.c && y.t.start === x.t.start) && (personAt(x.text, x.t) || /^[ \t]+\p{Ll}{3,}ed\b/u.test(x.text.slice(x.t.fullEnd, x.t.fullEnd + 16))) && !notPerson(x.text, x.t)) { x.first = 'hidden-elsewhere'; cands.push(x); }
+    cands.sort((a, b) => (a.d.row - b.d.row) || (a.c.col - b.c.col) || (a.t.start - b.t.start));
     for (const x of cands) {
       const { d, c, t, k, len, shape, text } = x;
       // a three-letter ALL-CAPS word is an abbreviation unless it is a well-known name (KIM, LEE are; IRR, PIV, ILD are not)
@@ -5939,10 +6138,11 @@
       // capitals stays with one patient; a longer word, or one in lower case, could be a staff name and is not cleared this way)
       const shared = shape === 'caps' && len <= 5 && groups.get(k).size >= RESIDUE_SHARED && !groups.get(k).has('');
       let why = '';
-      if (likeHidden(k)) why = 'hidden-elsewhere';
+      if (x.first) why = x.first;
+      else if (likeHidden(k)) why = 'hidden-elsewhere';
       else if (x.code || eponym) why = ''; // a code shape; or the eponym rule kept it on purpose (Lee Silverman voice treatment)
       else if (name) why = 'listed-name';
-      else if (tla || shared || drugContext(text, t)) why = '';
+      else if (tla || shared || drugLike(text, t, shape, c.header) || innLike(text, t, shape, c.header)) why = '';
       else why = shape === 'caps' ? 'unknown-caps' : shape === 'cap' ? 'unknown-cap' : 'unknown-lower';
       if (!why) continue;
       c.residue.push({ start: t.start, end: t.end, outStart: t.start + x.delta, outEnd: t.end + x.delta, text: t.core, why });
@@ -6266,7 +6466,7 @@
     return { hits, providerHits, coincidences, unnamed: unnamedHits, patients: census.patients.size };
   }
 
-  const VERSION = '0.11.0';
+  const VERSION = '0.12.0';
   // Release scan: an independent check of the protected output against the SOURCE, written apart from the detectors so a
   // miss in them is not repeated here. It never changes the output; it only reports.
   //  identifiers: an identifier-column value (patient last name, MRN, account, phone) that still appears anywhere in the output
