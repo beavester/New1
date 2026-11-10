@@ -3350,7 +3350,13 @@
     const toks = tokenize(text); if (!toks.length) return spans;
     const capsCell = !/\p{Ll}/u.test(text);
     const add = [];
-    const free = (a, b) => !spans.some((sp) => sp.start < b && a < sp.end) && !add.some((x) => x.start < b && a < x.end);
+    // is [a, b) clear of every span found so far? Asked for every capitalised word, so answered from a map of the covered
+    // characters (one pass over the spans) and not by reading the list of spans each time. (An empty span covers nothing
+    // and still counts when it lies strictly inside: kept apart.)
+    const cover = new Uint8Array(text.length + 1), points = [];
+    const mark = (st, en) => { if (en <= st) { points.push(st); return; } for (let k = Math.max(0, st), e2 = Math.min(text.length, en); k < e2; k++) cover[k] = 1; };
+    spans.forEach((sp) => mark(sp.start, sp.end));
+    const free = (a, b) => { for (let k = Math.max(0, a), e2 = Math.min(text.length, b); k < e2; k++) if (cover[k]) return false; return !points.some((p) => a < p && p < b); };
     const eligible = (t) => t && t.word && !t.initial && (t.cap || (capsCell && t.allcaps) || /^(?:Mc|Mac|De|La|Le|Du|O['’])\p{Lu}\p{Ll}+$/u.test(t.core)) && /^\p{L}[\p{L}\p{M}'’\-]*$/u.test(t.core);
     const isLoc = (sp) => COARSE(sp.type) === 'LOCATION';
     const stateAbbrOf = (name) => { const l = name.toLowerCase(); for (const k of Object.keys(LEX.US_STATES)) if (String(LEX.US_STATES[k]).toLowerCase() === l) return k; return null; };
@@ -3423,8 +3429,10 @@
         // an item of its own in brackets or in a list: place context comes from what stands beside it
         const leftDelim = /(?:[(,;\/:]|\b(?:and|or)|&)\s*$/.test(before), rightDelim = /^(?:['’]s)?\s*(?:[),;\/.]|$|(?:and|or|&)(?![\p{L}]))/.test(after);
         if (leftDelim && rightDelim && !clinical) {
-          const open = text.lastIndexOf('(', a), close = text.indexOf(')', b);
-          if (open >= 0 && close >= 0 && close - open <= 80 && text.lastIndexOf(')', a) < open && !text.slice(b, close).includes('(')) {
+          // (a bracket of at most 80 characters: nothing further than that from the word is read)
+          const lo = Math.max(0, b - 80), left = text.slice(lo, a + 1).lastIndexOf('('), right = text.slice(b, a + 82).indexOf(')');
+          const open = left < 0 ? -1 : lo + left, close = right < 0 ? -1 : b + right;
+          if (open >= 0 && close >= 0 && close - open <= 80 && !text.slice(open, a + 1).includes(')') && !text.slice(b, close).includes('(')) {
             const inside = text.slice(open + 1, a) + ' ' + text.slice(b, close);
             if (PLACE_SPECIALTY.test(inside) || spans.some((sp) => isLoc(sp) && sp.start > open && sp.end <= close)) { c.conf = allDict || given ? 0.6 : 0.65; c.why = 'bracket'; }
           }
@@ -3437,16 +3445,28 @@
       cands.push(c); i = e - 1;
     }
     // a list: an ambiguous item beside a place is a place too ("PCPs in Akron, Reading and Flint")
-    const between = (x, y) => /^(?:['’]s)?\s*(?:[,;\/]|,?\s*(?:and|or)(?![\p{L}])|&)\s*$/.test(text.slice(x, y)) && y - x <= 8;
-    const placeEnds = () => spans.filter(isLoc).map((sp) => [sp.start, sp.end]).concat(cands.filter((c) => c.conf).map((c) => [c.a, c.end]));
-    for (let changed = true; changed;) {
-      changed = false; const known = placeEnds();
-      for (const c of cands) {
-        if (c.conf || !c.listItem) continue;
-        if (known.some(([s2, e2]) => (e2 <= c.a && between(e2, c.a)) || (s2 >= c.b && between(c.b, s2)))) { c.conf = 0.6; c.why = 'list'; changed = true; }
+    // (a neighbour is at most 8 characters away, so each item looks only at the places that end or start within 8 characters
+    // of it, found by position; a pass from the left and one from the right carry a place along a list of any length, and
+    // the passes repeat only while one of them still added something)
+    const between = (x, y) => y - x <= 8 && /^(?:['’]s)?\s*(?:[,;\/]|,?\s*(?:and|or)(?![\p{L}])|&)\s*$/.test(text.slice(x, y));
+    const startsAt = new Uint8Array(text.length + 10), endsAt = new Uint8Array(text.length + 10);
+    const known = (st, en) => { if (st >= 0 && st <= text.length) startsAt[st] = 1; if (en >= 0 && en <= text.length) endsAt[en] = 1; };
+    spans.forEach((sp) => { if (isLoc(sp)) known(sp.start, sp.end); });
+    cands.forEach((c) => { if (c.conf) known(c.a, c.end); });
+    const beside = (c) => {
+      for (let e2 = c.a; e2 >= 0 && e2 >= c.a - 8; e2--) if (endsAt[e2] && between(e2, c.a)) return true;
+      for (let s2 = c.b; s2 <= text.length && s2 <= c.b + 8; s2++) if (startsAt[s2] && between(c.b, s2)) return true;
+      return false;
+    };
+    const pending = cands.filter((c) => !c.conf && c.listItem);
+    for (let changed = pending.length > 0; changed;) {
+      changed = false;
+      for (let dir = 0; dir < 2; dir++) for (let q = 0; q < pending.length; q++) {
+        const c = pending[dir ? pending.length - 1 - q : q];
+        if (!c.conf && beside(c)) { c.conf = 0.6; c.why = 'list'; known(c.a, c.end); changed = true; }
       }
     }
-    for (const c of cands) if (c.conf && free(c.a, c.end)) add.push({ start: c.a, end: c.end, type: 'LOCATION', source: `place:${c.why}`, conf: c.conf, text: text.slice(c.a, c.end) });
+    for (const c of cands) if (c.conf && free(c.a, c.end)) { add.push({ start: c.a, end: c.end, type: 'LOCATION', source: `place:${c.why}`, conf: c.conf, text: text.slice(c.a, c.end) }); mark(c.a, c.end); }
     if (!add.length) return spans;
     return spans.concat(add).sort((x, y) => x.start - y.start);
   }
@@ -3594,6 +3614,30 @@
         const town = s.text.replace(/,?\s*(?:[A-Z]{2}\s+)?\d{5}(?:-\d{4})?\s*$/, '').replace(/,?\s+[A-Z]{2}$/, '').trim();
         const ws = town.split(/\s+/);
         if (town.length >= 4 && ws.length <= 3 && ws.every((w) => /^[A-Z][a-z'’\-]+$/.test(w)) && !(ws.length === 1 && (LEX.isClinical(town) || COMMON_CAP.has(town.toLowerCase()) || COMMON_LOWER.has(town.toLowerCase()) || LEX.isAmbiguous(town) || LEX.isFirstName(town) || PLACE_WORD.test(town) || LEX.ORG_SUFFIX_SET.has(town.toLowerCase()) || LEX.ORG_NAMEWORD_SET.has(town.toLowerCase()) || town.length < 5))) placeTerms.add(town);
+        continue;
+      }
+      // a town found with something beside it that says it is a place (a state, a ZIP, "lives in", "the ... office", a list
+      // of places: the place list or a place cue, confidence 0.6 or more; or marked as a place by hand) is the same town
+      // where it stands alone in another row of this input. A state on its own is no identifier and is not carried. As with a name, a town that is also an ordinary word, a clinical word or a person's name is not looked for
+      // on its own ("Normal, IL" does not take "Normal saline", nor "lives in Reading" every "Reading"): a single word is
+      // carried only when no word list knows it as anything else; a name of several words is carried as written.
+      if (s.type === 'LOCATION' && /^(?:place:|cue:(?:city|city-state|org-town|place)(?![\w-])|manual)/.test(s.source || '') && s.text) {
+        if (!(s.conf >= 0.6) || s.text.length > 80) continue;
+        let town = s.text.trim();
+        const ab = town.match(/^(.*\p{L}\.?),?[ \t]{1,2}([A-Z]{2})$/u), fs2 = ab ? null : town.match(/^(.*\p{L}\.?),[ \t]{1,2}(\p{Lu}\p{Ll}+(?:[ \t]\p{Lu}\p{Ll}+)?)$/u);
+        if (ab && LEX.STATE_ABBR_SET.has(ab[2])) town = ab[1]; else if (fs2 && LEX.STATE_NAME_SET.has(fs2[2].toLowerCase())) town = fs2[1];
+        const ws = town.split(/[ \t]+/).filter(Boolean), letters = (town.match(/\p{L}/gu) || []).length;
+        if (!ws.length || ws.length > 4 || letters < 4 || /[\n\r]/.test(town)) continue;
+        if (!ws.every((w, k) => /^\p{Lu}[\p{L}\p{M}'’\-]*\.?$/u.test(w) || (k > 0 && k < ws.length - 1 && /^(?:du|de|la|del|of|the|d)$/.test(w)))) continue;
+        const lw = town.toLowerCase();
+        if ((cfg.allowSet && cfg.allowSet.has(lw)) || LEX.STATE_NAME_SET.has(lw)) continue;
+        if (ws.length === 1 && (letters < 5 || LEX.isClinical(town) || COMMON_CAP.has(lw) || COMMON_LOWER.has(lw) || LEX.isAmbiguous(town) || LEX.isFirstName(town) || LEX.isStrongName(town) || LEX.isDictWord(town) || LEX.isEnglishWord(town) || PLACE_WORD.test(town) || PLACE_COUNTRY.test(town) || LEX.STATE_NAME_SET.has(lw) || LEX.ORG_SUFFIX_SET.has(lw) || LEX.ORG_NAMEWORD_SET.has(lw) || LEX.ORG_PREFIX_SET.has(lw) || LEX.GEO_SUFFIX_SET.has(lw) || LEX.HONORIFIC_SET.has(lw) || LEX.CREDENTIAL_SET.has(lw) || LEX.LANGUAGE_SET.has(lw) || relWord(town) || monthIndex(town) || STRICT_SKIP.test(town) || DRUG_STEM.test(lw) || MED_MORPH.test(lw))) continue;
+        // in the forms a name is looked for in: as written, in CAPITALS from six letters on, in Title Case when it was
+        // found in a line of capitals, and without its accents
+        const forms = [town];
+        if (letters >= 6 && town !== town.toUpperCase()) forms.push(town.toUpperCase());
+        if (town === town.toUpperCase() && /\p{Lu}{3}/u.test(town)) forms.push(town.toLowerCase().replace(/(^|[\s\-'’.])(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase()));
+        forms.forEach((x) => { placeTerms.add(x); const fx = foldName(x); if (fx !== x) placeTerms.add(fx); });
         continue;
       }
       if (COARSE(s.type) !== 'NAME' || s.source === 'census' || s.source === 'propagate' || s.initials) continue;
@@ -4379,13 +4423,34 @@
     return prev[b.length];
   }
 
-  // seedRows: Patients sheet rows of a saved key; seedExtra: { providers: Providers rows, others: Others rows } of the same key
+  // seedRows: Patients sheet rows of a saved key; seedExtra: { providers: Providers rows, others: Others rows, aliases:
+  // carried-name rows } of the same key. A key written before nicknames and carried names were saved has no Nicknames
+  // column and no aliases: it loads as before, with none.
+  const ALIAS_MAX = 4000; // the carried names a session keeps (processTableCore drops the oldest past this)
+  // The session's table of name words and their made-up values, looked up without regard to accents: "Ève", "Eve" and "EVE"
+  // of one relative are one entry and so one made-up name, whichever spelling a row uses. It is a Map in every other way:
+  // it lists each entry under the spelling it was first written in (that is what the saved key and Restore identities
+  // show), and clear() followed by set() of its entries rebuilds it exactly (checkpoint relies on that).
+  class NameTokenMap extends Map {
+    constructor() { super(); this.spelling = new Map(); } // accent-free key -> the key as first written
+    canon(k) { return typeof k === 'string' ? foldName(k).toLowerCase() : k; }
+    has(k) { return this.spelling !== undefined && this.spelling.has(this.canon(k)); }
+    get(k) { const w = this.spelling.get(this.canon(k)); return w === undefined ? undefined : super.get(w); }
+    set(k, v) { const c = this.canon(k), w = this.spelling.get(c); if (w !== undefined) return super.set(w, v); this.spelling.set(c, k); return super.set(k, v); }
+    delete(k) { const c = this.canon(k), w = this.spelling.get(c); if (w === undefined) return false; this.spelling.delete(c); return super.delete(w); }
+    clear() { this.spelling.clear(); super.clear(); }
+  }
   function createRegistry(seedRows, seedExtra) {
     const entities = [];
     const byMrn = new Map();
     let next = 1;
     // session-wide surrogate allocation (see Surrogator): fakes handed out, real words seen, providers, name tokens, strings
-    const taken = new Set(), realWords = new Set(), providers = new Map(), tokenMap = new Map(), strings = new Map();
+    const taken = new Set(), realWords = new Set(), providers = new Map(), tokenMap = new NameTokenMap(), strings = new Map();
+    // the names of other people the session has found (a relative, a visitor, an outside provider), lower case -> as written,
+    // oldest first: processTableCore adds to it after each input and looks for them in the next. Part of the session, so
+    // part of every checkpoint and of the saved key.
+    const aliasTerms = new Map();
+    const aliasOk = (t) => typeof t === 'string' && t.length >= 3 && t.length <= 80 && !/[\u0000-\u001f]/.test(t);
     const newEntity = () => { const e = { id: `e${entities.length + 1}`, code: `P${String(next++).padStart(3, '0')}`, mrns: new Set(), names: new Set(), parsed: [], dobs: new Set(), accounts: new Set(), phones: new Set(), fakeFirst: null, fakeLast: null, offset: null, seq: entities.length }; entities.push(e); byId.set(e.id, e); return e; };
     // A name can only link to an entity with the same surname or the same birthdate (see nameMatch), so resolve looks at
     // those entities only, not at every patient of the session: a list of 50,000 patients resolves in linear time.
@@ -4433,7 +4498,7 @@
       return false;
     };
     const reg = {
-      entities, taken, realWords, providers, tokenMap, strings, allocations: 0, docOffset: null,
+      entities, taken, realWords, providers, tokenMap, strings, aliasTerms, allocations: 0, docOffset: null,
       get size() { return entities.length; },
       // A transaction: checkpoint() returns a function that puts the registry back exactly as it was (same entity objects,
       // same codes, same offsets), so a run that fails half way leaves no half-learned patient behind.
@@ -4446,11 +4511,15 @@
         const maps = [byMrn, providers, tokenMap, strings, byLast, byDob, byId, byLastDel].map((m) => [m, [...m].map(([k, v]) => [k, keep(v)])]);
         const sets = [taken, realWords].map((st) => [st, new Set(st)]);
         const scal = { next, allocations: reg.allocations, docOffset: reg.docOffset };
+        // the carried names, in their order (the oldest are the first dropped). A patient's nicknames need no entry here:
+        // they live on the entity (entity.nicks) and go back with it, a nickname learned since then included.
+        const aliasMap = reg.aliasTerms instanceof Map ? reg.aliasTerms : null, aliasCopy = aliasMap ? [...aliasMap] : [];
         return () => {
           entities.length = 0; ents.forEach((k) => entities.push(back(k)));
           maps.forEach(([m, entries]) => { m.clear(); entries.forEach(([k, v]) => m.set(k, back(v))); });
           sets.forEach(([st, copy]) => { st.clear(); copy.forEach((x) => st.add(x)); });
           next = scal.next; reg.allocations = scal.allocations; reg.docOffset = scal.docOffset;
+          const am = aliasMap || aliasTerms; am.clear(); aliasCopy.forEach(([k, v]) => am.set(k, v)); reg.aliasTerms = am;
         };
       },
       toProviderRows() {
@@ -4482,8 +4551,15 @@
         if (!mk && !(pn && pn.last)) return null;
         return absorb(newEntity(), rec);
       },
+      // Nicknames: the names a patient goes by (a preferred-name column, "Goes by 'Bronia'" in the patient's own row). They
+      // are the patient's identifiers as much as the legal name, so they are saved with the patient and read back.
       toMappingRows() {
-        return entities.map((e) => ({ Code: e.code, SurrogateName: e.fakeLast ? `${e.fakeLast}, ${e.fakeFirst}` : '', RealName: [...e.names].join('; '), MRN: [...e.mrns].join('; '), DOB: [...e.dobs].join('; '), Account: [...e.accounts].join('; '), Phone: [...e.phones].join('; '), DateOffsetDays: e.offset == null ? '' : e.offset }));
+        return entities.map((e) => ({ Code: e.code, SurrogateName: e.fakeLast ? `${e.fakeLast}, ${e.fakeFirst}` : '', RealName: [...e.names].join('; '), MRN: [...e.mrns].join('; '), DOB: [...e.dobs].join('; '), Account: [...e.accounts].join('; '), Phone: [...e.phones].join('; '), DateOffsetDays: e.offset == null ? '' : e.offset, Nicknames: e.nicks && typeof e.nicks.forEach === 'function' ? [...e.nicks].join('; ') : '' }));
+      },
+      // the carried names of the session, oldest first, for the saved key (its own sheet: these are real names with no
+      // made-up value of their own, so they are neither replacements to load nor anything Restore identities reads)
+      toAliasRows() {
+        return reg.aliasTerms instanceof Map ? [...reg.aliasTerms.values()].filter(aliasOk).map((t) => ({ Name: t })) : [];
       },
     };
     (seedRows || []).forEach((r) => {
@@ -4495,6 +4571,7 @@
       String(r.DOB || '').split(/;\s*/).filter(Boolean).forEach((d) => absorb(e, { dob: d }));
       String(r.Account || '').split(/;\s*/).filter(Boolean).forEach((a) => e.accounts.add(a));
       String(r.Phone || '').split(/;\s*/).filter(Boolean).forEach((p) => e.phones.add(p));
+      String(r.Nicknames == null ? '' : r.Nicknames).split(/;\s*/).map((n) => n.trim()).filter((n) => n.length >= 2 && n.length <= 80 && /\p{L}/u.test(n)).forEach((n) => { if (!e.nicks) e.nicks = new Set(); if (![...e.nicks].some((x) => String(x).toLowerCase() === n.toLowerCase())) e.nicks.add(n); });
       if (r.SurrogateName) { const [l, f] = String(r.SurrogateName).split(/,\s*/); e.fakeLast = l || null; e.fakeFirst = f || null; if (l) taken.add(l.toLowerCase()); if (f) taken.add(f.toLowerCase()); }
       if (r.DateOffsetDays !== '' && r.DateOffsetDays != null && !isNaN(+r.DateOffsetDays)) e.offset = +r.DateOffsetDays;
       e.names.forEach((nm) => { const pn = parseName(nm); if (pn) [pn.first, pn.last].forEach((t) => t && realWords.add(t.toLowerCase())); });
@@ -4511,9 +4588,17 @@
     ((seedExtra && seedExtra.others) || []).forEach((r) => {
       if (!r || !r.Surrogate || !r.Original) return;
       const type = String(r.Type || ''), orig = String(r.Original), fake = String(r.Surrogate);
-      if (type === 'NAME') { if (!tokenMap.has(orig.toLowerCase())) tokenMap.set(orig.toLowerCase(), fake); }
+      // (a key saved before accents were disregarded can hold two spellings of one name with a made-up value each: the
+      // first stands for the name from now on, and the other is kept as its own row, so a file protected with it restores)
+      if (type === 'NAME') { const lo = orig.toLowerCase(); if (!tokenMap.has(lo)) tokenMap.set(lo, fake); else if (tokenMap.get(lo) !== fake && !strings.has(`NAME|${lo}`)) strings.set(`NAME|${lo}`, { Type: 'NAME', Original: orig, Surrogate: fake }); }
       else strings.set(`${type}|${orig.toLowerCase()}`, { Type: type, Original: orig, Surrogate: fake });
       fake.toLowerCase().split(/[^a-z]+/).forEach((w) => { if (w.length >= 3) taken.add(w); });
+    });
+    // rows of the key's carried-names sheet ({ Name }) or plain strings; the newest ALIAS_MAX are kept
+    const aliasRows = seedExtra && Array.isArray(seedExtra.aliases) ? seedExtra.aliases : [];
+    aliasRows.slice(-ALIAS_MAX).forEach((r) => {
+      const t = (typeof r === 'string' ? r : r && r.Name != null ? String(r.Name) : '').trim();
+      if (aliasOk(t) && !aliasTerms.has(t.toLowerCase())) aliasTerms.set(t.toLowerCase(), t);
     });
     return reg;
   }
@@ -5333,6 +5418,7 @@
   // opts.manual: the review edits of the whole input (the page passes them when it re-reads a result made in parts).
   // ---------------------------------------------------------------------
   const RESIDUE_SHARED = 2; // an unknown word in the notes of this many different patients is the clinic's vocabulary
+  const RESIDUE_HALF = 32; // longer than any ordinary word in the lists (the longest has 20 letters)
   // generic drug names by their ending (international nonproprietary name stems) that the detectors' own stem list does not
   // carry, and standard ward shorthand that is pronounceable (so the shape test below cannot clear it)
   const RESIDUE_INN = /(?:tadine|ramine|faxine|oxetine|triptyline|azine|idone|setron|pitant|dipine|afil|gliptin|gliflozin|glutide|parin|xaban|gatran|caine|curium|relbine|tabine|rabine|tansine|vedotin|tecan|poside|mustine|bazine|trexate|trexed|amide|olone|asone|isone|terol|tropium|lukast|profen|coxib|triptan|penem|bactam|ciclovir|cyclovir|fungin|pime|axone|zolin|usate|maltose|dextran|gluconate|sucrose|citrate|sulfate|phosphate|chloride|acetate|tartrate|succinate|mesylate|maleate|fumarate|stim)$/i;
@@ -5375,7 +5461,10 @@
       if (!v && /[^s]s$/i.test(w) && w.length >= 4) v = known(w.slice(0, -1));
       // an ordinary prefix on a known word (redose, deaccessed, self-inj), or two ordinary words run together (chairside, rideshare)
       if (!v) { const pm = lw.match(/^(?:re|de|un|pre|post|non|co|sub|self|over|under|mis|anti|multi|semi|inter|intra|extra|hyper|hypo|peri)-?(.{4,})$/); v = !!pm && listed(pm[1]); }
-      if (!v && /^\p{Ll}+$/u.test(w) && w.length >= 7) for (let i = 3; i <= w.length - 3 && !v; i++) v = LEX.isEnglishWord(w.slice(0, i)) && LEX.isEnglishWord(w.slice(i)) && !LEX.isFirstName(w.slice(0, i)) && !LEX.isFirstName(w.slice(i));
+      // (bounded: no ordinary word has more than RESIDUE_HALF letters, so a longer half cannot be one, and a word longer than
+      // two of them is never split at all: the test costs at most RESIDUE_HALF look-ups whatever the length of the word. A
+      // word past the bound stays unexplained, never "known".)
+      if (!v && /^\p{Ll}+$/u.test(w) && w.length >= 7 && w.length <= 2 * RESIDUE_HALF) for (let i = Math.max(3, w.length - RESIDUE_HALF); i <= Math.min(w.length - 3, RESIDUE_HALF) && !v; i++) v = LEX.isEnglishWord(w.slice(0, i)) && LEX.isEnglishWord(w.slice(i)) && !LEX.isFirstName(w.slice(0, i)) && !LEX.isFirstName(w.slice(i));
       knownCache.set(w, v); return v;
     };
     // a dose or a cycle day right after it: a drug or a product ("Rystiggo 420 mg", "Lemtrada D3", "Vyepti q12wk"). Narrower on
@@ -5386,15 +5475,29 @@
       return /^\s*\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|gm|units?|iu|ml|mL|meq|mmol|%)(?![A-Za-z])/.test(after) || /^\s*(?:C\d+(?:D\d+)?|D\d+|wk\s*\d|week\s*\d|q\d+\s*(?:w|wk|wks|weeks?|d|h|mo)\b)/i.test(after);
     };
     // every name, place and organisation word this run replaced, and every census patient's name words
+    // (the replaced words are filed by length and first letter, the two things a word one letter off must share with them)
     const hidden = new Set(), hiddenByLen = new Map();
-    const addHidden = (s) => (String(s || '').match(/\p{L}[\p{L}\p{M}]{2,}/gu) || []).forEach((w) => { const k = key(w); if (k.length < 3 || hidden.has(k)) return; hidden.add(k); if (!hiddenByLen.has(k.length)) hiddenByLen.set(k.length, []); hiddenByLen.get(k.length).push(k); });
+    const addHidden = (s) => (String(s || '').match(/\p{L}[\p{L}\p{M}]{2,}/gu) || []).forEach((w) => { const k = key(w); if (k.length < 3 || hidden.has(k)) return; hidden.add(k); const b = k.length + k[0]; if (!hiddenByLen.has(b)) hiddenByLen.set(b, []); hiddenByLen.get(b).push(k); });
+    // one letter off: one letter changed, added or dropped, or two neighbours swapped (what osaDistance(h, k) <= 1 says, read
+    // off the common start and the common end of the two words in one pass, so the cost is their length and not its square)
+    const oneOff = (h, k) => {
+      const n = h.length, m = k.length; if (n - m > 1 || m - n > 1) return false;
+      const lo = n < m ? n : m; let p = 0; while (p < lo && h.charCodeAt(p) === k.charCodeAt(p)) p++;
+      let q = 0; while (q < lo - p && h.charCodeAt(n - 1 - q) === k.charCodeAt(m - 1 - q)) q++;
+      if (n !== m) return p + q >= lo;
+      return p + q >= n - 1 || (p + q === n - 2 && h.charCodeAt(p) === k.charCodeAt(p + 1) && h.charCodeAt(p + 1) === k.charCodeAt(p));
+    };
     result.details.forEach((d) => ((d && d.cells) || []).forEach((c) => (c.replacements || []).forEach((r) => { if (/^(?:NAME|ORG|LOCATION)$/.test(COARSE(r.type))) addHidden(r.original); })));
     try { const c = result.census; if (c && c.patients && typeof c.patients.forEach === 'function') c.patients.forEach((p) => { if (!p) return; if (p.names && typeof p.names.forEach === 'function') p.names.forEach(addHidden); if (p.entity && p.entity.nicks && typeof p.entity.nicks.forEach === 'function') p.entity.nicks.forEach(addHidden); }); } catch (e) { /* the census of a merged result may be partial: the replaced words are enough */ }
+    // (answered once per word: a word written ten thousand times is compared with the replaced words once)
+    const likeCache = new Map();
     const likeHidden = (k) => {
       if (hidden.has(k)) return true;
       if (k.length < 5) return false;
-      for (let n = k.length - 1; n <= k.length + 1; n++) for (const h of hiddenByLen.get(n) || []) if (h[0] === k[0] && osaDistance(h, k) <= 1) return true;
-      return false;
+      let v = likeCache.get(k); if (v !== undefined) return v;
+      v = false;
+      for (let n = k.length - 1; n <= k.length + 1 && !v; n++) for (const h of hiddenByLen.get(n + k[0]) || []) if (oneOff(h, k)) { v = true; break; }
+      likeCache.set(k, v); return v;
     };
     // pass 1: the candidates (words no list explains), with the patient whose row they are in
     const cands = [], groups = new Map();

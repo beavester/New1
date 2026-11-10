@@ -39,14 +39,26 @@
     provider: 'Doctor or staff name', date: 'Appointment or other date', age: 'Age', zip: 'ZIP code', text: 'Free text (notes, comments)', keep: 'Keep unchanged', drop: 'Remove the whole column',
   };
   const ROLE_AS = { patient_name: 'names', mrn: 'record numbers', dob: 'birthdates', account: 'account numbers', phone: 'phone numbers', provider: 'staff names', date: 'dates', age: 'ages', zip: 'ZIP codes', text: 'free text' };
-  const SOURCE_UI = (src) => {
-    const s = String(src || '').split(/[:+]/)[0];
+  // (the core's source is "kind" or "kind:detail", and two joined by "+" when two detectors agree: the first one is named)
+  const PLACE_UI = {
+    state: 'a town written with its state', zip: 'a town written with its ZIP code', prep: 'a town after "lives in", "from", "near" or the like',
+    site: 'a town before "office", "clinic", "area" or the like', bracket: 'a town in brackets beside a clinic or another place', list: 'in a list with other places',
+    bare: 'a town name with nothing around it that says so (less certain; may be a surname or another word)',
+  };
+  const SOURCE_UI = (src, type) => {
+    const first = String(src || '').split('+')[0], s = first.split(':')[0], detail = first.slice(s.length + 1);
+    const place = /^(?:LOCATION|ADDRESS|ZIP)$/.test(String(type || ''));
     if (s === 'manual') return 'Found by: you';
     if (s === 'census') return 'Found by: patient list';
     if (s === 'rule' || s === 'rules') return 'Found by: a pattern';
+    if (s === 'place') return 'Found by: the list of US towns – ' + (PLACE_UI[detail] || 'a town name');
     if (s === 'lexicon' || s === 'cue') return 'Found by: a word clue (less certain)';
-    if (s === 'propagate') return 'Found by: seen elsewhere in this file';
+    // a name or place found with a clue somewhere else in this input; a name can also come from an earlier input of the
+    // session (a relative or visitor named there is looked for here too)
+    if (s === 'propagate') return place ? 'Found by: the same place was found elsewhere in this file' : 'Found by: the same name was found elsewhere in this file, or in an earlier file of this session';
     if (s === 'strict') return 'Found by: unrecognised word (strict check; may be an ordinary word)';
+    if (s === 'column') return 'Found by: a contact or family column of this file';
+    if (s === 'custom') return 'Found by: your "Always remove" list';
     return 'Found by: ' + (s || 'the tool');
   };
   const TYPE_UI = { NAME_PATIENT: 'patient name', NAME_PROVIDER: 'staff name', NAME_OTHER: 'name', MRN: 'MRN', ACCOUNT: 'account number', PHONE: 'phone number', DOB: 'birthdate', DATE: 'date', EMAIL: 'email', ORG: 'organization', LOCATION: 'place', ADDRESS: 'address', ZIP: 'ZIP', AGE: 'age', SSN: 'SSN', ID_OTHER: 'other ID', URL: 'web address', IP: 'network address' };
@@ -637,7 +649,8 @@
   // lines, a cropped column). Re-protect those earlier items so they pick up the name and can pass the check.
   // The same goes for any earlier input once the session knows a patient (name or record number) it did not know when that
   // input was protected: a later tile view can name a patient that an earlier table listed, and the earlier output is rescanned.
-  const registryStamp = () => session.registry.entities.reduce((n, e) => n + e.names.size + e.mrns.size + 1, 0);
+  // (a nickname counts as a name: "goes by Bronia" in a later file makes BRONIA in an earlier one that patient's identifier)
+  const registryStamp = () => session.registry.entities.reduce((n, e) => n + e.names.size + e.mrns.size + (e.nicks && e.nicks.size ? e.nicks.size : 0) + 1, 0);
   // What a result was made from: tool version, the session's patients, the item's settings, column roles and review edits.
   // A download is allowed only while this still matches; anything changed since the check means the file would not be the
   // one that was checked.
@@ -1074,6 +1087,16 @@
   // blocks when it matters: when that made-up name is printed in this output, the self-check reports it and the verdict is red.)
   const needsReview = (item) => !!item && !!item.result && !item.error && !isRed(item) && (isAmber(item) || surviving(item).length > 0 || residueOpen(item).length > 0);
   const reviewed = (item) => !!item && !!item.resultKey && item.ackKey === item.resultKey;
+  // what there is to look at in a result: lines the screenshot reader was unsure of, and lines with a name that rests on a
+  // word clue alone (neither asks for a review by itself; both are named when one is asked for)
+  const reviewLooks = (item) => { const d = (item && item.result && item.result.details) || []; return { lowOcr: d.filter((x) => x.lowOcr).length, unsure: d.filter((x) => (x.cells || []).some((c) => c.spans.some(isUncertain))).length }; };
+  // the one thing to do first, for the title of a download button that is off
+  const reviewFirst = (item) => {
+    const n = residueOpen(item).length, w = surviving(item).length;
+    if (n) return `${plural(n, 'unexplained word is', 'unexplained words are')} still in the text and may be ${n === 1 ? 'a name' : 'names'}. Look at ${n === 1 ? 'it' : 'them'} in the review`;
+    if (w) return `${plural(w, 'word from the source', 'words from the source')} survived and may be ${w === 1 ? 'a name' : 'names'}. Look at ${w === 1 ? 'it' : 'them'} in the review`;
+    return 'there is no patient list, so names were found by rules only. Read the protected text for a name that was missed';
+  };
   // Why an input may not be downloaded right now ('' when it may). Every export path asks this itself.
   function blockReason(it, override) {
     if (!it) return 'Nothing to download yet';
@@ -1084,7 +1107,7 @@
     if (!it.resultKey || it.resultKey !== resultKey(it)) return 'Something changed after this was checked (settings, patients or edits). Run it again first.';
     if (isRed(it) && !override) return 'Fix the identifiers that still appear first';
     if (noOwnPatients(it) && !override) return 'Choose the column that holds patient names or record numbers first';
-    if (needsReview(it) && !reviewed(it)) return 'Review required: look over the flagged text, then press "I have reviewed this"';
+    if (needsReview(it) && !reviewed(it)) return `Review required: ${reviewFirst(it)}, then press "I have reviewed this"`;
     return '';
   }
   const allBlockReason = (override) => (!session.items.length ? 'Nothing to download yet' : session.items.map((x) => blockReason(x, override)).find(Boolean) || '');
@@ -1131,16 +1154,30 @@
       $('verdictBody').querySelectorAll('[data-cols]').forEach((a) => a.addEventListener('click', () => { $('colsDetails').open = true; $('colsCard').scrollIntoView({ block: 'center' }); }));
       $('verdictActions').classList.add('hidden');
     } else if (!isRed(item) && needsReview(item)) {
+      // What to look at, the likeliest leak first: words still in the output that nothing explains, source words that
+      // survived, screenshot lines that may have been misread, then the blanket reason (no patient list), and last the
+      // names that were replaced on a word clue alone (already hidden: the risk there is a lost word, not a leak).
       const words = surviving(item);
-      const why = [isAmber(item) ? `no patient list, so names were found by rules only (paste today's schedule under <span class="lnk" data-roster="1">Patient list</span> to make the check real)${item.kind === 'image' ? '; the check covers only the text that could be read' : ''}` : '',
-        words.length ? `${plural(words.length, 'word from the source survived', 'words from the source survived')} that ${words.length === 1 ? 'is' : 'are'} not an ordinary or medical word: ${words.slice(0, 12).map((w) => `<span class="lnk" data-word="${esc(w.text)}">${esc(w.text)}</span>${w.count > 1 ? ` ×${w.count}` : ''}`).join(', ')}${words.length > 12 ? ', …' : ''}. If any is a name or place, mark it in the review below` : ''].filter(Boolean);
       const res = item.residue || { open: [], words: [], rows: 0 };
-      if (res.open.length) why.push(`<b>${plural(res.open.length, 'unexplained word', 'unexplained words')} on ${plural(res.rows, 'line', 'lines')}</b>: left in the protected text, and neither an ordinary or medical word nor something the tool replaced, so it could be a name the tool did not recognise: ${res.words.slice(0, 12).map((w) => `<span class="lnk" data-resword="${esc(w.text)}" title="${esc(RESIDUE_WHY[w.why] || '')}">${esc(w.text)}</span>${w.count > 1 ? ` ×${w.count}` : ''}`).join(', ')}${res.words.length > 12 ? ', …' : ''}. Each is outlined in the "After" column below: press "Hide: it is a name" or "It is fine"`);
+      const amber = isAmber(item);
+      const looks = reviewLooks(item);
+      const links = (list, attr, tip) => list.slice(0, 12).map((w) => `<span class="lnk" ${attr}="${esc(w.text)}"${tip ? ` title="${esc(RESIDUE_WHY[w.why] || '')}"` : ''}>${esc(w.text)}</span>${w.count > 1 ? ` ×${w.count}` : ''}`).join(', ') + (list.length > 12 ? ', …' : '');
+      const only = (filter, label) => ` <span class="lnk" data-filter="${filter}">${label}</span>`;
+      const steps = [];
+      const nm = (k) => (k === 1 ? 'a name' : 'names');
+      if (res.open.length) steps.push(`<b>${plural(res.open.length, 'unexplained word', 'unexplained words')} on ${plural(res.rows, 'line', 'lines')}</b> ${res.open.length === 1 ? 'is' : 'are'} still in the protected text and may be ${nm(res.open.length)}: ${links(res.words, 'data-resword', true)}. Each is outlined under "After" below: press "Hide: it is a name" or "It is fine".${only('residue', 'Show only these lines')}`);
+      if (words.length) steps.push(`<b>${plural(words.length, 'word from the source survived', 'words from the source survived')}</b> that ${words.length === 1 ? 'is' : 'are'} not an ordinary or medical word and may be ${nm(words.length)}: ${links(words, 'data-word', false)}. If one is a name or place, select it in the review below and press "This is patient info"`);
+      if (looks.lowOcr) steps.push(`<b>${plural(looks.lowOcr, 'screenshot line was', 'screenshot lines were')} hard to read</b>, and a name the reader got wrong cannot be recognised: compare ${looks.lowOcr === 1 ? 'it' : 'them'} with the picture.${only('model', 'Show the lines that need a look')}`);
+      if (amber) steps.push(`<b>No patient list</b>, so names were found by rules only and the check had no real names to look for: read the text for a name that was missed (paste today's schedule under <span class="lnk" data-roster="1">Patient list</span> to make the check real)${item.kind === 'image' ? '; the check covers only the text that could be read' : ''}`);
+      if (looks.unsure) steps.push(`<b>${plural(looks.unsure, 'line has', 'lines have')} a name found from a word clue alone</b>, already replaced: tap a highlight that is not patient information to put the word back`);
+      const lead = steps.length > 1 ? `${steps.length} things to check before downloading, the most important first:` : '';
       const done = reviewed(item);
-      $('verdictBody').innerHTML = `<div class="verdict amber"><b>Review required</b> – ${why.join('; and ')}.${item.flagged > 0 ? ` ${plural(item.flagged, 'line is', 'lines are')} flagged below.` : ''}${collisionNote(item, false)}<div style="margin-top:8px">${done ? '<span class="ok">Reviewed. Downloads are on for this result.</span>' : '<button id="ackReview" class="secondary">I have reviewed this</button> <span class="small muted">Downloads stay off until then. A new run needs a new review.</span>'}</div></div>`;
+      $('verdictBody').innerHTML = `<div class="verdict amber"><b>Review required.</b> ${steps.length > 1 ? `${lead}<ol>${steps.map((x) => `<li>${x}</li>`).join('')}</ol>` : steps.join('')}${item.flagged > 0 ? `<div class="small" style="margin-top:6px">${plural(item.flagged, 'line is', 'lines are')} flagged below.</div>` : ''}${collisionNote(item, false)}<div style="margin-top:8px">${done ? '<span class="ok">Reviewed. Downloads are on for this result.</span>' : '<button id="ackReview" class="secondary">I have reviewed this</button> <span class="small muted">Downloads stay off until then. A new run needs a new review.</span>'}</div></div>`;
+      const toReview = (filter, search) => { $('reviewFilter').value = filter; $('reviewSearch').value = search || ''; state.page = 1; renderReview(item); $('reviewCard').scrollIntoView({ block: 'start' }); };
       $('verdictBody').querySelectorAll('[data-roster]').forEach((a) => a.addEventListener('click', openRoster));
-      $('verdictBody').querySelectorAll('[data-word]').forEach((a) => a.addEventListener('click', () => { $('reviewFilter').value = 'all'; $('reviewSearch').value = a.dataset.word; state.page = 1; renderReview(item); $('reviewCard').scrollIntoView({ block: 'start' }); }));
-      $('verdictBody').querySelectorAll('[data-resword]').forEach((a) => a.addEventListener('click', () => { $('reviewFilter').value = 'residue'; $('reviewSearch').value = a.dataset.resword; state.page = 1; renderReview(item); $('reviewCard').scrollIntoView({ block: 'start' }); }));
+      $('verdictBody').querySelectorAll('[data-word]').forEach((a) => a.addEventListener('click', () => toReview('all', a.dataset.word)));
+      $('verdictBody').querySelectorAll('[data-resword]').forEach((a) => a.addEventListener('click', () => toReview('residue', a.dataset.resword)));
+      $('verdictBody').querySelectorAll('[data-filter]').forEach((a) => a.addEventListener('click', () => toReview(a.dataset.filter, '')));
       const ack = $('ackReview'); if (ack) ack.addEventListener('click', () => { item.ackKey = item.resultKey; item.viewedReview = true; renderVerdict(item); });
       $('verdictActions').classList.toggle('hidden', isGated(item) || !done);
       $('toReview').textContent = item.flagged > 0 ? `${plural(item.flagged, 'line needs', 'lines need')} a look first` : 'Nothing needs a look';
@@ -1180,7 +1217,7 @@
     const coarse = DeID.COARSE(sp.type);
     const locked = !!sp.entity && /^(NAME_PATIENT|MRN|ACCOUNT|PHONE|DOB)$/.test(sp.type);
     const patientEnt = locked ? ' data-entity="1"' : '';
-    const title = locked ? `${esc(TYPE_UI[sp.type] || sp.type)} from the patient list · this is the patient's own identifier and cannot be un-hidden` : `${esc(SOURCE_UI(sp.source))} · ${esc(TYPE_UI[sp.type] || sp.type)}`;
+    const title = locked ? `${esc(TYPE_UI[sp.type] || sp.type)} from the patient list · this is the patient's own identifier and cannot be un-hidden` : `${esc(SOURCE_UI(sp.source, sp.type))} · ${esc(TYPE_UI[sp.type] || sp.type)}`;
     return `<mark class="${coarse}${sp.manual ? ' manual' : ''}${locked ? ' locked' : ''}${extraCls || ''}" data-s="${sp.start}" data-e="${sp.end}" data-type="${esc(sp.type)}" data-src="${esc(sp.source)}"${patientEnt} title="${title}">${esc(text.slice(sp.start, sp.end))}</mark>`;
   }
   function highlight(item, cellInfo) {
@@ -1246,7 +1283,7 @@
     const list = filteredDetails(item);
     const shown = list.slice(0, state.page * PAGE);
     const certain = certainCount(item);
-    $('reviewHeading').textContent = item.flagged > 0 ? `${item.flagged} line${item.flagged === 1 ? '' : 's'} need${item.flagged === 1 ? 's' : ''} a look: a name found from a word clue alone, a word left in the text that the tool could not explain, or text the screenshot reader was unsure of. The other ${certain} replacements are certain.` : `Nothing needs a look. ${certain} replacement${certain === 1 ? '' : 's'} came from the patient list or a fixed rule. You can still browse every line.`;
+    $('reviewHeading').textContent = item.flagged > 0 ? `${item.flagged} line${item.flagged === 1 ? '' : 's'} need${item.flagged === 1 ? 's' : ''} a look: a word left in the text that the tool could not explain, text the screenshot reader was unsure of, or a name found from a word clue alone. The other ${certain} replacements are certain.` : `Nothing needs a look. ${certain} replacement${certain === 1 ? '' : 's'} came from the patient list or a fixed rule. You can still browse every line.`;
     $('reviewInfo').textContent = `${shown.length} of ${list.length} lines shown`;
     $('morePages').style.display = shown.length < list.length ? '' : 'none';
     const t = $('reviewTable');
@@ -1479,6 +1516,7 @@
     if (!$('sessionPanel').classList.contains('hidden')) renderSessionPanel();
     layoutStrip();
   }
+  const KEY_NAMES_SHEET = 'OtherNames'; // absent from keys saved by earlier versions
   function mergedMapping() {
     // the registry holds every replacement of the session: patients, providers, third-party names, organizations, places, ids
     // a column is also listed under its protected header when the header itself held patient information (Restore identities
@@ -1488,17 +1526,21 @@
       const out = it.result && Array.isArray(it.result.headers) ? it.result.headers[c.index != null ? c.index : i] : null;
       if (out != null && out !== c.header && !cols.has(out)) cols.set(out, { header: out, role: c.role });
     }));
-    return { patients: session.registry.toMappingRows(), providers: session.registry.toProviderRows(), others: session.registry.toOtherRows(), meta: { seed: session.seed, docOffset: session.registry.docOffset == null ? '' : session.registry.docOffset, processedAt: new Date().toISOString(), mrnPattern: session.mrnPattern || '', columns: [...cols.values()], keySaves: session.keySaves + 1 } };
+    // aliases: the names of other people the session has found (looked for again in later files); Patients rows carry Nicknames
+    return { patients: session.registry.toMappingRows(), providers: session.registry.toProviderRows(), others: session.registry.toOtherRows(), aliases: typeof session.registry.toAliasRows === 'function' ? session.registry.toAliasRows() : [], meta: { seed: session.seed, docOffset: session.registry.docOffset == null ? '' : session.registry.docOffset, processedAt: new Date().toISOString(), mrnPattern: session.mrnPattern || '', columns: [...cols.values()], keySaves: session.keySaves + 1 } };
   }
   $('dlMap').addEventListener('click', () => {
     const m0 = mergedMapping();
     const guard = (rows) => rows.map((r) => mapValues(r, localSafeCell));
-    const m = Object.assign({}, m0, { patients: guard(m0.patients), providers: guard(m0.providers), others: guard(m0.others) });
+    const m = Object.assign({}, m0, { patients: guard(m0.patients), providers: guard(m0.providers), others: guard(m0.others), aliases: guard(m0.aliases || []) });
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(m.patients.length ? m.patients : [{ Code: '', SurrogateName: '', RealName: '', MRN: '', DOB: '', Account: '', Phone: '', DateOffsetDays: '' }]), 'Patients');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(m.patients.length ? m.patients : [{ Code: '', SurrogateName: '', RealName: '', MRN: '', DOB: '', Account: '', Phone: '', DateOffsetDays: '', Nicknames: '' }]), 'Patients');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(m.providers.length ? m.providers : [{ Code: '', SurrogateName: '', RealName: '', Credential: '' }]), 'Providers');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(m.others.length ? m.others : [{ Type: '', Original: '', Surrogate: '' }]), 'Others');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['meta'], [JSON.stringify(m.meta)]]), 'Meta');
+    // the other people named so far (relatives, visitors, outside staff), one per row: a session continued from this key
+    // looks for them in new files as this one does. A sheet of its own: one cell could not hold them (32,767 characters).
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(m.aliases.length ? m.aliases : [{ Name: '' }]), KEY_NAMES_SHEET);
     session.keySaves++; session.keyStamp = keyStamp();
     XLSX.writeFile(wb, `SESSION_KEY_PHI_${today()}_${hhmm()}_${session.keySaves}.xlsx`);
     $('newSessionConfirm').classList.add('hidden');
@@ -1515,7 +1557,9 @@
     const metaAoa = wb.Sheets.Meta ? sheetToAoa(wb.Sheets.Meta) : [];
     let meta = {}; try { meta = JSON.parse((metaAoa[1] || [])[0] || '{}'); } catch (e) {}
     const patients = toJson('Patients').filter((p) => p.Code);
-    session.registry = DeID.createRegistry(patients, { providers: toJson('Providers').filter((p) => p.SurrogateName && p.RealName), others: toJson('Others').filter((o) => o.Surrogate && o.Original) });
+    // (a key from an earlier version has no Nicknames column and no sheet of other names: it loads without them)
+    const aliases = toJson(KEY_NAMES_SHEET).map((a) => ({ Name: a && a.Name != null ? String(a.Name) : '' })).filter((a) => a.Name.trim());
+    session.registry = DeID.createRegistry(patients, { providers: toJson('Providers').filter((p) => p.SurrogateName && p.RealName), others: toJson('Others').filter((o) => o.Surrogate && o.Original), aliases });
     session.baseSeed = parseInt(meta.seed, 10) || randomSeed(); $('optSeed').value = ''; session.seed = session.baseSeed;
     // rows with no patient shift by the session's document offset: restored from the key when it carries one
     if (meta.docOffset !== '' && meta.docOffset != null && !isNaN(+meta.docOffset)) session.registry.docOffset = +meta.docOffset;
