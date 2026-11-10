@@ -109,6 +109,8 @@
   document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   $('verInfo').textContent = `Infusion De-ID ${DeID.VERSION} · built ${document.documentElement.dataset.built || 'from source'}${hasOcr() ? ' · screenshot reader included' : ''}`;
   $('verFoot').textContent = `v${DeID.VERSION}`;
+  // start the screenshot readers in the background once the page is idle, so the first screenshot does not wait for them
+  if (hasOcr() && DeIDOCR.warm) { const go = () => { try { DeIDOCR.warm().catch(() => {}); } catch (e) {} }; if (typeof requestIdleCallback === 'function') requestIdleCallback(go, { timeout: 1500 }); else setTimeout(go, 600); }
   if (!hasOcr()) { $('chipShot').classList.add('off'); $('chipShot').title = 'Needs infusion-deid-ocr.html'; }
 
   // ------------------------------------------------------------ small UI helpers
@@ -232,19 +234,22 @@
     state.cancel = false; state.queueActive = true;
     const images = files.filter(isImage);
     let imgIdx = 0;
+    // several screenshots are read at the same time, one worker each; the items are still added in the order given
+    const ahead = new Map();
+    if (images.length > 1 && hasOcr()) images.forEach((f) => { const h = { fn: null, promise: null }; h.promise = DeIDOCR.recognize(f, { share: images.length, onProgress: (m) => { if (h.fn) h.fn(m); } }); h.promise.catch(() => {}); ahead.set(f, h); });
     for (const f of files) {
       if (state.cancel) break;
-      if (isImage(f)) { imgIdx++; await addInput(f, imgIdx, images.length); } else await addInput(f);
+      if (isImage(f)) { imgIdx++; await addInput(f, imgIdx, images.length, ahead.get(f)); } else await addInput(f);
     }
     state.queueActive = false;
     hideWorking();
   }
   function isImage(f) { return !!f && (String(f.type || '').startsWith('image/') || /\.(png|jpe?g|gif|bmp|webp)$/i.test(f.name || '')); }
-  async function addInput(src, imgIdx, imgTotal) {
+  async function addInput(src, imgIdx, imgTotal, ahead) {
     try {
       if (typeof src === 'string') { addTextItem(src, 'pasted text', 'text'); return; }
       const file = src; const name = file.name || 'file';
-      if (isImage(file)) { await runOcrItem(file, imgIdx || 1, imgTotal || 1); return; }
+      if (isImage(file)) { await runOcrItem(file, imgIdx || 1, imgTotal || 1, ahead); return; }
       if (/\.txt$/i.test(name) || file.type === 'text/plain') { const text = await readText(file); routeText(text, name); return; }
       showWorking(name); stage(`Reading ${name}…`);
       const wb = await readWorkbook(file);
@@ -1620,23 +1625,25 @@
   window.addEventListener('beforeunload', (e) => { if ((session.items.length > 0 || session.registry.size > session.roster.ids.size) && !session.keySaved) { e.preventDefault(); e.returnValue = 'The session key has not been saved. Leave anyway?'; } });
 
   // ------------------------------------------------------------ OCR items
-  async function runOcrItem(file, i, n) {
+  async function runOcrItem(file, i, n, ahead) {
     if (!hasOcr()) { hideWorking(); notice(typeof DeIDOCR !== 'undefined' && DeIDOCR.reason && DeIDOCR.reason() === 'no-simd' ? NO_SIMD_MSG : PLAIN_BUILD_MSG, 'warn'); return; }
     const item = newItem('image', file.name || `screenshot-${i}.png`);
     item.sizeKB = Math.round((file.size || 0) / 1024);
     const prefix = n > 1 ? `Screenshot ${i} of ${n}: ` : '';
     showWorking(item.name); $('cancelRun').classList.toggle('hidden', n <= 1);
-    stage(`${prefix}Starting text recognition (the first screenshot takes about 20 seconds)…`);
+    stage(`${prefix}Reading the screenshot…`);
     $('runInfo').textContent = 'Reading…';
     let url = null;
     try {
       url = URL.createObjectURL(file);
       await new Promise((resolve) => { const img = new Image(); img.onload = () => { try { const c = $('thumb'); c.height = Math.max(20, Math.round(160 * img.naturalHeight / img.naturalWidth)); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); c.classList.remove('hidden'); } catch (e) {} resolve(); }; img.onerror = resolve; img.src = url; });
-      const res = await DeIDOCR.recognize(file, { onProgress: (m) => {
+      const onProgress = (m) => {
         if (!m || !m.status) return;
         if (/loading|initializ/i.test(m.status)) stage(`${prefix}Starting text recognition…`);
         else if (/recognizing/i.test(m.status)) { const p = Math.round((m.progress || 0) * 100); stage(`${prefix}Reading the screenshot… ${p}%`); $('workProg').firstElementChild.style.width = `${Math.max(10, p)}%`; }
-      } });
+      };
+      let res;
+      if (ahead) { ahead.fn = onProgress; res = await ahead.promise; } else res = await DeIDOCR.recognize(file, { onProgress });
       const fixLines = res.lines.map((l) => Object.assign({}, l, { text: DeID.normalizeOcrText(l.text) }));
       const fixedText = DeID.normalizeOcrText(res.text);
       item.ocr = { lines: fixLines, confidence: res.confidence, text: fixedText, edited: false };
